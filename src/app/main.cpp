@@ -1,8 +1,10 @@
 #include "core/Common.hpp"
+#include "core/Settings.hpp"
 
 #include "core/system/Config.hpp"
 #include "core/system/System.hpp"
 #include "core/system/TextUtilities.hpp"
+#include "core/Strings.hpp"
 
 #include <gl3w/gl3w.h>
 #include <GLFW/glfw3.h>
@@ -10,15 +12,18 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
+#include <imnodes/imnodes.h>
 
 #include "fonts/font_data_Lato.h"
+
+#include <unordered_map>
 
 #ifdef _WIN32
 // Avoid command prompt appearing on startup
 #pragma comment(linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"")
 #endif
 
-GLFWwindow* createWindow(int w, int h, UIStyle& uiStyle) {
+GLFWwindow* createWindow(int w, int h) {
 
 	// Initialize glfw, which will create and setup an OpenGL context.
 	if(!glfwInit()) {
@@ -55,6 +60,7 @@ GLFWwindow* createWindow(int w, int h, UIStyle& uiStyle) {
 	glfwSwapInterval(1);
 
 	ImGui::CreateContext();
+	ImNodes::CreateContext();
 	
 	ImFontConfig fontLato = ImFontConfig();
 	fontLato.FontData = (void*)(fontDataLato);
@@ -70,6 +76,10 @@ GLFWwindow* createWindow(int w, int h, UIStyle& uiStyle) {
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
+
+	ImNodes::GetIO().EmulateThreeButtonMouse.Modifier = &ImGui::GetIO().KeyAlt;
+	ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
+	
 	return window;
 }
 
@@ -90,7 +100,7 @@ int main(int argc, char** argv){
 		return 0;
 	}
 
-	GLFWwindow* window = createWindow(830, 620, style);
+	GLFWwindow* window = createWindow(830, 620);
 
 	if(!window){
 		Log::Error() << "Unable to create window." << std::endl;
@@ -100,6 +110,9 @@ int main(int argc, char** argv){
 	sr_gui_init();
 
 	int winW, winH;
+	float val;
+	std::unordered_map<int, std::pair<int, int>> links;
+	int linkIndex = 0;
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -148,19 +161,76 @@ int main(int argc, char** argv){
 			}
 
 		}
+		const float menuBarHeight = ImGui::GetItemRectSize().y;
 
+		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
 
-
-		const float heightToReserve = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-		
 		ImGui::SetNextWindowPos(ImVec2(0.0f, menuBarHeight));
 		ImGui::SetNextWindowSize(ImVec2(float(winW), float(winH) - menuBarHeight));
-
 
 
 		if(ImGui::Begin("PackoMainWindow", nullptr, winFlags)){
 
 
+			ImNodes::BeginNodeEditor();
+
+			ImNodes::BeginNode(1);
+			ImNodes::BeginNodeTitleBar();
+			ImGui::TextUnformatted("output node");
+			ImNodes::EndNodeTitleBar();
+			ImNodes::BeginOutputAttribute(10);
+			ImGui::Text("output pin");
+			ImNodes::EndOutputAttribute();
+			ImNodes::EndNode();
+
+			ImNodes::BeginNode(2);
+			ImNodes::BeginNodeTitleBar();
+			ImGui::TextUnformatted("mixed node");
+			ImNodes::EndNodeTitleBar();
+			ImNodes::BeginStaticAttribute(21);
+			ImGui::PushItemWidth(80);
+			ImGui::SliderFloat("test", &val, 0.f, 1.f);
+			ImGui::PopItemWidth();
+			ImNodes::EndStaticAttribute();
+			ImNodes::BeginInputAttribute(20);
+			ImGui::Text("intput pin");
+			ImNodes::EndInputAttribute();
+			ImNodes::BeginOutputAttribute(22);
+			ImGui::Text("output pin 1");
+			ImNodes::EndOutputAttribute();
+			ImNodes::BeginOutputAttribute(23);
+			ImGui::Text("output pin 2");
+			ImNodes::EndOutputAttribute();
+			ImNodes::EndNode();
+
+			ImNodes::BeginNode(3);
+			ImNodes::BeginNodeTitleBar();
+			ImGui::TextUnformatted("output node");
+			ImNodes::EndNodeTitleBar();
+			ImNodes::BeginInputAttribute(30);
+			ImGui::Text("input pin 1");
+			ImNodes::EndInputAttribute();
+			ImNodes::BeginInputAttribute(31);
+			ImGui::Text("input pin 2");
+			ImNodes::EndInputAttribute();
+			ImNodes::EndNode();
+
+			for(const auto& link : links){
+				ImNodes::Link(link.first, link.second.first, link.second.second);
+
+			}
+			ImNodes::MiniMap();
+			ImNodes::EndNodeEditor();
+
+			int startLink, endLink;
+			if(ImNodes::IsLinkCreated(&startLink, &endLink)){
+				links[linkIndex++] = {startLink, endLink};
+			}
+
+			int linkId;
+			if(ImNodes::IsLinkDestroyed(&linkId)){
+				links.erase(linkId);
+			}
 		}
 		ImGui::End();
 
@@ -177,6 +247,7 @@ int main(int argc, char** argv){
 	// Cleanup.
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
+	ImNodes::DestroyContext();
 	ImGui::DestroyContext();
 
 	sr_gui_cleanup();

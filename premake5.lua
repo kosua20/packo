@@ -58,7 +58,7 @@ include("libs/glfw/premake5.lua")
 group("Packo")
 
 
-project("PackoApp")
+project("Packo")
 	
 	CommonFlags()
 
@@ -67,6 +67,7 @@ project("PackoApp")
 
 	-- common files
 	files({"src/core/**", "src/libs/**.hpp", "src/libs/*/*.cpp", "src/libs/**.h", "src/libs/*/*.c", "src/app/**", "premake5.lua"})
+
 	removefiles({"**.DS_STORE", "**.thumbs"})
 
 	-- per platform files

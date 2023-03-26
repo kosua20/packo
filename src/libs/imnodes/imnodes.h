@@ -1,7 +1,9 @@
 #pragma once
 
 #include <stddef.h>
-#include <imgui.h>
+
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui/imgui.h>
 
 #ifdef IMNODES_USER_CONFIG
 #include IMNODES_USER_CONFIG
