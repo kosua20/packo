@@ -1,0 +1,8 @@
+/build*/
+/ext/
+/premake5.exe
+.DS_Store
+premake.tar.gz
+premake.zip
+premake5
+premake5.exe
