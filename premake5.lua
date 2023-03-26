@@ -30,7 +30,8 @@ workspace("Packo")
 -- Projects	
 
 function CommonFlags()
-	kind("ConsoleApp")
+	kind("WindowedApp")
+	icon("resources/Packo.icns")
 	language("C++")
 	cppdialect("C++17")
 	
@@ -45,6 +46,12 @@ function CommonFlags()
 	filter("action:vs*")
 		defines({ "_CRT_SECURE_NO_WARNINGS" })  
 	filter({})
+
+	 xcodebuildsettings {
+        ["MACOSX_DEPLOYMENT_TARGET"] = "10.12",
+        ["PRODUCT_BUNDLE_IDENTIFIER"] = 'com.simonrodriguez.packo',
+        ["INFOPLIST_FILE"] = "../resources/macos/Contents/Info.plist",                     -- path is relative to the generated project file
+      }
 
 end
 
