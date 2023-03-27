@@ -30,7 +30,7 @@ workspace("Packo")
 -- Projects	
 
 function CommonFlags()
-	kind("WindowedApp")
+
 	language("C++")
 	cppdialect("C++17")
 	
@@ -45,13 +45,6 @@ function CommonFlags()
 	filter("action:vs*")
 		defines({ "_CRT_SECURE_NO_WARNINGS" })  
 	filter({})
-
-	 xcodebuildsettings {
-        ["MACOSX_DEPLOYMENT_TARGET"] = "10.12",
-        ["PRODUCT_BUNDLE_IDENTIFIER"] = 'com.simonrodriguez.packo',
-        ["INFOPLIST_FILE"] = "../resources/macos/Contents/Info.plist",                     -- path is relative to the generated project file
-      }
-
 end
 
 
@@ -66,6 +59,8 @@ group("Packo")
 
 project("Packo")
 	
+	kind("WindowedApp")
+
 	CommonFlags()
 
 	includedirs({"src/"})
@@ -77,10 +72,13 @@ project("Packo")
 	removefiles({"**.DS_STORE", "**.thumbs"})
 
 	-- per platform files
-	filter("system:windows")
+	filter("action:vs*")
 		files({"resources/windows/*"})
 
-	filter({})
+	filter("action:xcode*")
+		files({"resources/macos/*"})
+		
+   filter({})
 	
 	links({"sr_gui", "glfw3"})
 
