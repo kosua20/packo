@@ -31,7 +31,6 @@ workspace("Packo")
 
 function CommonFlags()
 	kind("WindowedApp")
-	icon("resources/Packo.icns")
 	language("C++")
 	cppdialect("C++17")
 	
