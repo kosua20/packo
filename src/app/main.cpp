@@ -1,6 +1,9 @@
 #include "core/Common.hpp"
 #include "core/Settings.hpp"
 
+#include "core/Graph.hpp"
+#include "core/nodes/InOutNodes.hpp"
+
 #include "core/system/Config.hpp"
 #include "core/system/System.hpp"
 #include "core/system/TextUtilities.hpp"
@@ -180,6 +183,15 @@ GLFWwindow* createWindow(int w, int h) {
 	return window;
 }
 
+const uint kMaxSlotCount = 16;
+
+uint fromSlotToLink(Graph::Slot slot){
+	return slot.node * kMaxSlotCount + slot.slot;
+}
+
+Graph::Slot fromLinkToSlot(uint link){
+	return {link / kMaxSlotCount, link % kMaxSlotCount};
+}
 
 int main(int argc, char** argv){
 
@@ -208,8 +220,19 @@ int main(int argc, char** argv){
 
 	int winW, winH;
 	float val;
-	std::unordered_map<int, std::pair<int, int>> links;
-	int linkIndex = 0;
+
+	Graph graph;
+	{
+		GraphEditor editor(graph);
+		editor.addNode(new ConstantRGBANode());
+		editor.addNode(new ConstantFloatNode());
+		editor.addNode(new InputNode());
+		editor.addNode(new OutputNode());
+		editor.addNode(new InputNode());
+		editor.addNode(new InputNode());
+		editor.addNode(new InputNode());
+		editor.commit();
+	}
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -271,63 +294,82 @@ int main(int argc, char** argv){
 
 			ImNodes::BeginNodeEditor();
 
-			ImNodes::BeginNode(1);
-			ImNodes::BeginNodeTitleBar();
-			ImGui::TextUnformatted("output node");
-			ImNodes::EndNodeTitleBar();
-			ImNodes::BeginOutputAttribute(10);
-			ImGui::Text("output pin");
-			ImNodes::EndOutputAttribute();
-			ImNodes::EndNode();
+			GraphNodes nodes(graph);
 
-			ImNodes::BeginNode(2);
-			ImNodes::BeginNodeTitleBar();
-			ImGui::TextUnformatted("mixed node");
-			ImNodes::EndNodeTitleBar();
-			ImNodes::BeginStaticAttribute(21);
-			ImGui::PushItemWidth(80);
-			ImGui::SliderFloat("test", &val, 0.f, 1.f);
-			ImGui::PopItemWidth();
-			ImNodes::EndStaticAttribute();
-			ImNodes::BeginInputAttribute(20);
-			ImGui::Text("intput pin");
-			ImNodes::EndInputAttribute();
-			ImNodes::BeginOutputAttribute(22);
-			ImGui::Text("output pin 1");
-			ImNodes::EndOutputAttribute();
-			ImNodes::BeginOutputAttribute(23);
-			ImGui::Text("output pin 2");
-			ImNodes::EndOutputAttribute();
-			ImNodes::EndNode();
+			for(const uint nodeId : nodes){
+				const Node* node = graph.node(nodeId);
+				ImNodes::BeginNode(nodeId);
+				ImNodes::BeginNodeTitleBar();
+				ImGui::TextUnformatted(node->name().c_str());
+				ImNodes::EndNodeTitleBar();
+				uint attId = 0;
+				for(const std::string& name : node->inputNames()){
+					ImNodes::BeginInputAttribute(fromSlotToLink({nodeId, attId}));
+					ImGui::Text("%s", name.c_str());
+					ImNodes::EndInputAttribute();
+					++attId;
+				}
+				attId = 0;
+				for(const std::string& name : node->outputNames()){
+					ImNodes::BeginOutputAttribute(fromSlotToLink({nodeId, attId}));
+					ImGui::Text("%s", name.c_str());
+					ImNodes::EndOutputAttribute();
+					++attId;
+				}
 
-			ImNodes::BeginNode(3);
-			ImNodes::BeginNodeTitleBar();
-			ImGui::TextUnformatted("output node");
-			ImNodes::EndNodeTitleBar();
-			ImNodes::BeginInputAttribute(30);
-			ImGui::Text("input pin 1");
-			ImNodes::EndInputAttribute();
-			ImNodes::BeginInputAttribute(31);
-			ImGui::Text("input pin 2");
-			ImNodes::EndInputAttribute();
-			ImNodes::EndNode();
-
-			for(const auto& link : links){
-				ImNodes::Link(link.first, link.second.first, link.second.second);
-
+				ImNodes::EndNode();
 			}
-			ImNodes::MiniMap();
+
+			uint linkCount = graph.getLinkCount();
+			for(uint linkId = 0u; linkId < linkCount; ++linkId ){
+				const Graph::Link& link = graph.link( linkId );
+				ImNodes::Link(linkId, fromSlotToLink(link.from), fromSlotToLink(link.to));
+			}
+
+			ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_BottomRight);
 			ImNodes::EndNodeEditor();
 
-			int startLink, endLink;
-			if(ImNodes::IsLinkCreated(&startLink, &endLink)){
-				links[linkIndex++] = {startLink, endLink};
+			{
+				GraphEditor editor(graph);
+
+				int startLink, endLink;
+				if(ImNodes::IsLinkCreated(&startLink, &endLink)){
+					Graph::Slot from = fromLinkToSlot(startLink);
+					Graph::Slot to = fromLinkToSlot(endLink);
+					editor.addLink(from.node, from.slot, to.node, to.slot);
+				}
+
+				int linkId;
+				if(ImNodes::IsLinkDestroyed(&linkId)){
+					editor.removeLink(linkId);
+				}
+
+				if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
+				   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)))){
+					const uint nodesCount = ImNodes::NumSelectedNodes();
+					std::vector<int> nodeIds(nodesCount);
+					ImNodes::GetSelectedNodes(nodeIds.data());
+					for(const int nodeId : nodeIds){
+						editor.removeNode((uint)nodeId);
+					}
+					const uint linkCount = ImNodes::NumSelectedLinks();
+					std::vector<int> linkIds(linkCount);
+					ImNodes::GetSelectedLinks(linkIds.data());
+					for(const int linkId : linkIds){
+						editor.removeLink((uint)linkId);
+					}
+				}
+
+				if(ImGui::IsKeyReleased(ImGuiKey_I)){
+					editor.addNode(new InputNode());
+				}
+				if(ImGui::IsKeyReleased(ImGuiKey_O)){
+					editor.addNode(new OutputNode());
+				}
+				editor.commit();
 			}
 
-			int linkId;
-			if(ImNodes::IsLinkDestroyed(&linkId)){
-				links.erase(linkId);
-			}
+
 		}
 		ImGui::End();
 
