@@ -1,5 +1,14 @@
 #include "core/Graph.hpp"
 
+Graph::~Graph(){
+	// The graph owns the nodes.
+	for(Node* node : _nodes){
+		if(!node)
+			continue;
+		delete node;
+	}
+}
+
 int Graph::findNode( const Node* const node ){
 	if( node == nullptr )
 		return -1;
@@ -35,6 +44,11 @@ void Graph::addLink(const Link& link){
 bool operator==(const Graph::Link& a, const Graph::Link& b){
 	   return a.from.node == b.from.node && a.from.slot == b.from.slot
 		   && a.to.node == b.to.node && a.to.slot == b.to.slot;
+}
+
+GraphEditor::~GraphEditor(){
+	// Make sure all modifications are complete.
+	commit();
 }
 
 void GraphEditor::addNode(Node* node){
@@ -106,7 +120,8 @@ void GraphEditor::commit(){
 	_addedLinks.erase(itl, _addedLinks.end());
 
 	// Mark all links to delete with a sentinel node index.
-	const uint kSentinel = 0xFFFFFFFF;
+	constexpr uint kSentinel = 0xFFFFFFFF;
+
 	assert(kSentinel >= _graph._nodes.size());
 	for(uint linkToDelete : _deletedLinks){
 		_graph._links[linkToDelete].from.node = kSentinel;
@@ -129,4 +144,6 @@ void GraphEditor::commit(){
 	// Done!
 	_deletedNodes.clear();
 	_deletedLinks.clear();
+	_addedLinks.clear();
+	_addedNodes.clear();
 }

@@ -24,6 +24,8 @@ public:
 		Slot to;
 	};
 
+	~Graph();
+
 	int findNode( const Node* node );
 
 	uint getNodeCount() const { return _nodes.size() - _freeListNodes.size();}
@@ -54,6 +56,8 @@ class GraphEditor {
 public:
 
 	GraphEditor(Graph& graph) : _graph(graph){}
+
+	~GraphEditor();
 
 	void addNode(Node* node);
 
