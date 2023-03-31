@@ -24,6 +24,7 @@ public:
 		Slot to;
 	};
 
+	int findNode( const Node* node );
 
 	uint getNodeCount() const { return _nodes.size() - _freeListNodes.size();}
 

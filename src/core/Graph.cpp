@@ -1,5 +1,17 @@
 #include "core/Graph.hpp"
 
+int Graph::findNode( const Node* const node ){
+	if( node == nullptr )
+		return -1;
+
+	for( uint nodeIndex = 0u; nodeIndex < _nodes.size(); ++nodeIndex )
+	{
+		if( _nodes[ nodeIndex ] == node )
+			return (int)nodeIndex;
+	}
+	return -1;
+}
+
 void Graph::addNode(Node* node){
 	uint index = _freeListNodes.getIndex();
 	if(index == _nodes.size()){
@@ -54,10 +66,26 @@ void GraphEditor::addLink(uint fromNode, uint fromSlot, uint toNode, uint toSlot
 	link.from = {fromNode, fromSlot };
 	link.to = { toNode, toSlot };
 
-	if(std::find(_addedLinks.begin(), _addedLinks.end(), link) != _addedLinks.end()){
-		return;
+	// Remove previously added links pointing to the same destination (including copies of this one).
+	auto itl = std::remove_if( _addedLinks.begin(), _addedLinks.end(), [&link] ( const Graph::Link& olink )
+	{
+		return olink.to.node == link.to.node && olink.to.slot == link.to.slot;
+	});
+	_addedLinks.erase( itl, _addedLinks.end() );
+
+	// Remove existing links pointing to the same destination.
+	const size_t linkCount = _graph.getLinkCount();
+	for( size_t lid = 0; lid < linkCount; ++lid )
+	{
+		const Graph::Link& olink = _graph.link( lid );
+		if( olink.to.node == link.to.node && olink.to.slot == link.to.slot )
+		{
+			_deletedLinks.insert( lid );
+		}
 	}
-	_addedLinks.push_back(link);
+
+	// Add new link
+	_addedLinks.push_back( link );
 }
 
 void GraphEditor::removeLink(uint link){
@@ -84,7 +112,7 @@ void GraphEditor::commit(){
 		_graph._links[linkToDelete].from.node = kSentinel;
 	}
 	// Erase them.
-	auto itg = std::remove_if(_graph._links.begin(), _graph._links.end(), [](const Graph::Link& link){
+	auto itg = std::remove_if(_graph._links.begin(), _graph._links.end(), [kSentinel](const Graph::Link& link){
 		return link.from.node == kSentinel;
 	});
 	_graph._links.erase(itg, _graph._links.end());

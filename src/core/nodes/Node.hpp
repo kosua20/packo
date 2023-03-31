@@ -4,7 +4,7 @@
 class Node {
 public:
 
-	virtual bool evaluate(const std::vector<float>& inputs, std::vector<float>& outputs){};
+	virtual bool evaluate( const std::vector<float>& inputs, std::vector<float>& outputs ) { return true; };
 	virtual ~Node() = default;
 	
 	const std::string& name() const { return _name; }
