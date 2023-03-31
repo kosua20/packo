@@ -219,11 +219,11 @@ int main(int argc, char** argv){
 	sr_gui_init();
 
 	int winW, winH;
-	float val;
 
-	Graph graph;
+	std::unique_ptr<Graph> graph(new Graph());
+
 	{
-		GraphEditor editor(graph);
+		GraphEditor editor(*graph);
 		editor.addNode(new ConstantRGBANode());
 		editor.addNode(new ConstantFloatNode());
 		editor.addNode(new InputNode());
@@ -236,6 +236,7 @@ int main(int argc, char** argv){
 
 	Node* createdNode = nullptr;
 	ImVec2 mouseRightClick( 0.f, 0.f );
+
 	while(!glfwWindowShouldClose(window)) {
 
 		glfwWaitEventsTimeout(0.1);
@@ -250,6 +251,12 @@ int main(int argc, char** argv){
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		bool wantsExit = false;
+
+		if(ImGui::IsKeyReleased(ImGuiKey_Escape)){
+			wantsExit = true;
+		}
+
 		// Menus and settings
 		{
 
@@ -257,20 +264,44 @@ int main(int argc, char** argv){
 
 				if(ImGui::BeginMenu("File")){
 
-					if(ImGui::BeginMenu("Open...")){
-						ImGui::EndMenu();
+					if(ImGui::MenuItem("Execute graph...")){
+						// TODO: ask for inputs and output directory
+						// TODO: "compile" the graph, run it on images and save the result
 					}
-
-
 					ImGui::Separator();
 					if(ImGui::MenuItem("Quit")){
-						glfwSetWindowShouldClose(window, GLFW_TRUE);
+						wantsExit = true;
 					}
 					ImGui::EndMenu();
 				}
 
-				if(ImGui::BeginMenu("View")){
-					//ImGui::MenuItem("Nodes", nullptr, &showLibrary, true);
+				if(ImGui::BeginMenu("Graph")){
+
+					if(ImGui::MenuItem("Open...")){
+						// TODO: ask for file
+						// TODO: deserialize and replace current graph
+						// TODO: auto layout
+					}
+
+					if(ImGui::MenuItem("Save...")){
+						// TODO: ask for file
+						// TODO: serialize current graph
+					}
+
+					ImGui::Separator();
+					if(ImGui::MenuItem("Reset...")){
+						graph.reset(new Graph());
+						{
+							GraphEditor editor(*graph);
+							editor.addNode(new InputNode());
+							editor.addNode(new OutputNode());
+							for(uint i = 0; i < 4; ++i){
+								editor.addLink(0, i, 1, i);
+							}
+							editor.commit();
+							// TODO: auto layout.
+						}
+					}
 					ImGui::EndMenu();
 				}
 
@@ -281,64 +312,81 @@ int main(int argc, char** argv){
 				}
 				ImGui::EndMainMenuBar();
 			}
-
 		}
 		const float menuBarHeight = ImGui::GetItemRectSize().y;
+
+		// TODO: Nodes
+		// * arithmetic, minmax, exponent
+		// * float AND RGBA versions?
+		// * comparisons and boolean selector? (still floats)
+		// * "full image" nodes: resize, flip, rotate, blur?
+		// * procedural nodes
+		// * ...
+
+		// TODO: display preview of inputs/outputs if inputs have been selected?
 
 		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
 
 		ImGui::SetNextWindowPos(ImVec2(0.0f, menuBarHeight));
 		ImGui::SetNextWindowSize(ImVec2(float(winW), float(winH) - menuBarHeight));
 
-
 		if(ImGui::Begin("PackoMainWindow", nullptr, winFlags)){
 
-			int createdNodeIndex = graph.findNode( createdNode );
-			createdNode = nullptr;
-
-			ImNodes::BeginNodeEditor();
-
-			GraphNodes nodes(graph);
-
-			for(const uint nodeId : nodes){
-				const Node* node = graph.node(nodeId);
-
-				ImNodes::BeginNode(nodeId);
-				ImNodes::BeginNodeTitleBar();
-				ImGui::TextUnformatted(node->name().c_str());
-				ImNodes::EndNodeTitleBar();
-				uint attId = 0;
-				for(const std::string& name : node->inputNames()){
-					ImNodes::BeginInputAttribute(fromSlotToLink({nodeId, attId}));
-					ImGui::Text("%s", name.c_str());
-					ImNodes::EndInputAttribute();
-					++attId;
-				}
-				attId = 0;
-				for(const std::string& name : node->outputNames()){
-					ImNodes::BeginOutputAttribute(fromSlotToLink({nodeId, attId}));
-					ImGui::Text("%s", name.c_str());
-					ImNodes::EndOutputAttribute();
-					++attId;
-				}
-
-				ImNodes::EndNode();
-			}
-
-			if( createdNodeIndex >= 0 )
-				ImNodes::SetNodeScreenSpacePos( createdNodeIndex, mouseRightClick );
-
-			uint linkCount = graph.getLinkCount();
-			for(uint linkId = 0u; linkId < linkCount; ++linkId ){
-				const Graph::Link& link = graph.link( linkId );
-				ImNodes::Link(linkId, fromSlotToLink(link.from), fromSlotToLink(link.to));
-			}
-
-			ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_BottomRight);
-			ImNodes::EndNodeEditor();
-
+			// Graph viewer.
 			{
-				GraphEditor editor(graph);
+				ImNodes::BeginNodeEditor();
+
+				// First, immediately register the position for a newly created node if there is one.
+				{
+					int createdNodeIndex = graph->findNode( createdNode );
+					if( createdNodeIndex >= 0 )
+						ImNodes::SetNodeScreenSpacePos( createdNodeIndex, mouseRightClick );
+					createdNode = nullptr;
+				}
+
+
+				GraphNodes nodes(*graph);
+
+				for(const uint nodeId : nodes){
+					const Node* node = graph->node(nodeId);
+
+					ImNodes::BeginNode(nodeId);
+					ImNodes::BeginNodeTitleBar();
+					ImGui::TextUnformatted(node->name().c_str());
+					ImNodes::EndNodeTitleBar();
+					uint attId = 0;
+					for(const std::string& name : node->inputNames()){
+						ImNodes::BeginInputAttribute(fromSlotToLink({nodeId, attId}));
+						ImGui::Text("%s", name.c_str());
+						ImNodes::EndInputAttribute();
+						++attId;
+					}
+					attId = 0;
+					for(const std::string& name : node->outputNames()){
+						ImNodes::BeginOutputAttribute(fromSlotToLink({nodeId, attId}));
+						ImGui::Text("%s", name.c_str());
+						ImNodes::EndOutputAttribute();
+						++attId;
+					}
+					// TODO: attributes of various types. Either introduce a type system (float, color, str, enum+enumstrings)
+					// or provide an "adapter" friend for each type of node to keep the node ImGui-less.
+
+					ImNodes::EndNode();
+				}
+
+				uint linkCount = graph->getLinkCount();
+				for(uint linkId = 0u; linkId < linkCount; ++linkId ){
+					const Graph::Link& link = graph->link( linkId );
+					ImNodes::Link(linkId, fromSlotToLink(link.from), fromSlotToLink(link.to));
+				}
+
+				ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_BottomRight);
+				ImNodes::EndNodeEditor();
+			}
+
+			// Graph edition.
+			{
+				GraphEditor editor(*graph);
 
 				int startLink, endLink;
 				if(ImNodes::IsLinkCreated(&startLink, &endLink)){
@@ -374,35 +422,30 @@ int main(int argc, char** argv){
 							editor.removeLink( ( uint )linkId );
 						}
 					}
-					
 				}
 
 				if(ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
 					ImGui::OpenPopup( "Create node" );
+					// Save position for placing the new node on screen.
 					mouseRightClick = ImGui::GetMousePos();
 				}
 
-				if( ImGui::BeginPopup( "Create node" ) )
-				{
+				if( ImGui::BeginPopup("Create node")){
+					// TODO: streamline labels and creation. Have names and function pointers?
 					createdNode = nullptr;
-					if( ImGui::Selectable( "Input" ) )
-					{
+					if( ImGui::Selectable("Input")){
 						createdNode = new InputNode();
 					}
-					if(ImGui::Selectable( "Output" ))
-					{
+					if(ImGui::Selectable("Output")){
 						createdNode = new OutputNode();
 					}
-					if( ImGui::Selectable( "Constant scalar" ) )
-					{
+					if( ImGui::Selectable("Constant scalar")){
 						createdNode = new ConstantFloatNode();
 					}
-					if( ImGui::Selectable( "Constant color" ) )
-					{
+					if( ImGui::Selectable("Constant color") ){
 						createdNode = new ConstantRGBANode();
 					}
-					if( createdNode )
-					{
+					if( createdNode ){
 						editor.addNode( createdNode );
 					}
 					ImGui::EndPopup();
@@ -415,15 +458,37 @@ int main(int argc, char** argv){
 		}
 		ImGui::End();
 
+		// We *might* want to exit, ask the user for confirmation.
+		if(wantsExit){
+			ImGui::OpenPopup("Exit");
+		}
+
+		// Exit confirmation popup
+		if(ImGui::BeginPopupModal("Exit", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)){
+			ImGui::Text("Are you sure you want to quit?");
+			const ImVec2 buttonSize(150.0f, 0.0f);
+			if(ImGui::Button("No", buttonSize)){
+				wantsExit = false;
+				// This will close the popup.
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SameLine(buttonSize.x+20.f);
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.1f, 0.1f, 1.0f));
+			if(ImGui::Button("Yes", buttonSize)){
+				// Now we definitely want to exit.
+				glfwSetWindowShouldClose(window, GLFW_TRUE);
+			}
+			ImGui::PopStyleColor();
+			ImGui::EndPopup();
+		}
 
 		// Render the interface.
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		
+
+
 		glfwSwapBuffers(window);
 	}
-
-	// Save internal state.
 
 	// Cleanup.
 	ImGui_ImplOpenGL3_Shutdown();
