@@ -234,6 +234,8 @@ int main(int argc, char** argv){
 		editor.commit();
 	}
 
+	Node* createdNode = nullptr;
+	ImVec2 mouseRightClick( 0.f, 0.f );
 	while(!glfwWindowShouldClose(window)) {
 
 		glfwWaitEventsTimeout(0.1);
@@ -291,6 +293,8 @@ int main(int argc, char** argv){
 
 		if(ImGui::Begin("PackoMainWindow", nullptr, winFlags)){
 
+			int createdNodeIndex = graph.findNode( createdNode );
+			createdNode = nullptr;
 
 			ImNodes::BeginNodeEditor();
 
@@ -298,6 +302,7 @@ int main(int argc, char** argv){
 
 			for(const uint nodeId : nodes){
 				const Node* node = graph.node(nodeId);
+
 				ImNodes::BeginNode(nodeId);
 				ImNodes::BeginNodeTitleBar();
 				ImGui::TextUnformatted(node->name().c_str());
@@ -319,6 +324,9 @@ int main(int argc, char** argv){
 
 				ImNodes::EndNode();
 			}
+
+			if( createdNodeIndex >= 0 )
+				ImNodes::SetNodeScreenSpacePos( createdNodeIndex, mouseRightClick );
 
 			uint linkCount = graph.getLinkCount();
 			for(uint linkId = 0u; linkId < linkCount; ++linkId ){
@@ -347,25 +355,59 @@ int main(int argc, char** argv){
 				if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
 				   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)))){
 					const uint nodesCount = ImNodes::NumSelectedNodes();
-					std::vector<int> nodeIds(nodesCount);
-					ImNodes::GetSelectedNodes(nodeIds.data());
-					for(const int nodeId : nodeIds){
-						editor.removeNode((uint)nodeId);
+					if( nodesCount > 0u )
+					{
+						std::vector<int> nodeIds( nodesCount );
+						ImNodes::GetSelectedNodes( nodeIds.data() );
+						for( const int nodeId : nodeIds )
+						{
+							editor.removeNode( ( uint )nodeId );
+						}
 					}
 					const uint linkCount = ImNodes::NumSelectedLinks();
-					std::vector<int> linkIds(linkCount);
-					ImNodes::GetSelectedLinks(linkIds.data());
-					for(const int linkId : linkIds){
-						editor.removeLink((uint)linkId);
+					if( linkCount > 0 )
+					{
+						std::vector<int> linkIds( linkCount );
+						ImNodes::GetSelectedLinks( linkIds.data() );
+						for( const int linkId : linkIds )
+						{
+							editor.removeLink( ( uint )linkId );
+						}
 					}
+					
 				}
 
-				if(ImGui::IsKeyReleased(ImGuiKey_I)){
-					editor.addNode(new InputNode());
+				if(ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
+					ImGui::OpenPopup( "Create node" );
+					mouseRightClick = ImGui::GetMousePos();
 				}
-				if(ImGui::IsKeyReleased(ImGuiKey_O)){
-					editor.addNode(new OutputNode());
+
+				if( ImGui::BeginPopup( "Create node" ) )
+				{
+					createdNode = nullptr;
+					if( ImGui::Selectable( "Input" ) )
+					{
+						createdNode = new InputNode();
+					}
+					if(ImGui::Selectable( "Output" ))
+					{
+						createdNode = new OutputNode();
+					}
+					if( ImGui::Selectable( "Constant scalar" ) )
+					{
+						createdNode = new ConstantFloatNode();
+					}
+					if( ImGui::Selectable( "Constant color" ) )
+					{
+						createdNode = new ConstantRGBANode();
+					}
+					if( createdNode )
+					{
+						editor.addNode( createdNode );
+					}
+					ImGui::EndPopup();
 				}
+				
 				editor.commit();
 			}
 
