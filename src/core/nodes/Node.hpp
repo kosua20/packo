@@ -10,6 +10,8 @@ public:
 	const std::string& name() const { return _name; }
 	const std::vector<std::string>& inputNames() const { return _inputNames; }
 	const std::vector<std::string>& outputNames() const { return _outputNames; }
+	uint inputCount() const { return (uint)_inputNames.size(); }
+	uint outputCount() const { return (uint)_outputNames.size();}
 
 protected:
 
