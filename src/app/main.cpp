@@ -2,7 +2,8 @@
 #include "core/Settings.hpp"
 
 #include "core/Graph.hpp"
-#include "core/nodes/InOutNodes.hpp"
+#include "core/nodes/Nodes.hpp"
+#include "core/Evaluator.hpp"
 
 #include "core/system/Config.hpp"
 #include "core/system/System.hpp"
@@ -183,14 +184,19 @@ GLFWwindow* createWindow(int w, int h) {
 	return window;
 }
 
-const uint kMaxSlotCount = 16;
+const uint kMaxSlotCount = 8;
 
-uint fromSlotToLink(Graph::Slot slot){
-	return slot.node * kMaxSlotCount + slot.slot;
+uint fromInputSlotToLink(Graph::Slot slot){
+	return 2 * (slot.node * kMaxSlotCount + slot.slot);
+}
+
+uint fromOutputSlotToLink(Graph::Slot slot){
+	return 2 * (slot.node * kMaxSlotCount + slot.slot) + 1;
 }
 
 Graph::Slot fromLinkToSlot(uint link){
-	return {link / kMaxSlotCount, link % kMaxSlotCount};
+	uint baseLink = link / 2;
+	return {baseLink / kMaxSlotCount, (baseLink % kMaxSlotCount)};
 }
 
 int main(int argc, char** argv){
@@ -236,6 +242,7 @@ int main(int argc, char** argv){
 
 	Node* createdNode = nullptr;
 	ImVec2 mouseRightClick( 0.f, 0.f );
+	ErrorContext errorContext;
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -267,6 +274,7 @@ int main(int argc, char** argv){
 					if(ImGui::MenuItem("Execute graph...")){
 						// TODO: ask for inputs and output directory
 						// TODO: "compile" the graph, run it on images and save the result
+						evaluate(*graph, errorContext, {"img0.png", "img1.png"}, "out/");
 					}
 					ImGui::Separator();
 					if(ImGui::MenuItem("Quit")){
@@ -356,14 +364,14 @@ int main(int argc, char** argv){
 					ImNodes::EndNodeTitleBar();
 					uint attId = 0;
 					for(const std::string& name : node->inputNames()){
-						ImNodes::BeginInputAttribute(fromSlotToLink({nodeId, attId}));
+						ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
 						ImGui::Text("%s", name.c_str());
 						ImNodes::EndInputAttribute();
 						++attId;
 					}
 					attId = 0;
 					for(const std::string& name : node->outputNames()){
-						ImNodes::BeginOutputAttribute(fromSlotToLink({nodeId, attId}));
+						ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
 						ImGui::Text("%s", name.c_str());
 						ImNodes::EndOutputAttribute();
 						++attId;
@@ -377,7 +385,7 @@ int main(int argc, char** argv){
 				uint linkCount = graph->getLinkCount();
 				for(uint linkId = 0u; linkId < linkCount; ++linkId ){
 					const Graph::Link& link = graph->link( linkId );
-					ImNodes::Link(linkId, fromSlotToLink(link.from), fromSlotToLink(link.to));
+					ImNodes::Link(linkId, fromOutputSlotToLink(link.from), fromInputSlotToLink(link.to));
 				}
 
 				ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_BottomRight);
@@ -445,6 +453,9 @@ int main(int argc, char** argv){
 					if( ImGui::Selectable("Constant color") ){
 						createdNode = new ConstantRGBANode();
 					}
+					if( ImGui::Selectable("Add ") ){
+						createdNode = new AddNode();
+					}
 					if( createdNode ){
 						editor.addNode( createdNode );
 					}
@@ -455,8 +466,23 @@ int main(int argc, char** argv){
 			}
 
 
+
+
 		}
+		const float mainWindowHeight = ImGui::GetWindowHeight();
 		ImGui::End();
+
+		if(errorContext.hasErrors()){
+
+			ImGui::SetNextWindowPos(ImVec2(0, mainWindowHeight + menuBarHeight), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
+			if(ImGui::Begin("Error messages", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)){
+				const std::string errorMsg = errorContext.summarizeErrors();
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
+				ImGui::TextUnformatted(errorMsg.c_str());
+				ImGui::PopStyleColor();
+			}
+			ImGui::End();
+		}
 
 		// We *might* want to exit, ask the user for confirmation.
 		if(wantsExit){
