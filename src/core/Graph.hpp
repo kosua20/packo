@@ -28,8 +28,6 @@ public:
 
 	int findNode( const Node* node );
 
-	uint getNodeCount() const { return _nodes.size() - _freeListNodes.size();}
-
 	const Node* node(uint node) const { return _nodes[node]; }
 
 	uint getLinkCount() const { return _links.size(); }
@@ -83,11 +81,11 @@ private:
 
 struct GraphNodes {
 public:
-	GraphNodes(Graph& graph) : _graph(graph){}
+	GraphNodes(const Graph& graph) : _graph(graph){}
 
 	class iterator {
 	public:
-		explicit iterator(Graph& graph, uint index) : _graph(graph), _index(index) {
+		explicit iterator(const Graph& graph, uint index) : _graph(graph), _index(index) {
 			// Find the next valid index
 			while(_index < _graph._nodes.size() && _graph._nodes[_index] == nullptr){
 				++_index;
@@ -114,7 +112,7 @@ public:
 		using iterator_category = std::forward_iterator_tag;
 
 	private:
-		Graph& _graph;
+		const Graph& _graph;
 		uint _index{ 0 };
 	};
 
@@ -123,7 +121,7 @@ public:
 
 private:
 
-	Graph& _graph;
+	const Graph& _graph;
 
 };
 
