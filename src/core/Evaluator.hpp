@@ -13,7 +13,13 @@ public:
 	std::string summarizeErrors();
 
 	void clear();
+
+	bool contains( const Node* const node ) const;
 	
+	uint errorCount() const { return _errors.size(); }
+
+	void getError( uint i, const char*& message, const Node*& node, int& slot );
+
 private:
 
 	struct Error {
@@ -22,7 +28,6 @@ private:
 		const int slot;
 
 		Error(const std::string& _message, const Node* _node, int _slot) : message(_message), node(_node), slot(_slot){}
-
 	};
 
 	std::vector<Error> _errors;

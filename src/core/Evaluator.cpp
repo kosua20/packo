@@ -31,10 +31,30 @@ std::string ErrorContext::summarizeErrors(){
 	return _cachedSummary;
 }
 
+void ErrorContext::getError( uint i, const char*& message, const Node*& node, int& slot )
+{
+	assert( i < _errors.size() );
+	Error& error = _errors[ i ];
+	message = error.message.c_str();
+	node = error.node;
+	slot = error.slot;
+}
+
 void ErrorContext::clear(){
 	_errors.clear();
 	_dirtySummary = true;
 }
+
+bool ErrorContext::contains( const Node* const node ) const
+{
+	for( const Error& error : _errors )
+	{
+		if( error.node == node )
+			return true;
+	}
+	return false;
+}
+
 
 
 class WorkGraph {

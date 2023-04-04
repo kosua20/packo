@@ -216,6 +216,10 @@ int main(int argc, char** argv){
 	}
 
 	GLFWwindow* window = createWindow(830, 620);
+	const uint errorTitleBar			= IM_COL32( 190, 15, 15, 255 ); 
+	const uint errorTitleBarActive		= IM_COL32( 220, 15, 15, 255 ); 
+	const uint errorBackground			= IM_COL32( 50, 5, 5, 255 );
+	const uint errorBackgroundActive	= IM_COL32( 75, 5, 5, 255 );
 
 	if(!window){
 		Log::Error() << "Unable to create window." << std::endl;
@@ -343,6 +347,7 @@ int main(int argc, char** argv){
 			// Graph viewer.
 			{
 				ImNodes::BeginNodeEditor();
+				ImNodes::PushAttributeFlag( ImNodesAttributeFlags_EnableLinkDetachWithDragClick );
 
 				// First, immediately register the position for a newly created node if there is one.
 				{
@@ -357,11 +362,25 @@ int main(int argc, char** argv){
 
 				for(const uint nodeId : nodes){
 					const Node* node = graph->node(nodeId);
+					const bool nodeHasIssue = errorContext.contains( node );
+					if( nodeHasIssue )
+					{
+						ImNodes::PushColorStyle( ImNodesCol_TitleBar, errorTitleBar );
+						ImNodes::PushColorStyle( ImNodesCol_TitleBarHovered, errorTitleBarActive );
+						ImNodes::PushColorStyle( ImNodesCol_TitleBarSelected, errorTitleBarActive );
+						ImNodes::PushColorStyle( ImNodesCol_NodeBackground, errorBackground );
+						ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundHovered, errorBackgroundActive );
+						ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundSelected, errorBackgroundActive );
+					}
 
 					ImNodes::BeginNode(nodeId);
+
+					
 					ImNodes::BeginNodeTitleBar();
 					ImGui::TextUnformatted(node->name().c_str());
 					ImNodes::EndNodeTitleBar();
+					
+
 					uint attId = 0;
 					for(const std::string& name : node->inputNames()){
 						ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
@@ -380,6 +399,10 @@ int main(int argc, char** argv){
 					// or provide an "adapter" friend for each type of node to keep the node ImGui-less.
 
 					ImNodes::EndNode();
+					if( nodeHasIssue ) {
+						for(uint i = 0; i < 6; ++i )
+						ImNodes::PopColorStyle();
+					}
 				}
 
 				uint linkCount = graph->getLinkCount();
@@ -389,6 +412,7 @@ int main(int argc, char** argv){
 				}
 
 				ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_BottomRight);
+				ImNodes::PopAttributeFlag();
 				ImNodes::EndNodeEditor();
 			}
 
@@ -470,16 +494,38 @@ int main(int argc, char** argv){
 
 		}
 		const float mainWindowHeight = ImGui::GetWindowHeight();
+		const float mainWindowWidth = ImGui::GetWindowWidth();
 		ImGui::End();
 
 		if(errorContext.hasErrors()){
 
 			ImGui::SetNextWindowPos(ImVec2(0, mainWindowHeight + menuBarHeight), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
 			if(ImGui::Begin("Error messages", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)){
-				const std::string errorMsg = errorContext.summarizeErrors();
+				const uint errorCount = errorContext.errorCount();
+				ImGui::Text( "Graph validation: %u errors", errorCount );
+
+				for( uint i = 0; i < errorCount; ++i )
+				{
+					const char* msg;
+					const Node* node;
+					int slot;
+					errorContext.getError( i, msg, node, slot );
+					if( ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns ) )
+					{
+						uint nodeId = graph->findNode( node );
+						ImNodes::EditorContextMoveToNode( nodeId );
+						ImVec2 pan = ImNodes::EditorContextGetPanning();
+						pan.x += 0.5f * mainWindowWidth;
+						pan.y += 0.5f * mainWindowHeight;
+						ImNodes::EditorContextResetPanning( pan );
+					}
+					ImGui::SameLine();
+					ImGui::Text( msg );
+				}
+				/*const std::string errorMsg = errorContext.summarizeErrors();
 				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
 				ImGui::TextUnformatted(errorMsg.c_str());
-				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();*/
 			}
 			ImGui::End();
 		}
