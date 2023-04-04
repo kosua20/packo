@@ -274,7 +274,10 @@ int main(int argc, char** argv){
 			if(ImGui::BeginMainMenuBar()){
 
 				if(ImGui::BeginMenu("File")){
-
+					if(ImGui::MenuItem("Validate graph...", "Ctrl/Cmd+R")){
+						validate(*graph, errorContext);
+					}
+					
 					if(ImGui::MenuItem("Execute graph...")){
 						// TODO: ask for inputs and output directory
 						// TODO: "compile" the graph, run it on images and save the result
@@ -347,7 +350,8 @@ int main(int argc, char** argv){
 			// Graph viewer.
 			{
 				ImNodes::BeginNodeEditor();
-				ImNodes::PushAttributeFlag( ImNodesAttributeFlags_EnableLinkDetachWithDragClick );
+				// Allowing unplugging of links conflicts with multiple outputs
+				ImNodes::PushAttributeFlag( 0 /*ImNodesAttributeFlags_EnableLinkDetachWithDragClick*/ );
 
 				// First, immediately register the position for a newly created node if there is one.
 				{
@@ -502,30 +506,53 @@ int main(int argc, char** argv){
 			ImGui::SetNextWindowPos(ImVec2(0, mainWindowHeight + menuBarHeight), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
 			if(ImGui::Begin("Error messages", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)){
 				const uint errorCount = errorContext.errorCount();
-				ImGui::Text( "Graph validation: %u errors", errorCount );
 
-				for( uint i = 0; i < errorCount; ++i )
-				{
-					const char* msg;
-					const Node* node;
-					int slot;
-					errorContext.getError( i, msg, node, slot );
-					if( ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns ) )
-					{
-						uint nodeId = graph->findNode( node );
-						ImNodes::EditorContextMoveToNode( nodeId );
-						ImVec2 pan = ImNodes::EditorContextGetPanning();
-						pan.x += 0.5f * mainWindowWidth;
-						pan.y += 0.5f * mainWindowHeight;
-						ImNodes::EditorContextResetPanning( pan );
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+				ImGui::Text( "Graph validation: %u errors", errorCount );
+				ImGui::PopStyleColor();
+
+				if(ImGui::BeginTable("##Errors", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg, ImVec2(400,0))){
+					ImGui::TableSetupColumn("Node");
+					ImGui::TableSetupColumn("Slot");
+					ImGui::TableSetupColumn("Message");
+					ImGui::TableHeadersRow();
+					for( uint i = 0; i < errorCount; ++i ){
+
+						const char* msg;
+						const Node* node;
+						int slot;
+						errorContext.getError( i, msg, node, slot );
+
+						ImGui::TableNextColumn();
+						if(node){
+							if( ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns ) )
+							{
+								uint nodeId = graph->findNode( node );
+								ImNodes::EditorContextMoveToNode( nodeId );
+								ImVec2 pan = ImNodes::EditorContextGetPanning();
+								ImVec2 size = ImNodes::GetNodeDimensions(nodeId);
+								pan.x += 0.5f * (mainWindowWidth - size.x);
+								pan.y += 0.5f * (mainWindowHeight - size.y);
+								ImNodes::EditorContextResetPanning( pan );
+							}
+						}
+
+						ImGui::TableNextColumn();
+						if(slot >= 0){
+							if(node && ((uint)slot < node->inputCount())){
+								ImGui::TextUnformatted(node->inputNames()[slot].c_str());
+							} else {
+								ImGui::Text("%d", slot + 1);
+							}
+
+						}
+						ImGui::TableNextColumn();
+						ImGui::TextUnformatted( msg );
+
 					}
-					ImGui::SameLine();
-					ImGui::Text( msg );
+
+					ImGui::EndTable();
 				}
-				/*const std::string errorMsg = errorContext.summarizeErrors();
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
-				ImGui::TextUnformatted(errorMsg.c_str());
-				ImGui::PopStyleColor();*/
 			}
 			ImGui::End();
 		}

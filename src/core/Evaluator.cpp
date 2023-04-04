@@ -132,21 +132,32 @@ public:
 	}
 
 	bool validateInputs(){
-		bool missing = false;
+		bool incompleteNodes = false;
 		// Check that all nodes have their inputs filled.
 		for(uint nid = 0; nid < nodes.size();){
 			const Vertex* node = nodes[nid];
-			if(node->slots.size() != node->node->inputCount()){
+			const uint tgtSlotCount = node->node->inputCount();
+			const auto& usedSlots = node->slots;
+			bool missingSlot = false;
+			for(uint sid = 0; sid < tgtSlotCount; ++sid){
+				// Check if the slot is in use.
+				if(std::find(usedSlots.begin(), usedSlots.end(), sid) != usedSlots.end()){
+					continue;
+				}
+				context.addError("Missing input", node->node, sid);
+				missingSlot = true;
+			}
+			// If one slot is missing, remove the node from the graph.
+			if(missingSlot){
 				// Missing input
 				nodes[nid] = nodes.back();
 				nodes.resize(nodes.size()-1);
-				context.addError("Missing inputs", node->node);
-				missing = true;
+				incompleteNodes = true;
 				continue;
 			}
 			++nid;
 		}
-		return !missing;
+		return !incompleteNodes;
 	}
 
 	bool hasCycle(const Vertex* node, std::vector<const Vertex*>& visited){
@@ -191,20 +202,36 @@ private:
 
 };
 
-
-bool evaluate(const Graph& _editGraph, ErrorContext& _errors, const std::vector<std::string>& inputPaths, const std::string& outputDir ){
-
-	_errors.clear();
-
-	// Validate the graph.
-	WorkGraph graph(_editGraph, _errors);
+bool validate(WorkGraph& graph){
+	bool success = true;
 
 	if(!graph.validateInputs()){
-		return false;
+		success = false;
 	}
 	if(!graph.validateCycles()){
-		return false;
+		success = false;
 	}
+	return success;
+}
+
+bool validate(const Graph& editGraph, ErrorContext& errors ){
+
+	errors.clear();
+
+	WorkGraph graph(editGraph, errors);
+
+	return validate(graph);
+}
+
+
+bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir ){
+
+	errors.clear();
+
+	// Validate the graph.
+	WorkGraph graph(editGraph, errors);
+
+	validate(graph);
 	// Split the graph and order nodes to evaluate them.
 	// For each node list all the flushing parent nodes, then greedily cluster them
 	// Assign registers to each node
