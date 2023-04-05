@@ -44,6 +44,37 @@ unsigned int packedOpaqueColorFromVec4( const ImVec4& _col )
 	return IM_COL32( r, g, b, 255 );
 }
 
+void autoLayout( const Graph& graph )
+{
+	// Nodes need to be valid.
+	uint nodeCount = 0u;
+	GraphNodes nodes(graph);
+	ImVec2 maxNodeSize( 100.f, 170.f );
+	for( uint node : nodes )
+	{
+		const ImVec2 nodeSize = ImNodes::GetNodeDimensions( node );
+		maxNodeSize.x = ( std::max )( nodeSize.x, maxNodeSize.x );
+		maxNodeSize.y = ( std::max )( nodeSize.y, maxNodeSize.y );
+		++nodeCount;
+	}
+	// Add padding 
+	maxNodeSize.x *= 1.1f;
+	maxNodeSize.y *= 1.1f;
+
+	const uint gridSize = uint( std::ceil( std::sqrt( ( float )nodeCount ) ) );
+
+	GraphNodes nodes2( graph );
+	uint id = 0;
+	for( uint node : nodes2 )
+	{
+		ImVec2 pos( ( float )( id % gridSize ), ( float )( id / gridSize ) );
+		pos.x *= maxNodeSize.x;
+		pos.y *= maxNodeSize.y;
+		ImNodes::SetNodeGridSpacePos( node, pos );
+		++id;
+	}
+}
+
 GLFWwindow* createWindow(int w, int h) {
 
 	// Initialize glfw, which will create and setup an OpenGL context.
@@ -113,7 +144,9 @@ GLFWwindow* createWindow(int w, int h) {
 	style.FrameRounding = 12;
 	style.GrabRounding = 12;
 	style.PopupBorderSize = 0;
-	style.PopupRounding = 6;
+	style.PopupRounding = 12;
+	style.WindowRounding = 12;
+	
 
 	ImVec4* colors = style.Colors;
 	colors[ ImGuiCol_FrameBg ] = ImVec4( 0.58f, 0.58f, 0.58f, 0.54f );
@@ -248,6 +281,9 @@ int main(int argc, char** argv){
 	ImVec2 mouseRightClick( 0.f, 0.f );
 	ErrorContext errorContext;
 
+	bool needAutoLayout = true;
+	
+
 	while(!glfwWindowShouldClose(window)) {
 
 		glfwWaitEventsTimeout(0.1);
@@ -296,6 +332,7 @@ int main(int argc, char** argv){
 						// TODO: ask for file
 						// TODO: deserialize and replace current graph
 						// TODO: auto layout
+						
 					}
 
 					if(ImGui::MenuItem("Save...")){
@@ -309,12 +346,26 @@ int main(int argc, char** argv){
 						{
 							GraphEditor editor(*graph);
 							editor.addNode(new InputNode());
-							editor.addNode(new OutputNode());
-							for(uint i = 0; i < 4; ++i){
-								editor.addLink(0, i, 1, i);
-							}
+							editor.addNode( new OutputNode() ); // 1
+							editor.addNode( new OutputNode() ); // 2
+							editor.addNode( new AddNode() ); // 3
+							editor.addNode( new AddNode() ); // 4
+
+							editor.addLink( 0, 0, 3, 1 );
+							editor.addLink( 0, 1, 1, 1 );
+							editor.addLink( 0, 1, 2, 0 );
+
+							editor.addLink( 0, 2, 4, 0 );
+							editor.addLink( 0, 3, 1, 3 );
+							editor.addLink( 0, 3, 2, 2 );
+
+							editor.addLink( 3, 0, 4, 1 );
+							editor.addLink( 4, 0, 1, 0 );
+							editor.addLink( 4, 0, 3, 0 );
+
+
 							editor.commit();
-							// TODO: auto layout.
+							needAutoLayout = true;
 						}
 					}
 					ImGui::EndMenu();
@@ -418,6 +469,12 @@ int main(int argc, char** argv){
 				ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_BottomRight);
 				ImNodes::PopAttributeFlag();
 				ImNodes::EndNodeEditor();
+
+				if( needAutoLayout )
+				{
+					autoLayout( *graph );
+					needAutoLayout = false;
+				}
 			}
 
 			// Graph edition.
@@ -492,9 +549,6 @@ int main(int argc, char** argv){
 				
 				editor.commit();
 			}
-
-
-
 
 		}
 		const float mainWindowHeight = ImGui::GetWindowHeight();
