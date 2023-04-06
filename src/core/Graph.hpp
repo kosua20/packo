@@ -28,7 +28,9 @@ public:
 
 	int findNode( const Node* node );
 
-	const Node* node(uint node) const { return _nodes[node]; }
+	const Node* node( uint node ) const { return _nodes[ node ]; }
+
+	Node* node(uint node) { return _nodes[node]; }
 
 	uint getLinkCount() const { return _links.size(); }
 

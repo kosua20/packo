@@ -220,15 +220,20 @@ GLFWwindow* createWindow(int w, int h) {
 const uint kMaxSlotCount = 8;
 
 uint fromInputSlotToLink(Graph::Slot slot){
-	return 2 * (slot.node * kMaxSlotCount + slot.slot);
+	return 3 * (slot.node * kMaxSlotCount + slot.slot);
 }
 
 uint fromOutputSlotToLink(Graph::Slot slot){
-	return 2 * (slot.node * kMaxSlotCount + slot.slot) + 1;
+	return 3 * (slot.node * kMaxSlotCount + slot.slot) + 1;
+}
+
+uint fromAttributeToLink( Graph::Slot slot )
+{
+	return 3 * ( slot.node * kMaxSlotCount + slot.slot ) + 2;
 }
 
 Graph::Slot fromLinkToSlot(uint link){
-	uint baseLink = link / 2;
+	uint baseLink = link / 3;
 	return {baseLink / kMaxSlotCount, (baseLink % kMaxSlotCount)};
 }
 
@@ -416,7 +421,7 @@ int main(int argc, char** argv){
 				GraphNodes nodes(*graph);
 
 				for(const uint nodeId : nodes){
-					const Node* node = graph->node(nodeId);
+					 Node* node = graph->node(nodeId);
 					const bool nodeHasIssue = errorContext.contains( node );
 					if( nodeHasIssue )
 					{
@@ -443,6 +448,30 @@ int main(int argc, char** argv){
 						ImNodes::EndInputAttribute();
 						++attId;
 					}
+
+					ImGui::PushItemWidth( 130 );
+					for( Node::Attribute& attribute : node->attributes() )
+					{
+						ImNodes::BeginStaticAttribute( fromAttributeToLink( { nodeId, attId } ) );
+						switch( attribute.type )
+						{
+							case Node::Attribute::Type::FLOAT:
+								ImGui::InputFloat( attribute.name.c_str(), &attribute.flt );
+								break;
+							case Node::Attribute::Type::COLOR:
+								ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0] );
+							break; 
+							case Node::Attribute::Type::STRING:
+								ImGui::InputText( attribute.name.c_str(), &attribute.str[0], 256 );
+								break;
+							default:
+								assert( false );
+								break;
+						}
+						ImNodes::EndStaticAttribute(  );
+					}
+					ImGui::PopItemWidth();
+
 					attId = 0;
 					for(const std::string& name : node->outputNames()){
 						ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
