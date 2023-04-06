@@ -272,13 +272,24 @@ int main(int argc, char** argv){
 
 	{
 		GraphEditor editor(*graph);
-		editor.addNode(new ConstantRGBANode());
-		editor.addNode(new ConstantFloatNode());
 		editor.addNode(new InputNode());
-		editor.addNode(new OutputNode());
-		editor.addNode(new InputNode());
-		editor.addNode(new InputNode());
-		editor.addNode(new InputNode());
+		editor.addNode( new OutputNode() ); // 1
+		editor.addNode( new OutputNode() ); // 2
+		editor.addNode( new AddNode() ); // 3
+		editor.addNode( new AddNode() ); // 4
+
+		editor.addLink( 0, 0, 3, 1 );
+		editor.addLink( 0, 1, 1, 1 );
+		editor.addLink( 0, 1, 2, 0 );
+
+		editor.addLink( 0, 2, 4, 0 );
+		editor.addLink( 0, 3, 1, 3 );
+		editor.addLink( 0, 3, 2, 2 );
+
+		editor.addLink( 3, 0, 4, 1 );
+		editor.addLink( 4, 0, 1, 0 );
+		editor.addLink( 4, 0, 3, 0 );
+
 		editor.commit();
 	}
 
@@ -348,30 +359,15 @@ int main(int argc, char** argv){
 					ImGui::Separator();
 					if(ImGui::MenuItem("Reset...")){
 						graph.reset(new Graph());
-						{
-							GraphEditor editor(*graph);
-							editor.addNode(new InputNode());
-							editor.addNode( new OutputNode() ); // 1
-							editor.addNode( new OutputNode() ); // 2
-							editor.addNode( new AddNode() ); // 3
-							editor.addNode( new AddNode() ); // 4
 
-							editor.addLink( 0, 0, 3, 1 );
-							editor.addLink( 0, 1, 1, 1 );
-							editor.addLink( 0, 1, 2, 0 );
+						GraphEditor editor(*graph);
+						editor.addNode(new InputNode());
+						editor.addNode( new OutputNode() );
+						for(uint i = 0; i < 4; ++i)
+							editor.addLink( 0, i, 1, i );
+						editor.commit();
 
-							editor.addLink( 0, 2, 4, 0 );
-							editor.addLink( 0, 3, 1, 3 );
-							editor.addLink( 0, 3, 2, 2 );
-
-							editor.addLink( 3, 0, 4, 1 );
-							editor.addLink( 4, 0, 1, 0 );
-							editor.addLink( 4, 0, 3, 0 );
-
-
-							editor.commit();
-							needAutoLayout = true;
-						}
+						needAutoLayout = true;
 					}
 					ImGui::EndMenu();
 				}
@@ -435,50 +431,70 @@ int main(int argc, char** argv){
 
 					ImNodes::BeginNode(nodeId);
 
-					
 					ImNodes::BeginNodeTitleBar();
 					ImGui::TextUnformatted(node->name().c_str());
 					ImNodes::EndNodeTitleBar();
-					
 
-					uint attId = 0;
-					for(const std::string& name : node->inputNames()){
-						ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
-						ImGui::Text("%s", name.c_str());
-						ImNodes::EndInputAttribute();
-						++attId;
-					}
+					const std::vector<std::string>& inputs = node->inputNames();
+					const std::vector<std::string>& outputs = node->outputNames();
+					std::vector<Node::Attribute>& attributes = node->attributes();
 
-					ImGui::PushItemWidth( 130 );
-					for( Node::Attribute& attribute : node->attributes() )
-					{
-						ImNodes::BeginStaticAttribute( fromAttributeToLink( { nodeId, attId } ) );
-						switch( attribute.type )
-						{
-							case Node::Attribute::Type::FLOAT:
-								ImGui::InputFloat( attribute.name.c_str(), &attribute.flt );
-								break;
-							case Node::Attribute::Type::COLOR:
-								ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0] );
-							break; 
-							case Node::Attribute::Type::STRING:
-								ImGui::InputText( attribute.name.c_str(), &attribute.str[0], 256 );
-								break;
-							default:
-								assert( false );
-								break;
+					const uint inputCount = inputs.size();
+					const uint outputCount = outputs.size();
+					const uint attributeCount = attributes.size();
+					const uint maxCount = std::max(attributeCount, std::max(inputCount, outputCount));
+
+					// TODO: estimate node width?
+					for(uint attId = 0; attId < maxCount; ++attId ){
+						bool predecessor = false;
+						if(attId < inputCount){
+							const std::string& name = inputs[attId];
+							ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
+							ImGui::TextUnformatted(name.c_str());
+							ImNodes::EndInputAttribute();
+							predecessor = true;
 						}
-						ImNodes::EndStaticAttribute(  );
-					}
-					ImGui::PopItemWidth();
+						if(attId < attributeCount){
+							if(predecessor){
+								ImGui::SameLine();
+							}
+							ImGui::PushItemWidth(120);
+							Node::Attribute& attribute = attributes[attId];
+							switch( attribute.type )
+							{
+								case Node::Attribute::Type::FLOAT:
+									ImGui::InputFloat( attribute.name.c_str(), &attribute.flt );
+									break;
+								case Node::Attribute::Type::COLOR:
+									ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0] );
+								break;
+								case Node::Attribute::Type::STRING:
+									ImGui::InputText( attribute.name.c_str(), &attribute.str[0], 256 );
+									break;
+								default:
+									assert( false );
+									break;
+							}
+							ImGui::PopItemWidth();
+							predecessor = true;
+						}
+						if(attId < outputCount){
+							if(predecessor){
+								ImGui::SameLine();
+							}
+							const std::string& name = outputs[attId];
+							const float labelWidth = ImGui::CalcTextSize(name.c_str()).x;
 
-					attId = 0;
-					for(const std::string& name : node->outputNames()){
-						ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
-						ImGui::Text("%s", name.c_str());
-						ImNodes::EndOutputAttribute();
-						++attId;
+							ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
+							ImGui::Indent(-labelWidth);
+							ImGui::TextUnformatted(name.c_str());
+							ImGui::Indent(0);
+							ImNodes::EndOutputAttribute();
+
+						}
+
 					}
+
 					// TODO: attributes of various types. Either introduce a type system (float, color, str, enum+enumstrings)
 					// or provide an "adapter" friend for each type of node to keep the node ImGui-less.
 
