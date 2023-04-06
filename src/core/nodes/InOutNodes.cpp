@@ -3,11 +3,13 @@
 ConstantFloatNode::ConstantFloatNode(){
 	_name = "Constant";
 	_outputNames = {"Value"};
+	_attributes = { {"X", Attribute::Type::FLOAT} };
 }
 
 ConstantRGBANode::ConstantRGBANode(){
 	_name = "Constant";
-	_outputNames = {"R", "G", "B", "A"};
+	_outputNames = { "R", "G", "B", "A" };
+	_attributes = { {"Val", Attribute::Type::COLOR} };
 }
 
 FreeList InputNode::_freeList;
@@ -27,7 +29,8 @@ FreeList OutputNode::_freeList;
 OutputNode::OutputNode() {
 	_index = _freeList.getIndex();
 	_name = "Output " + std::to_string(_index);
-	_inputNames = {"R", "G", "B", "A"};
+	_inputNames = { "R", "G", "B", "A" };
+	_attributes = { {"Prefix", Attribute::Type::STRING}, {"Suffix", Attribute::Type::STRING} };
 }
 
 OutputNode::~OutputNode(){
