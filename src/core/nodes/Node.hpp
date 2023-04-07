@@ -1,6 +1,8 @@
 #pragma once
 #include "core/Common.hpp"
 
+constexpr unsigned int MAX_STR_LENGTH = 256;
+
 class Node {
 public:
 
@@ -15,7 +17,7 @@ public:
 		Type type;
 		union
 		{
-			char str[256]; // TODO: char buffer instead?
+			char str[ MAX_STR_LENGTH ]; // TODO: char buffer instead?
 			glm::vec4 clr;
 			float flt;
 		};

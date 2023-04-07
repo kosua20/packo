@@ -444,21 +444,38 @@ int main(int argc, char** argv){
 					const uint attributeCount = attributes.size();
 					const uint maxCount = std::max(attributeCount, std::max(inputCount, outputCount));
 
+					// First, estimate the size of the node.
+					const uint slotWidth = 30u;
+					const uint attribWidth = 130u;
+
 					// TODO: estimate node width?
+					const uint nodeWidth = inputCount > 0u ? slotWidth : 0u + attributeCount > 0u ? 130u : 0 + outputCount > 0u ? slotWidth : 0u;
+					
 					for(uint attId = 0; attId < maxCount; ++attId ){
-						bool predecessor = false;
-						if(attId < inputCount){
+						bool hasInput = attId < inputCount;
+						bool hasAttrib = attId < attributeCount;
+						
+						if( hasInput ){
 							const std::string& name = inputs[attId];
 							ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
+							ImGui::PushItemWidth( slotWidth );
 							ImGui::TextUnformatted(name.c_str());
+							ImGui::PopItemWidth();
 							ImNodes::EndInputAttribute();
-							predecessor = true;
 						}
-						if(attId < attributeCount){
-							if(predecessor){
-								ImGui::SameLine();
+
+						if( hasAttrib ){
+							bool deindent = false;
+							if( hasInput){
+								ImGui::SameLine(  );
 							}
-							ImGui::PushItemWidth(120);
+							else
+							{
+								ImGui::Indent( slotWidth );
+								deindent = true;
+							}
+							ImGui::PushItemWidth(attribWidth);
+
 							Node::Attribute& attribute = attributes[attId];
 							switch( attribute.type )
 							{
@@ -469,28 +486,41 @@ int main(int argc, char** argv){
 									ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0] );
 								break;
 								case Node::Attribute::Type::STRING:
-									ImGui::InputText( attribute.name.c_str(), &attribute.str[0], 256 );
+									ImGui::InputText( attribute.name.c_str(), &attribute.str[0], MAX_STR_LENGTH );
 									break;
 								default:
 									assert( false );
 									break;
 							}
 							ImGui::PopItemWidth();
-							predecessor = true;
+							if( deindent )
+							{
+								ImGui::Unindent( slotWidth );
+							}
 						}
 						if(attId < outputCount){
-							if(predecessor){
+
+							const std::string& name = outputs[ attId ];
+							//const float labelWidth = ImGui::CalcTextSize( name.c_str() ).x;
+							bool deindent = false;
+							if(hasInput || hasAttrib ){
 								ImGui::SameLine();
 							}
-							const std::string& name = outputs[attId];
-							const float labelWidth = ImGui::CalcTextSize(name.c_str()).x;
-
+							else
+							{
+								ImGui::Indent( slotWidth + attribWidth );
+								deindent = true;
+							}
 							ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
-							ImGui::Indent(-labelWidth);
+							ImGui::PushItemWidth( slotWidth );
 							ImGui::TextUnformatted(name.c_str());
-							ImGui::Indent(0);
-							ImNodes::EndOutputAttribute();
+							ImGui::PopItemWidth();
 
+							ImNodes::EndOutputAttribute();
+							if( deindent )
+							{
+								ImGui::Unindent( slotWidth + attribWidth );
+							}
 						}
 
 					}
