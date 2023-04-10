@@ -18,6 +18,8 @@
 #include <imgui/imgui_impl_opengl3.h>
 #include <imnodes/imnodes.h>
 
+#include <json/json.hpp>
+
 #include "fonts/font_data_Lato.h"
 
 #include <unordered_map>
@@ -345,15 +347,51 @@ int main(int argc, char** argv){
 				if(ImGui::BeginMenu("Graph")){
 
 					if(ImGui::MenuItem("Open...")){
-						// TODO: ask for file
-						// TODO: deserialize and replace current graph
-						// TODO: auto layout
-						
+						int count = 0;
+						char** paths = nullptr;
+						if(sr_gui_ask_load_files("Load graph", "", "packgraph", &paths, &count) == SR_GUI_VALIDATED){
+							if(count != 0){
+								const std::string path(paths[0]);
+								std::ifstream file(path);
+								if(file.is_open()){
+									json data = json::parse(file, nullptr, false);
+									if(data.is_discarded()){
+										errorContext.addError("Unable to parse graph from file at path \"" + path + "\"");
+									} else {
+										// Remove the current graph.
+										graph.reset(new Graph());
+										graph->deserialize(data);
+										if(data.contains("layout")){
+											std::string state = data["layout"];
+											ImNodes::LoadCurrentEditorStateFromIniString(state.c_str(), state.size());
+										}
+									}
+									file.close();
+								} else {
+									errorContext.addError("Unable to load graph from file at path \"" + path + "\"");
+								}
+							}
+						}
 					}
 
-					if(ImGui::MenuItem("Save...")){
-						// TODO: ask for file
-						// TODO: serialize current graph
+					if(ImGui::MenuItem("Save...", nullptr, false, graph != nullptr)){
+						char* rawPath = nullptr;
+						if(sr_gui_ask_save_file("Save graph", "", "packgraph", &rawPath) == SR_GUI_VALIDATED){
+							json data;
+							// Graph is guaranteed to exist.
+							graph->serialize(data);
+							std::string state = ImNodes::SaveCurrentEditorStateToIniString();
+							data["layout"] = state;
+
+							std::string path(rawPath);
+							std::ofstream file(path);
+							if(file.is_open()){
+								file << std::setw(4) << data << "\n";
+								file.close();
+							} else {
+								errorContext.addError("Unable to create file at path \"" + path + "\"");
+							}
+						}
 					}
 
 					ImGui::Separator();
