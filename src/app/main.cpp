@@ -328,14 +328,31 @@ int main(int argc, char** argv){
 			if(ImGui::BeginMainMenuBar()){
 
 				if(ImGui::BeginMenu("File")){
-					if(ImGui::MenuItem("Validate graph...", "Ctrl/Cmd+R")){
+					if(ImGui::MenuItem("Validate graph...")){
 						validate(*graph, errorContext);
 					}
 					
 					if(ImGui::MenuItem("Execute graph...")){
-						// TODO: ask for inputs and output directory
-						// TODO: "compile" the graph, run it on images and save the result
-						evaluate(*graph, errorContext, {"img0.png", "img1.png"}, "out/");
+						char** inputFiles = nullptr;
+						int inputCount = 0;
+						char* outputDir = nullptr;
+						if(sr_gui_ask_load_files("Input directory", "", "", &inputFiles, &inputCount) == SR_GUI_VALIDATED){
+							if(sr_gui_ask_directory("Output directory", "", &outputDir) == SR_GUI_VALIDATED){
+								if(inputCount > 0 && inputFiles != nullptr && outputDir != nullptr){
+									std::vector<std::string> inputs;
+									for(uint i = 0u; i < uint(inputCount); ++i){
+										inputs.emplace_back(inputFiles[i]);
+									}
+									std::string output(outputDir);
+
+									evaluate(*graph, errorContext, inputs, output);
+								}
+							}
+						}
+					}
+
+					if(ImGui::MenuItem("Debug graph...")){
+						evaluate(*graph, errorContext, {"in/0.png", "in/1.png"}, "out/");
 					}
 					ImGui::Separator();
 					if(ImGui::MenuItem("Quit")){
@@ -358,13 +375,19 @@ int main(int argc, char** argv){
 									if(data.is_discarded()){
 										errorContext.addError("Unable to parse graph from file at path \"" + path + "\"");
 									} else {
-										// Remove the current graph.
-										graph.reset(new Graph());
-										graph->deserialize(data);
-										if(data.contains("layout")){
-											std::string state = data["layout"];
-											ImNodes::LoadCurrentEditorStateFromIniString(state.c_str(), state.size());
+										std::unique_ptr<Graph> newGraph(new Graph());
+										if(newGraph->deserialize(data)){
+											// Remove the current graph.
+											graph.reset(nullptr);
+											graph = std::move(newGraph);
+											if(data.contains("layout")){
+												std::string state = data["layout"];
+												ImNodes::LoadCurrentEditorStateFromIniString(state.c_str(), state.size());
+											}
+										} else {
+											errorContext.addError("Unable to deserialize graph from file at path \"" + path + "\"");
 										}
+
 									}
 									file.close();
 								} else {
@@ -654,6 +677,7 @@ int main(int argc, char** argv){
 					ImGui::TableHeadersRow();
 					for( uint i = 0; i < errorCount; ++i ){
 
+						ImGui::PushID(i);
 						const char* msg;
 						const Node* node;
 						int slot;
@@ -680,10 +704,10 @@ int main(int argc, char** argv){
 							} else {
 								ImGui::Text("%d", slot + 1);
 							}
-
 						}
 						ImGui::TableNextColumn();
 						ImGui::TextUnformatted( msg );
+						ImGui::PopID();
 
 					}
 
