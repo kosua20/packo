@@ -50,6 +50,8 @@ public:
 
 	uint version() const override;
 
+	std::string generateFileName(uint batch) const;
+
 private:
 	unsigned int _index{0u};
 	static FreeList _freeList;

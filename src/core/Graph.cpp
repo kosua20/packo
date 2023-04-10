@@ -41,7 +41,7 @@ void Graph::addLink(const Link& link){
 	_links.push_back(link);
 }
 
-bool Graph::serialize(json& data){
+void Graph::serialize(json& data){
 	data["nodes"] = {};
 	data["links"] = {};
 	for(const Node* node : _nodes){
@@ -57,7 +57,6 @@ bool Graph::serialize(json& data){
 		linkData["to"]["node"] = link.to.node;
 		linkData["to"]["slot"] = link.to.slot;
 	}
-	return true;
 }
 
 bool Graph::deserialize(const json& data){

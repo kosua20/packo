@@ -69,3 +69,14 @@ uint OutputNode::type() const {
 uint OutputNode::version() const{
 	return 1;
 }
+
+std::string OutputNode::generateFileName(uint batch) const {
+	const std::string prefix(_attributes[0].str);
+	const std::string suffix(_attributes[1].str);
+	// Special case if no suffix or prefix
+	if(prefix.empty() && suffix.empty()){
+		return std::to_string(batch) + "_" + std::to_string(_index);
+	}
+	// Else don't introduce the output index.
+	return prefix + "_" + std::to_string(batch) + "_" + suffix;
+}

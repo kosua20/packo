@@ -36,7 +36,7 @@ public:
 
 	const Link& link(uint link) const { return _links[link]; }
 
-	bool serialize(json& data);
+	void serialize(json& data);
 	bool deserialize(const json& data);
 
 private:

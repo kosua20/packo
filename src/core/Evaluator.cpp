@@ -2,6 +2,7 @@
 #include "core/Graph.hpp"
 #include "core/nodes/Nodes.hpp"
 
+#include <unordered_map>
 #include <sstream>
 
 void ErrorContext::addError(const std::string& message, const Node* node, int slot){
@@ -88,15 +89,15 @@ public:
 		Vertex(const Node* _node) : node(_node){}
 	};
 
-	WorkGraph(const Graph& graph, ErrorContext& errorContext) : context(errorContext){
+	WorkGraph(const Graph& graph, ErrorContext& errorContext) : _context(errorContext){
 
 		GraphNodes nodesIt(graph);
 		// Allocate nodes.
 		for(uint node : nodesIt){
-			nodesPool.emplace_back(graph.node(node));
+			_nodesPool.emplace_back(graph.node(node));
 		}
 		// Insert working nodes.
-		for(Vertex& node : nodesPool){
+		for(Vertex& node : _nodesPool){
 			nodes.push_back(&node);
 		}
 
@@ -144,16 +145,12 @@ public:
 				if(std::find(usedSlots.begin(), usedSlots.end(), sid) != usedSlots.end()){
 					continue;
 				}
-				context.addError("Missing input", node->node, sid);
+				_context.addError("Missing input", node->node, sid);
 				missingSlot = true;
 			}
 			// If one slot is missing, remove the node from the graph.
 			if(missingSlot){
-				// Missing input
-				nodes[nid] = nodes.back();
-				nodes.resize(nodes.size()-1);
 				incompleteNodes = true;
-				continue;
 			}
 			++nid;
 		}
@@ -163,7 +160,7 @@ public:
 	bool hasCycle(const Vertex* node, std::vector<const Vertex*>& visited){
 		// Have we already visited the node.
 		if(std::find(visited.begin(), visited.end(), node) != visited.end()){
-			context.addError("Cycle detected", node->node);
+			_context.addError("Cycle detected", node->node);
 			return true;
 		}
 		visited.push_back(node);
@@ -192,13 +189,52 @@ public:
 		return !rootHasCycle;
 	}
 
+	bool validateOutputNames(){
+		bool duplicated = false;
+		std::unordered_map<std::string, const OutputNode*> outputNames;
+		for(const Vertex* node : nodes){
+			if(node->node->type() != NodeClass::OUTPUT){
+				continue;
+			}
+			// Generate the filename
+			const OutputNode* outNode = static_cast<const OutputNode*>(node->node);
+			const std::string filename = outNode->generateFileName(0);
+			auto other = outputNames.find(filename);
+			if(other != outputNames.end()){
+				duplicated = true;
+				_context.addError("Colliding output name with " + (*other).second->name(), outNode);
+			} else {
+				outputNames[filename] = outNode;
+			}
+		}
+
+		return !duplicated;
+	}
+
+	void collectInputsAndOutputs(std::vector<Vertex*>& inputs, std::vector<Vertex*>& outputs){
+		for(Vertex* node : nodes){
+			if(node->node->type() == NodeClass::INPUT){
+				inputs.push_back(node);
+			}
+			if(node->node->type() == NodeClass::OUTPUT){
+				outputs.push_back(node);
+			}
+		}
+		auto sortByName = [](const Vertex* a, const Vertex* b){
+			return a->node->name() < b->node->name();
+		};
+
+		std::sort(inputs.begin(), inputs.end(), sortByName);
+		std::sort(outputs.begin(), outputs.end(), sortByName);
+	}
+
 	std::vector<Vertex*> nodes;
 
 private:
 
-	ErrorContext& context;
+	ErrorContext& _context;
 
-	std::vector<Vertex> nodesPool;
+	std::vector<Vertex> _nodesPool;
 
 };
 
@@ -209,6 +245,9 @@ bool validate(WorkGraph& graph){
 		success = false;
 	}
 	if(!graph.validateCycles()){
+		success = false;
+	}
+	if(!graph.validateOutputNames()){
 		success = false;
 	}
 	return success;
@@ -232,11 +271,61 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	WorkGraph graph(editGraph, errors);
 
 	validate(graph);
+
 	// Split the graph and order nodes to evaluate them.
+
 	// For each node list all the flushing parent nodes, then greedily cluster them
 	// Assign registers to each node
 
+	// Create batches
+	std::vector<WorkGraph::Vertex*> inputs;
+	std::vector<WorkGraph::Vertex*> outputs;
+	graph.collectInputsAndOutputs(inputs, outputs);
+
+	// TODO: maps instead with pointers to the nodes?
+	struct Batch {
+		std::vector<std::string> inputs;
+		std::vector<std::string> outputs;
+	};
+
+	const uint inputCount = inputs.size();
+	const uint outputCount = outputs.size();
+	const uint pathCount = inputPaths.size();
+	const uint batchCount = pathCount / inputCount;
+	std::vector<Batch> batches(batchCount);
+
+	for(uint batchId = 0u; batchId < batchCount; ++batchId){
+		Batch& batch = batches[batchId];
+		for(uint inputId = 0u; inputId < inputCount; ++inputId){
+			const uint pathId = batchId * inputCount + inputId;
+			if(pathId < pathCount){
+				batch.inputs.push_back(inputPaths[pathId]);
+			} else {
+				// Empty input image will return 0s.
+				// TODO: or an error?
+				batch.inputs.push_back("");
+			}
+		}
+		for(uint outputId = 0u; outputId < outputCount; ++outputId){
+			const OutputNode* node = static_cast<const OutputNode*>(outputs[outputId]->node);
+			const std::string outName = node->generateFileName(batchId);
+			batch.outputs.push_back(outName);
+		}
+	}
+
+
 	// Load all inputs, allocate all outputs, for the current batch
+	for(const Batch& batch : batches){
+		Log::Info() << "Processing batch: " << "\n";
+		Log::Info() << "Inputs: " << "\n";
+		for(const std::string& input : batch.inputs){
+			Log::Info() << "* '" << input << "'" << "\n";
+		}
+		Log::Info() << "Outputs: " << "\n";
+		for(const std::string& output : batch.outputs){
+			Log::Info() << "* '" << output << "'" << "\n";
+		}
+	}
 	// For each channel, evaluate the nodes using temporary storage.
 	return true;
 }
