@@ -8,10 +8,9 @@ public:
 
 	ConstantFloatNode();
 
-	float& value(){ return _value; }
+	uint type() const override;
 
-private:
-	float _value{0.f};
+	uint version() const override;
 };
 
 class ConstantRGBANode : public Node {
@@ -19,10 +18,10 @@ public:
 
 	ConstantRGBANode();
 
-	glm::vec4& value(){ return _value; }
+	uint type() const override;
 
-private:
-	glm::vec4 _value{0.f};
+	uint version() const override;
+
 };
 
 class InputNode : public Node {
@@ -31,6 +30,10 @@ public:
 	InputNode();
 
 	virtual ~InputNode();
+	
+	uint type() const override;
+
+	uint version() const override;
 
 private:
 	unsigned int _index{0u};
@@ -43,11 +46,11 @@ public:
 
 	virtual ~OutputNode();
 
+	uint type() const override;
+
+	uint version() const override;
+
 private:
 	unsigned int _index{0u};
-	
-	std::string _prefix;
-	std::string _suffix;
-
 	static FreeList _freeList;
 };

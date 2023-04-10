@@ -17,41 +17,25 @@ public:
 		Type type;
 		union
 		{
-			char str[ MAX_STR_LENGTH ]; // TODO: char buffer instead?
+			char str[ MAX_STR_LENGTH ];
 			glm::vec4 clr;
 			float flt;
 		};
 
-		Attribute( const std::string& aname, Type atype ) : name(aname), type( atype )
-		{
-			switch( type )
-			{
-				case Type::COLOR:
-					clr = glm::vec4( 0.0f, 0.0f, 0.0f, 1.0f );
-					break;
-				case Type::FLOAT:
-					flt = 0.f;
-					break;
-				case Type::STRING:
-					memset( str, 0, sizeof( str ) );
-					break;
-				default:
-					assert( false );
-			}
-		}
-		~Attribute() {};
+		Attribute( const std::string& aname, Type atype );
+
+		~Attribute();
 	};
 
 	virtual bool evaluate( const std::vector<float>& inputs, std::vector<float>& outputs ) { return true; };
 	virtual ~Node() = default;
+	virtual uint type() const = 0;
+	virtual uint version() const = 0;
 	
 	const std::string& name() const { return _name; }
-	const std::vector<std::string>& inputNames() const { return _inputNames; }
-	const std::vector<std::string>& outputNames() const { return _outputNames; }
-	uint inputCount() const { return (uint)_inputNames.size(); }
-	uint outputCount() const { return ( uint )_outputNames.size(); }
-	uint attributeCount() const { return ( uint )_attributes.size(); }
-
+	const std::vector<std::string>& inputs() const { return _inputNames; }
+	const std::vector<std::string>& outputs() const { return _outputNames; }
+	const std::vector<Attribute>& attributes( ) const { return _attributes; }
 	std::vector<Attribute>& attributes( )  { return _attributes; }
 
 protected:
