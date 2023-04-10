@@ -68,10 +68,10 @@ public:
 	};
 
 	struct Child {
-		const Vertex* node;
+		Vertex* const node;
 		std::vector<Edge> edges;
 
-		Child(const Vertex* _node, uint from, uint to) : node(_node) {
+		Child(Vertex* const _node, uint from, uint to) : node(_node) {
 			edges.push_back({from, to});
 		}
 
@@ -85,6 +85,7 @@ public:
 		std::vector<Child> children;
 		// TODO: parents?
 		std::vector<uint> slots;
+		uint tmpData{0u};
 
 		Vertex(const Node* _node) : node(_node){}
 	};
@@ -157,34 +158,42 @@ public:
 		return !incompleteNodes;
 	}
 
-	bool hasCycle(const Vertex* node, std::vector<const Vertex*>& visited){
+	void purgeTmpData(){
+		for(Vertex* node : nodes){
+			node->tmpData = 0u;
+		}
+	}
+
+	bool hasCycle(Vertex* node){
 		// Have we already visited the node.
-		if(std::find(visited.begin(), visited.end(), node) != visited.end()){
+		if(node->tmpData != 0u){
 			_context.addError("Cycle detected", node->node);
 			return true;
 		}
-		visited.push_back(node);
+		// Mark as visited
+		node->tmpData = 1u;
 		bool childHasCycle = false;
 		for(const Child& child : node->children){
-			childHasCycle |= hasCycle(child.node, visited);
+			childHasCycle |= hasCycle(child.node);
 		}
-		visited.pop_back();
+		// Unmark
+		node->tmpData = 0u;
 		return childHasCycle;
 	}
 
 	bool validateCycles(){
-		std::vector<const Vertex*> visited;
-		visited.reserve(nodes.size());
+		purgeTmpData();
+
 		// Collect roots.
-		std::vector<const Vertex*> roots;
-		for(const Vertex* node : nodes){
+		std::vector<Vertex*> roots;
+		for(Vertex* node : nodes){
 			if(node->slots.empty()){
 				roots.push_back(node);
 			}
 		}
 		bool rootHasCycle = false;
-		for(const Vertex* root : roots){
-			rootHasCycle |= hasCycle(root, visited);
+		for(Vertex* root : roots){
+			rootHasCycle |= hasCycle(root);
 		}
 		return !rootHasCycle;
 	}
@@ -226,6 +235,49 @@ public:
 
 		std::sort(inputs.begin(), inputs.end(), sortByName);
 		std::sort(outputs.begin(), outputs.end(), sortByName);
+	}
+
+
+	void checkConnectionToOutputs(Vertex* vertex){
+		if(vertex->tmpData == 1u){
+			return;
+		}
+
+		if(vertex->node->type() == NodeClass::OUTPUT){
+			vertex->tmpData = 1u;
+			return;
+		}
+
+		bool connected = false;
+		for(WorkGraph::Child& child : vertex->children){
+			checkConnectionToOutputs(child.node);
+			connected |= vertex->tmpData == 1u;
+		}
+		if(connected){
+			vertex->tmpData = 1u;
+		}
+	}
+
+	void cleanUnconnectedComponents(){
+		purgeTmpData();
+		// Collect roots.
+		std::vector<Vertex*> roots;
+		for(Vertex* node : nodes){
+			if(node->slots.empty()){
+				roots.push_back(node);
+			}
+		}
+		for(Vertex* node : roots){
+			checkConnectionToOutputs(node);
+		}
+		for(uint nid = 0; nid < nodes.size();){
+			if(nodes[nid]->tmpData == 0u){
+				nodes[nid] = nodes.back();
+				nodes.resize(nodes.size()-1);
+				continue;
+			}
+			++nid;
+		}
 	}
 
 	std::vector<Vertex*> nodes;
@@ -275,9 +327,12 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	if(!validate(graph)){
 		return false;
 	}
+	// We dont have incomplete nodes anymore.
+	// We could have unconnected regions.
+	graph.cleanUnconnectedComponents();
 
 	// Split the graph and order nodes to evaluate them.
-
+	std::vector<std::set<WorkGraph::Vertex*>> dependencies;
 	// For each node list all the flushing parent nodes, then greedily cluster them
 	// Assign registers to each node
 
