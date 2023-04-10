@@ -17,6 +17,9 @@
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <json/json_fwd.hpp>
+using json = nlohmann::json;
+
 typedef unsigned char uchar;
 typedef unsigned int  uint;
 typedef unsigned long ulong;

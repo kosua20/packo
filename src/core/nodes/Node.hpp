@@ -29,6 +29,10 @@ public:
 
 	virtual bool evaluate( const std::vector<float>& inputs, std::vector<float>& outputs ) { return true; };
 	virtual ~Node() = default;
+
+	virtual void serialize(json& data) const;
+	virtual bool deserialize(const json& data);
+
 	virtual uint type() const = 0;
 	virtual uint version() const = 0;
 	
