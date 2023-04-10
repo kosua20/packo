@@ -270,7 +270,9 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	// Validate the graph.
 	WorkGraph graph(editGraph, errors);
 
-	validate(graph);
+	if(!validate(graph)){
+		return false;
+	}
 
 	// Split the graph and order nodes to evaluate them.
 
@@ -309,7 +311,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		for(uint outputId = 0u; outputId < outputCount; ++outputId){
 			const OutputNode* node = static_cast<const OutputNode*>(outputs[outputId]->node);
 			const std::string outName = node->generateFileName(batchId);
-			batch.outputs.push_back(outName);
+			batch.outputs.push_back(outputDir + "/" + outName);
 		}
 	}
 
