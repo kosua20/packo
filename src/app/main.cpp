@@ -599,24 +599,17 @@ int main(int argc, char** argv){
 				}
 
 				if( ImGui::BeginPopup("Create node")){
-					// TODO: streamline labels and creation. Have names and function pointers?
-					createdNode = nullptr;
-					if( ImGui::Selectable("Input")){
-						createdNode = new InputNode();
+					NodeClass typeToCreate = NodeClass::COUNT;
+
+					for(uint i = 0; i < NodeClass::COUNT; ++i){
+						NodeClass type = NodeClass(i);
+						const std::string& label = getNodeName(type);
+						if( ImGui::Selectable(label.c_str())){
+							typeToCreate = type;
+						}
 					}
-					if(ImGui::Selectable("Output")){
-						createdNode = new OutputNode();
-					}
-					if( ImGui::Selectable("Constant scalar")){
-						createdNode = new ConstantFloatNode();
-					}
-					if( ImGui::Selectable("Constant color") ){
-						createdNode = new ConstantRGBANode();
-					}
-					if( ImGui::Selectable("Add ") ){
-						createdNode = new AddNode();
-					}
-					if( createdNode ){
+					if(typeToCreate != NodeClass::COUNT){
+						createdNode = createNode(typeToCreate);
 						editor.addNode( createdNode );
 					}
 					ImGui::EndPopup();
@@ -668,8 +661,8 @@ int main(int argc, char** argv){
 
 						ImGui::TableNextColumn();
 						if(slot >= 0){
-							if(node && ((uint)slot < node->inputCount())){
-								ImGui::TextUnformatted(node->inputNames()[slot].c_str());
+							if(node && ((uint)slot < node->inputs().size())){
+								ImGui::TextUnformatted(node->inputs()[slot].c_str());
 							} else {
 								ImGui::Text("%d", slot + 1);
 							}

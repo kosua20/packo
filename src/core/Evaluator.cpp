@@ -136,7 +136,7 @@ public:
 		// Check that all nodes have their inputs filled.
 		for(uint nid = 0; nid < nodes.size();){
 			const Vertex* node = nodes[nid];
-			const uint tgtSlotCount = node->node->inputCount();
+			const uint tgtSlotCount = node->node->inputs().size();
 			const auto& usedSlots = node->slots;
 			bool missingSlot = false;
 			for(uint sid = 0; sid < tgtSlotCount; ++sid){

@@ -11,3 +11,8 @@ enum NodeClass : uint {
 	CONST_COLOR,
 	COUNT
 };
+
+
+Node* createNode(NodeClass type);
+
+const std::string& getNodeName(NodeClass type);
