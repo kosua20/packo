@@ -141,10 +141,10 @@ GLFWwindow* createWindow(int w, int h) {
 	style.GrabMinSize = 18;
 	style.FrameBorderSize = 0;
 	style.WindowBorderSize = 0;
-	style.FrameRounding = 12;
+	style.FrameRounding = 4;
 	style.GrabRounding = 12;
 	style.PopupBorderSize = 0;
-	style.PopupRounding = 12;
+	style.PopupRounding = 4;
 	style.WindowRounding = 12;
 	
 
@@ -176,7 +176,7 @@ GLFWwindow* createWindow(int w, int h) {
 	colors[ ImGuiCol_NavHighlight ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
 
 	ImNodesStyle& nodesStyle = ImNodes::GetStyle();
-	nodesStyle.NodeCornerRounding = style.FrameRounding;
+	nodesStyle.NodeCornerRounding = 12;
 	nodesStyle.PinCircleRadius = 7.f;
 	nodesStyle.PinOffset = 0.0f;
 	nodesStyle.Flags = ImNodesStyleFlags_GridLines | ImNodesStyleFlags_NodeOutline;
@@ -435,98 +435,74 @@ int main(int argc, char** argv){
 					ImGui::TextUnformatted(node->name().c_str());
 					ImNodes::EndNodeTitleBar();
 
-					const std::vector<std::string>& inputs = node->inputNames();
-					const std::vector<std::string>& outputs = node->outputNames();
+					const std::vector<std::string>& inputs = node->inputs();
+					const std::vector<std::string>& outputs = node->outputs();
 					std::vector<Node::Attribute>& attributes = node->attributes();
+					const uint attributeCount = attributes.size();
+
+					const uint attribWidth = 130u;
+
+					const uint nodeSize = attributeCount != 0u ? attribWidth : 50u;
+
+					for(uint attId = 0; attId < attributeCount; ++attId ){
+
+						ImGui::PushItemWidth(attribWidth);
+						Node::Attribute& attribute = attributes[attId];
+						switch( attribute.type )
+						{
+							case Node::Attribute::Type::FLOAT:
+								ImGui::InputFloat( attribute.name.c_str(), &attribute.flt );
+								break;
+							case Node::Attribute::Type::COLOR:
+								ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR );
+								break;
+							case Node::Attribute::Type::STRING:
+								ImGui::InputText( attribute.name.c_str(), &attribute.str[0], MAX_STR_LENGTH );
+								break;
+							default:
+								assert( false );
+								break;
+						}
+						ImGui::PopItemWidth();
+					}
 
 					const uint inputCount = inputs.size();
 					const uint outputCount = outputs.size();
-					const uint attributeCount = attributes.size();
-					const uint maxCount = std::max(attributeCount, std::max(inputCount, outputCount));
+					const uint maxCount = std::max(inputCount, outputCount);
 
-					// First, estimate the size of the node.
-					const uint slotWidth = 30u;
-					const uint attribWidth = 130u;
-
-					// TODO: estimate node width?
-					const uint nodeWidth = inputCount > 0u ? slotWidth : 0u + attributeCount > 0u ? 130u : 0 + outputCount > 0u ? slotWidth : 0u;
-					
 					for(uint attId = 0; attId < maxCount; ++attId ){
-						bool hasInput = attId < inputCount;
-						bool hasAttrib = attId < attributeCount;
+						const bool hasInput = attId < inputCount;
+						const bool hasOutput = attId < outputCount;
 						
 						if( hasInput ){
 							const std::string& name = inputs[attId];
 							ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
-							ImGui::PushItemWidth( slotWidth );
+							//ImGui::PushItemWidth( slotWidth );
 							ImGui::TextUnformatted(name.c_str());
-							ImGui::PopItemWidth();
+							//ImGui::PopItemWidth();
 							ImNodes::EndInputAttribute();
 						}
-
-						if( hasAttrib ){
-							bool deindent = false;
-							if( hasInput){
-								ImGui::SameLine(  );
-							}
-							else
-							{
-								ImGui::Indent( slotWidth );
-								deindent = true;
-							}
-							ImGui::PushItemWidth(attribWidth);
-
-							Node::Attribute& attribute = attributes[attId];
-							switch( attribute.type )
-							{
-								case Node::Attribute::Type::FLOAT:
-									ImGui::InputFloat( attribute.name.c_str(), &attribute.flt );
-									break;
-								case Node::Attribute::Type::COLOR:
-									ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0] );
-								break;
-								case Node::Attribute::Type::STRING:
-									ImGui::InputText( attribute.name.c_str(), &attribute.str[0], MAX_STR_LENGTH );
-									break;
-								default:
-									assert( false );
-									break;
-							}
-							ImGui::PopItemWidth();
-							if( deindent )
-							{
-								ImGui::Unindent( slotWidth );
-							}
-						}
-						if(attId < outputCount){
-
+						if(hasOutput){
+							bool indented = false;
 							const std::string& name = outputs[ attId ];
-							//const float labelWidth = ImGui::CalcTextSize( name.c_str() ).x;
-							bool deindent = false;
-							if(hasInput || hasAttrib ){
-								ImGui::SameLine();
-							}
-							else
-							{
-								ImGui::Indent( slotWidth + attribWidth );
-								deindent = true;
+
+							const uint offset = nodeSize -  ImGui::CalcTextSize( name.c_str()).x;
+							if(hasInput){
+								ImGui::SameLine(offset);
+							} else {
+								ImGui::Indent(offset);
+								indented = true;
 							}
 							ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
-							ImGui::PushItemWidth( slotWidth );
+							//ImGui::PushItemWidth( slotWidth );
 							ImGui::TextUnformatted(name.c_str());
-							ImGui::PopItemWidth();
-
+							//ImGui::PopItemWidth();
 							ImNodes::EndOutputAttribute();
-							if( deindent )
-							{
-								ImGui::Unindent( slotWidth + attribWidth );
+							if(indented){
+								ImGui::Unindent(offset);
 							}
 						}
-
 					}
-
-					// TODO: attributes of various types. Either introduce a type system (float, color, str, enum+enumstrings)
-					// or provide an "adapter" friend for each type of node to keep the node ImGui-less.
 
 					ImNodes::EndNode();
 					if( nodeHasIssue ) {
