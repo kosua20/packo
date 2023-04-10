@@ -51,9 +51,19 @@ void Node::serialize(json& data) const {
 }
 
 bool Node::deserialize(const json& data){
-	if(!data.contains("attributes")){
+	if(!data.contains("version") || !data.contains("type") || !data.contains("attributes")){
 		return false;
 	}
+	
+	if(data["type"] != uint(type())){
+		// Wrong type of node.
+		return false;
+	}
+	if(data["version"] > version()){
+		// Attempting to open a new node in an old app.
+		return false;
+	}
+
 	for(auto& attrData : data["attributes"]){
 		if(!attrData.contains("name")){
 			continue;
