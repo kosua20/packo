@@ -267,6 +267,8 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 
 	errors.clear();
 
+	// TODO: one base graph and N subgraphs.
+	// Just create the raw graph and a subgraph with everything, validate, then split.
 	// Validate the graph.
 	WorkGraph graph(editGraph, errors);
 
@@ -294,19 +296,21 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	const uint outputCount = outputs.size();
 	const uint pathCount = inputPaths.size();
 	const uint batchCount = pathCount / inputCount;
-	std::vector<Batch> batches(batchCount);
 
+	// Check that we have the correct number of input paths
+	if(batchCount * inputCount != pathCount){
+		errors.addError("Not enough input files, expected batches of " + std::to_string(inputCount) + " files.");
+		return false;
+	}
+
+	// Prepare input and output paths.
+	std::vector<Batch> batches(batchCount);
 	for(uint batchId = 0u; batchId < batchCount; ++batchId){
 		Batch& batch = batches[batchId];
 		for(uint inputId = 0u; inputId < inputCount; ++inputId){
 			const uint pathId = batchId * inputCount + inputId;
-			if(pathId < pathCount){
-				batch.inputs.push_back(inputPaths[pathId]);
-			} else {
-				// Empty input image will return 0s.
-				// TODO: or an error?
-				batch.inputs.push_back("");
-			}
+			assert(pathId < pathCount);
+			batch.inputs.push_back(inputPaths[pathId]);
 		}
 		for(uint outputId = 0u; outputId < outputCount; ++outputId){
 			const OutputNode* node = static_cast<const OutputNode*>(outputs[outputId]->node);
