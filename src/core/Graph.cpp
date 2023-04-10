@@ -1,4 +1,6 @@
 #include "core/Graph.hpp"
+#include <json/json.hpp>
+#include "core/nodes/Nodes.hpp"
 
 Graph::~Graph(){
 	clear();
@@ -39,6 +41,79 @@ void Graph::addLink(const Link& link){
 	_links.push_back(link);
 }
 
+bool Graph::serialize(json& data){
+	data["nodes"] = {};
+	data["links"] = {};
+	for(const Node* node : _nodes){
+		auto& nodeData = data["nodes"].emplace_back();
+		if(node == nullptr)
+			continue;
+		node->serialize(nodeData);
+	}
+	for(const Link& link : _links ){
+		auto& linkData = data["links"].emplace_back();
+		linkData["from"]["node"] = link.from.node;
+		linkData["from"]["slot"] = link.from.slot;
+		linkData["to"]["node"] = link.to.node;
+		linkData["to"]["slot"] = link.to.slot;
+	}
+	return true;
+}
+
+bool Graph::deserialize(const json& data){
+	clear();
+
+	if(data.contains("nodes")){
+
+		for(auto& nodeData : data["nodes"]){
+			// Ensure the free list is in the correct state.
+			uint nodeId =_freeListNodes.getIndex();
+			(void)nodeId;
+			if(nodeData.is_null() || !nodeData.contains("type")){
+				_nodes.push_back(nullptr);
+			} else {
+				uint type = nodeData["type"];
+				type = (std::min)(uint(NodeClass::COUNT), type);
+				Node* node = createNode(NodeClass(type));
+				if(node){
+					if(!node->deserialize(nodeData)){
+						delete node;
+						node = nullptr;
+					}
+				}
+				_nodes.push_back(node);
+			}
+		}
+
+		const uint nodeCount = _nodes.size();
+		for(uint nodeId = 0u; nodeId < nodeCount; ++nodeId){
+			if(!_nodes[nodeId]){
+				_freeListNodes.returnIndex(nodeId);
+			}
+		}
+	}
+	if(data.contains("links")){
+		for(auto& linkData : data["links"]){
+			if(!linkData.contains("from") || !linkData.contains("to")){
+				continue;
+			}
+			const auto& fromData = linkData["from"];
+			if(!fromData.contains("node") || !fromData.contains("slot")){
+				continue;
+			}
+			const auto& toData = linkData["to"];
+			if(!toData.contains("node") || !toData.contains("slot")){
+				continue;
+			}
+			Link& link = _links.emplace_back();
+			link.from.node = fromData["node"];
+			link.from.slot = fromData["slot"];
+			link.to.node = toData["node"];
+			link.to.slot = toData["slot"];
+		}
+	}
+	return true;
+}
 
 void Graph::clear(){
 	uint nodesCount = _nodes.size();
