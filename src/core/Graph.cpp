@@ -1,12 +1,7 @@
 #include "core/Graph.hpp"
 
 Graph::~Graph(){
-	// The graph owns the nodes.
-	for(Node* node : _nodes){
-		if(!node)
-			continue;
-		delete node;
-	}
+	clear();
 }
 
 int Graph::findNode( const Node* const node ){
@@ -31,6 +26,9 @@ void Graph::addNode(Node* node){
 }
 
 void Graph::removeNode(uint node){
+	if(_nodes[node] == nullptr){
+		return;
+	}
 	// Don't worry about links here.
 	delete _nodes[node];
 	_nodes[node] = nullptr;
@@ -39,6 +37,16 @@ void Graph::removeNode(uint node){
 
 void Graph::addLink(const Link& link){
 	_links.push_back(link);
+}
+
+
+void Graph::clear(){
+	uint nodesCount = _nodes.size();
+	for(uint nodeId = 0u; nodeId < nodesCount; ++nodeId){
+		removeNode(nodeId);
+	}
+	_nodes.clear();
+	_links.clear();
 }
 
 bool operator==(const Graph::Link& a, const Graph::Link& b){

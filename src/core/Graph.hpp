@@ -44,6 +44,8 @@ private:
 
 	void addLink(const Graph::Link& link);
 
+	void clear();
+
 	std::vector<Node*> _nodes;
 	std::vector<Link> _links;
 	FreeList _freeListNodes;
