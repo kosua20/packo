@@ -3,9 +3,9 @@
 
 Node* createNode(NodeClass type){
 	switch(type){
-		case INPUT:
+		case INPUT_IMG:
 			return new InputNode();
-		case OUTPUT:
+		case OUTPUT_IMG:
 			return new OutputNode();
 		case ADD:
 			return new AddNode();
