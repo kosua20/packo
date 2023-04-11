@@ -67,11 +67,11 @@ public:
 		uint to;
 	};
 
-	struct Child {
-		Vertex* const node;
+	struct Neighbor {
+		Vertex* node;
 		std::vector<Edge> edges;
 
-		Child(Vertex* const _node, uint from, uint to) : node(_node) {
+		Neighbor(Vertex* _node, uint from, uint to) : node(_node) {
 			edges.push_back({from, to});
 		}
 
@@ -82,9 +82,9 @@ public:
 
 	struct Vertex {
 		const Node* node;
-		std::vector<Child> children;
-		// TODO: parents?
-		std::vector<uint> slots;
+		std::vector<Neighbor> children;
+		std::vector<Neighbor> parents;
+
 		uint tmpData{0u};
 
 		Vertex(const Node* _node) : node(_node){}
@@ -120,8 +120,8 @@ public:
 				continue;
 			}
 
-			std::vector<Child>& fromChildren = (*fromNode)->children;
-			auto child = std::find_if(fromChildren.begin(), fromChildren.end(), [&toNode](const Child& child){
+			std::vector<Neighbor>& fromChildren = (*fromNode)->children;
+			auto child = std::find_if(fromChildren.begin(), fromChildren.end(), [&toNode](const Neighbor& child){
 				return child.node == *toNode;
 			});
 			if(child == fromChildren.end()){
@@ -129,7 +129,18 @@ public:
 			} else {
 				child->addEdge( link.from.slot, link.to.slot);
 			}
-			(*toNode)->slots.push_back(link.to.slot);
+
+			std::vector<Neighbor>& toParents = (*toNode)->parents;
+			auto parent = std::find_if(toParents.begin(), toParents.end(), [&fromNode](const Neighbor& parent){
+				return parent.node == *fromNode;
+			});
+
+			if(parent == toParents.end()){
+				toParents.emplace_back(*fromNode, link.from.slot, link.to.slot);
+			} else {
+				parent->addEdge( link.from.slot, link.to.slot);
+			}
+
 		}
 	}
 
@@ -139,19 +150,26 @@ public:
 		for(uint nid = 0; nid < nodes.size();){
 			const Vertex* node = nodes[nid];
 			const uint tgtSlotCount = node->node->inputs().size();
-			const auto& usedSlots = node->slots;
-			bool missingSlot = false;
+
+			// Check that each slot is assigned to one of the parents.
 			for(uint sid = 0; sid < tgtSlotCount; ++sid){
-				// Check if the slot is in use.
-				if(std::find(usedSlots.begin(), usedSlots.end(), sid) != usedSlots.end()){
-					continue;
+				bool foundSlot = false;
+				// Find the parent.
+				for(const Neighbor& neigh : node->parents){
+					for(const Edge& edge : neigh.edges){
+						if(edge.to == sid){
+							foundSlot = true;
+							break;
+						}
+					}
+					if(foundSlot){
+						break;
+					}
 				}
-				_context.addError("Missing input", node->node, sid);
-				missingSlot = true;
-			}
-			// If one slot is missing, remove the node from the graph.
-			if(missingSlot){
-				incompleteNodes = true;
+				if(!foundSlot){
+					_context.addError("Missing input", node->node, sid);
+					incompleteNodes = true;
+				}
 			}
 			++nid;
 		}
@@ -173,7 +191,7 @@ public:
 		// Mark as visited
 		node->tmpData = 1u;
 		bool childHasCycle = false;
-		for(const Child& child : node->children){
+		for(const Neighbor& child : node->children){
 			childHasCycle |= hasCycle(child.node);
 		}
 		// Unmark
@@ -187,7 +205,7 @@ public:
 		// Collect roots.
 		std::vector<Vertex*> roots;
 		for(Vertex* node : nodes){
-			if(node->slots.empty()){
+			if(node->parents.empty()){
 				roots.push_back(node);
 			}
 		}
@@ -249,9 +267,9 @@ public:
 		}
 
 		bool connected = false;
-		for(WorkGraph::Child& child : vertex->children){
+		for(Neighbor& child : vertex->children){
 			checkConnectionToOutputs(child.node);
-			connected |= vertex->tmpData == 1u;
+			connected |= child.node->tmpData == 1u;
 		}
 		if(connected){
 			vertex->tmpData = 1u;
@@ -263,17 +281,28 @@ public:
 		// Collect roots.
 		std::vector<Vertex*> roots;
 		for(Vertex* node : nodes){
-			if(node->slots.empty()){
+			if(node->parents.empty()){
 				roots.push_back(node);
 			}
 		}
 		for(Vertex* node : roots){
 			checkConnectionToOutputs(node);
 		}
-		for(uint nid = 0; nid < nodes.size();){
-			if(nodes[nid]->tmpData == 0u){
-				nodes[nid] = nodes.back();
-				nodes.resize(nodes.size()-1);
+		for(Vertex* vert : nodes){
+			auto itp = std::remove_if(vert->parents.begin(), vert->parents.end(), [](const Neighbor& parent){
+				return parent.node->tmpData == 0u;
+			});
+			vert->parents.erase( itp, vert->parents.end() );
+			auto itc = std::remove_if(vert->children.begin(), vert->children.end(), [](const Neighbor& child){
+				return child.node->tmpData == 0u;
+			});
+			vert->children.erase( itc, vert->children.end() );
+
+		}
+		auto itn = std::remove_if(nodes.begin(), nodes.end(), [](const Vertex* node){
+			return node->tmpData == 0u;
+		});
+		nodes.erase( itn, nodes.end() );
 				continue;
 			}
 			++nid;
