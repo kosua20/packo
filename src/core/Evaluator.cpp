@@ -303,9 +303,119 @@ public:
 			return node->tmpData == 0u;
 		});
 		nodes.erase( itn, nodes.end() );
+	}
+
+	void orderNodes(){
+		std::vector<Vertex*> orderedNodes;
+		orderedNodes.reserve(nodes.size());
+		purgeTmpData();
+		// Collect roots.
+		std::deque<Vertex*> nodesToProcess;
+		for(Vertex* node : nodes){
+			if(node->parents.empty()){
+				nodesToProcess.push_back(node);
+			}
+		}
+		//
+		while(!nodesToProcess.empty()){
+			Vertex* top = nodesToProcess.front();
+			nodesToProcess.pop_front();
+			if(top->tmpData == 1u)
+				continue;
+
+			bool parentsReady = true;
+			for(Neighbor& parent : top->parents){
+				if(parent.node->tmpData == 0u){
+					parentsReady = false;
+					break;
+				}
+			}
+			// Skip if not ready yet.
+			if(!parentsReady){
+				nodesToProcess.push_back(top);
 				continue;
 			}
-			++nid;
+			// The node can be processed, mark as complete.
+			orderedNodes.push_back(top);
+			top->tmpData = 1u;
+			// Insert all children
+			for(Neighbor& child : top->children){
+				// If a child is already processed, nothing to do, its own children
+				// have already been enqueued.
+				if(child.node->tmpData == 1u)
+					continue;
+				// Put them at the front to preserve consecutive nodes as much as possible.
+				nodesToProcess.push_front(child.node);
+			}
+		}
+		nodes = orderedNodes;
+		// Then assign registers
+		purgeTmpData();
+		uint id = 0;
+		for(Vertex* vert : nodes){
+			vert->tmpData = id;
+			++id;
+		}
+
+		FreeList availableRegisters;
+		struct Registers {
+			std::vector<int> inputs;
+			std::vector<int> outputs;
+			std::vector<uint> outputsRefCount;
+		};
+		std::vector<Registers> assignedRegisters(nodes.size());
+		for(Vertex* vert : nodes){
+			Registers& registers = assignedRegisters[vert->tmpData];
+			registers.inputs.resize(vert->node->inputs().size(), -1);
+			registers.outputs.resize(vert->node->outputs().size(), -1);
+			registers.outputsRefCount.resize(vert->node->outputs().size(), 0);
+			for(Neighbor& child : vert->children){
+				for(Edge& edge : child.edges){
+					++registers.outputsRefCount[edge.from];
+				}
+			}
+		}
+
+		for(Vertex* vert : nodes){
+			Registers& registers = assignedRegisters[vert->tmpData];
+			for(Neighbor& parent : vert->parents){
+				Registers& parentRegisters = assignedRegisters[parent.node->tmpData];
+				for(Edge& edge : parent.edges){
+					const int linkRegister = parentRegisters.outputs[edge.from];
+					assert(linkRegister >= 0);
+					registers.inputs[edge.to] = linkRegister;
+
+					// We want to return registers from parents that have propagated them to all their children.
+					--parentRegisters.outputsRefCount[edge.from];
+					if(parentRegisters.outputsRefCount[edge.from] == 0u){
+						availableRegisters.returnIndex(linkRegister);
+					}
+				}
+
+			}
+			for(Neighbor& child : vert->children){
+				for(Edge& edge : child.edges){
+					if(registers.outputs[edge.from] == -1){
+						registers.outputs[edge.from] = availableRegisters.getIndex();
+					}
+				}
+			}
+
+		}
+
+		for(const Vertex* vert : nodes){
+			Log::Info() << "Processing node: " << vert->node->name() << " of type " << getNodeName(NodeClass(vert->node->type())) << "\n";
+			const Registers& regs = assignedRegisters[vert->tmpData];
+			Log::Info() << "Inputs: " << "\n";
+			for(uint reg : regs.inputs){
+				Log::Info() << reg << ", ";
+			}
+			Log::Info() << "\n";
+			Log::Info() << "Outputs: " << "\n";
+			for(uint reg : regs.outputs){
+				Log::Info() << reg << ", ";
+			}
+			Log::Info() << std::endl;
 		}
 	}
 
@@ -361,8 +471,11 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	graph.cleanUnconnectedComponents();
 
 	// Split the graph and order nodes to evaluate them.
-	std::vector<std::set<WorkGraph::Vertex*>> dependencies;
 	// For each node list all the flushing parent nodes, then greedily cluster them
+	graph.orderNodes();
+	// For now assume a unique subgraph
+	// Pick an input, queue all nodes that have no other dependencies.
+	// Pick another input, idem.
 	// Assign registers to each node
 
 	// Create batches
