@@ -15,12 +15,10 @@ public:
 
 		std::string name;
 		Type type;
-		union
-		{
-			char str[ MAX_STR_LENGTH ];
-			glm::vec4 clr;
-			float flt;
-		};
+
+		char str[ MAX_STR_LENGTH ];
+		glm::vec4 clr;
+		float flt;
 
 		Attribute( const std::string& aname, Type atype );
 
