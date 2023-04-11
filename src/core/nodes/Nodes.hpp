@@ -4,8 +4,8 @@
 #include "core/nodes/ArithmeticNodes.hpp"
 
 enum NodeClass : uint {
-	INPUT = 0,
-	OUTPUT,
+	INPUT_IMG = 0,
+	OUTPUT_IMG,
 	ADD,
 	CONST_FLOAT,
 	CONST_COLOR,

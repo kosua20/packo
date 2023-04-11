@@ -42,7 +42,7 @@ InputNode::~InputNode(){
 }
 
 uint InputNode::type() const {
-	return NodeClass::INPUT;
+	return NodeClass::INPUT_IMG;
 }
 
 uint InputNode::version() const{
@@ -63,7 +63,7 @@ OutputNode::~OutputNode(){
 }
 
 uint OutputNode::type() const {
-	return NodeClass::OUTPUT;
+	return NodeClass::OUTPUT_IMG;
 }
 
 uint OutputNode::version() const{

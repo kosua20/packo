@@ -220,7 +220,7 @@ public:
 		bool duplicated = false;
 		std::unordered_map<std::string, const OutputNode*> outputNames;
 		for(const Vertex* node : nodes){
-			if(node->node->type() != NodeClass::OUTPUT){
+			if(node->node->type() != NodeClass::OUTPUT_IMG){
 				continue;
 			}
 			// Generate the filename
@@ -240,10 +240,10 @@ public:
 
 	void collectInputsAndOutputs(std::vector<Vertex*>& inputs, std::vector<Vertex*>& outputs){
 		for(Vertex* node : nodes){
-			if(node->node->type() == NodeClass::INPUT){
+			if(node->node->type() == NodeClass::INPUT_IMG ){
 				inputs.push_back(node);
 			}
-			if(node->node->type() == NodeClass::OUTPUT){
+			if(node->node->type() == NodeClass::OUTPUT_IMG ){
 				outputs.push_back(node);
 			}
 		}
@@ -261,7 +261,7 @@ public:
 			return;
 		}
 
-		if(vertex->node->type() == NodeClass::OUTPUT){
+		if(vertex->node->type() == NodeClass::OUTPUT_IMG ){
 			vertex->tmpData = 1u;
 			return;
 		}
@@ -476,8 +476,12 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	// For now assume a unique subgraph
 	// Pick an input, queue all nodes that have no other dependencies.
 	// Pick another input, idem.
+	// For now, assume a unique subgraph (no flush), we'll replace flush nodes by virtual inputs/outputs with appended inputs
+	
+
 	// Assign registers to each node
 
+	// Create a context with : input images, register stack, evaluation coordinates
 	// Create batches
 	std::vector<WorkGraph::Vertex*> inputs;
 	std::vector<WorkGraph::Vertex*> outputs;
