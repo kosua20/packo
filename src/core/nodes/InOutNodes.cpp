@@ -81,13 +81,19 @@ void OutputNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 }
 
 std::string OutputNode::generateFileName(uint batch) const {
-	const std::string prefix(_attributes[0].str);
-	const std::string suffix(_attributes[1].str);
+	std::string prefix(_attributes[0].str);
+	std::string suffix(_attributes[1].str);
 	const std::string extension = "png";
 	// Special case if no suffix or prefix
 	if(prefix.empty() && suffix.empty()){
 		return std::to_string(batch) + "_" + std::to_string(_index) + "." + extension;
 	}
 	// Else don't introduce the output index.
-	return prefix + "_" + std::to_string(batch) + "_" + suffix + "." + extension;
+	if(!prefix.empty()){
+		prefix = prefix + "_";
+	}
+	if(!suffix.empty()){
+		suffix = "_" + suffix;
+	}
+	return prefix + std::to_string(batch) + suffix + "." + extension;
 }
