@@ -1,10 +1,10 @@
 #include "core/Image.hpp"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <libs/stb_image/stb_image.h>
+#include <stb_image/stb_image.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <libs/stb_image/stb_image_write.h>
+#include <stb_image/stb_image_write.h>
 
 
 Image::Image(uint w, uint h, const glm::vec4& defaultColor) {
