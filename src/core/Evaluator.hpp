@@ -37,4 +37,4 @@ private:
 
 bool validate(const Graph& editGraph, ErrorContext& context );
 
-bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<std::string>& inputPaths, const std::string& outputDir);
+bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& outputRes);

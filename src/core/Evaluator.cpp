@@ -459,12 +459,10 @@ bool validate(const Graph& editGraph, ErrorContext& errors ){
 }
 
 
-bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir ){
+bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& outputRes ){
 
 	errors.clear();
 
-	// TODO: one base graph and N subgraphs.
-	// Just create the raw graph and a subgraph with everything, validate, then split.
 	// Validate the graph.
 	WorkGraph graph(editGraph, errors);
 
@@ -478,15 +476,13 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	std::vector<NodeAndRegisters> compiledNodes;
 	const uint stackSize = graph.compile(compiledNodes);
 	// For now, assume a unique subgraph (no flush), we'll replace flush nodes by virtual inputs/outputs with appended inputs
-	
-	// Create a context with : input images, register stack, evaluation coordinates
-	// Create batches
+
+	// Collect file nodes.
 	std::vector<const Node*> inputs;
 	std::vector<const Node*> outputs;
 	auto sortByName = [](const Node* a, const Node* b) {
 		return a->name() < b->name();
 	};
-
 	for (const NodeAndRegisters& compiledNode : compiledNodes) {
 		if (compiledNode.node->type() == NodeClass::INPUT_IMG) {
 			inputs.push_back(compiledNode.node);
@@ -499,19 +495,18 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		std::sort(outputs.begin(), outputs.end(), sortByName);
 	}
 
-	// TODO: maps instead with pointers to the nodes?
+	// Generate batches based on the number of file nodes and paths given.
 	struct Batch {
 		std::vector<std::string> inputs;
 		std::vector<std::string> outputs;
 	};
-
 	const uint inputCount = inputs.size();
 	const uint outputCount = outputs.size();
 	const uint pathCount = inputPaths.size();
-	const uint batchCount = pathCount / inputCount;
+	const uint batchCount = std::max(pathCount, 1u) / std::max(inputCount, 1u);
 
 	// Check that we have the correct number of input paths
-	if(batchCount * inputCount != pathCount){
+	if(batchCount * std::max(inputCount, 1u) != std::max(pathCount, 1u)){
 		errors.addError("Not enough input files, expected batches of " + std::to_string(inputCount) + " files.");
 		return false;
 	}
@@ -532,7 +527,6 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		}
 	}
 
-	// Load all inputs, allocate all outputs, for the current batch
 	for(const Batch& batch : batches){
 		Log::Info() << "Processing batch: " << "\n";
 		Log::Info() << "Inputs: " << "\n";
@@ -543,17 +537,18 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		for(const std::string& output : batch.outputs){
 			Log::Info() << "* '" << output << "'" << "\n";
 		}
-		// Load inputs
+		Log::Info() << std::endl;
 		const uint inputCount = batch.inputs.size();
 		const uint outputCount = batch.outputs.size();
-		
+
+		// Load inputs
 		SharedContext sharedContext;
 		sharedContext.inputImages.resize(inputCount);
 		for (uint i = 0u; i < inputCount; ++i) {
 			sharedContext.inputImages[i].load(batch.inputs[i]);
 		}
-		// Check all images have the same size.
-		uint w = 256; uint h = 256;
+		// Check that all images have the same size.
+		uint w = outputRes[0]; uint h = outputRes[1];
 		if (inputCount > 0) {
 			w = sharedContext.inputImages[0].w();
 			h = sharedContext.inputImages[0].h();
@@ -571,10 +566,10 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		// For each pixel
 		for (uint y = 0; y < h; ++y) {
 			for (uint x = 0; x < w; ++x) {
-				// Create local context (shared context + x,y coords)
+				// Create local context (shared context + x,y coords and a scratch space)
 				LocalContext context(&sharedContext, { x,y }, stackSize);
 				
-				// run the compiled graph, assigning to registers, passing the context along.
+				// Run the compiled graph, assigning to registers, passing the context along.
 				for (const NodeAndRegisters& node : compiledNodes) {
 					node.node->evaluate(context, node.inputs, node.outputs);
 				}
