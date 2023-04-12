@@ -11,6 +11,8 @@ public:
 	uint type() const override;
 
 	uint version() const override;
+
+	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
 };
 
 class ConstantRGBANode : public Node {
@@ -22,6 +24,7 @@ public:
 
 	uint version() const override;
 
+	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
 };
 
 class InputNode : public Node {
@@ -34,6 +37,8 @@ public:
 	uint type() const override;
 
 	uint version() const override;
+
+	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
 
 private:
 	unsigned int _index{0u};
@@ -49,6 +54,8 @@ public:
 	uint type() const override;
 
 	uint version() const override;
+
+	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
 
 	std::string generateFileName(uint batch) const;
 

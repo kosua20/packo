@@ -2,6 +2,10 @@
 #include "core/nodes/Node.hpp"
 #include <json/json.hpp>
 
+LocalContext::LocalContext(SharedContext* ashared, const glm::vec2& acoords, uint stackSize) : shared(ashared), coords(acoords) {
+	stack.resize(stackSize);
+}
+
 Node::Attribute::Attribute( const std::string& aname, Type atype ) : name(aname), type( atype )
 {
 	clr = glm::vec4( 0.0f, 0.0f, 0.0f, 1.0f );

@@ -16,3 +16,9 @@ uint AddNode::type() const {
 uint AddNode::version() const{
 	return 1;
 }
+
+void AddNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 2);
+	assert(outputs.size() == 1);
+	context.stack[outputs[0]] = context.stack[inputs[0]] + context.stack[inputs[1]];
+}

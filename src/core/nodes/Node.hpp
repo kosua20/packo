@@ -1,7 +1,24 @@
 #pragma once
 #include "core/Common.hpp"
+#include "core/Image.hpp"
+
+#include <vector>
 
 constexpr unsigned int MAX_STR_LENGTH = 256;
+
+struct SharedContext {
+	std::vector<Image> inputImages;
+	std::vector<Image> outputImages;
+};
+
+struct LocalContext {
+
+	LocalContext(SharedContext* ashared, const glm::vec2& acoords, uint stackSize);
+
+	SharedContext* const shared;
+	std::vector<float> stack;
+	const glm::ivec2 coords;
+};
 
 class Node {
 public:
@@ -25,7 +42,7 @@ public:
 		~Attribute();
 	};
 
-	virtual bool evaluate( const std::vector<float>& inputs, std::vector<float>& outputs ) { return true; };
+	virtual void evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const = 0;
 	virtual ~Node() = default;
 
 	virtual void serialize(json& data) const;

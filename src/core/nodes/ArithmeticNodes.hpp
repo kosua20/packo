@@ -13,4 +13,5 @@ public:
 
 	uint version() const override;
 	
+	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
 };
