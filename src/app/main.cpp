@@ -451,7 +451,6 @@ int main(int argc, char** argv){
 		const float menuBarHeight = ImGui::GetItemRectSize().y;
 
 		// TODO: Nodes
-		// * arithmetic, minmax, exponent
 		// * float AND RGBA versions?
 		// * comparisons and boolean selector? (still floats)
 		// * "full image" nodes: resize, flip, rotate, blur?
@@ -519,7 +518,7 @@ int main(int argc, char** argv){
 						switch( attribute.type )
 						{
 							case Node::Attribute::Type::FLOAT:
-								ImGui::InputFloat( attribute.name.c_str(), &attribute.flt );
+								ImGui::InputFloat( attribute.name.c_str(), &attribute.flt, 0.0f, 0.0f, "%.6f" );
 								break;
 							case Node::Attribute::Type::COLOR:
 								ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR );
@@ -643,16 +642,16 @@ int main(int argc, char** argv){
 				}
 
 				if( ImGui::BeginPopup("Create node")){
-					NodeClass typeToCreate = NodeClass::COUNT;
+					NodeClass typeToCreate = NodeClass::COUNT_EXPOSED;
 
-					for(uint i = 0; i < NodeClass::COUNT; ++i){
+					for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
 						NodeClass type = NodeClass(i);
 						const std::string& label = getNodeName(type);
 						if( ImGui::Selectable(label.c_str())){
 							typeToCreate = type;
 						}
 					}
-					if(typeToCreate != NodeClass::COUNT){
+					if(typeToCreate < NodeClass::COUNT_EXPOSED){
 						createdNode = createNode(typeToCreate);
 						editor.addNode( createdNode );
 					}

@@ -16,6 +16,7 @@ enum NodeClass : uint {
 	MINI,
 	MAXI,
 	CLAMP,
+	COUNT_EXPOSED,
 	COUNT
 };
 

@@ -25,7 +25,6 @@ Node* createNode(NodeClass type){
 			return new MaxNode();
 		case CLAMP:
 			return new ClampNode();
-		case COUNT:
 		default:
 			assert(false);
 			break;
@@ -35,9 +34,9 @@ Node* createNode(NodeClass type){
 
 const std::string& getNodeName(NodeClass type){
 	static const std::vector<std::string> names = {
-		"Input", "Output", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp",
-		"Unknown"
+		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
+		"Internal", "Unknown"
 	};
 	assert(names.size() == NodeClass::COUNT+1);
 	return names[uint(type)];

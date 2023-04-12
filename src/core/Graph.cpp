@@ -72,7 +72,7 @@ bool Graph::deserialize(const json& data){
 				_nodes.push_back(nullptr);
 			} else {
 				uint type = nodeData["type"];
-				type = (std::min)(uint(NodeClass::COUNT), type);
+				type = (std::min)(uint(NodeClass::COUNT_EXPOSED), type);
 				Node* node = createNode(NodeClass(type));
 				if(node){
 					if(!node->deserialize(nodeData)){
