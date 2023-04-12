@@ -340,9 +340,27 @@ int main(int argc, char** argv){
 						char** inputFiles = nullptr;
 						int inputCount = 0;
 						char* outputDir = nullptr;
-						if(sr_gui_ask_load_files("Input directory", "", "", &inputFiles, &inputCount) == SR_GUI_VALIDATED){
+						sr_gui_ask_load_files("Input directory", "", "", &inputFiles, &inputCount);
+						{
 							if(sr_gui_ask_directory("Output directory", "", &outputDir) == SR_GUI_VALIDATED){
-								if(inputCount > 0 && inputFiles != nullptr && outputDir != nullptr){
+								glm::ivec2 outputRes{0};
+								if(inputCount == 0){
+									char* wStr = nullptr;
+									if(sr_gui_ask_string("Width requested", "Specify output width", &wStr) == SR_GUI_VALIDATED){
+										if(wStr){
+											outputRes.x = std::max(std::stoi(std::string(wStr)), 0);
+											free(wStr);
+										}
+									}
+									char* hStr = nullptr;
+									if(sr_gui_ask_string("Height requested", "Specify output height", &hStr) == SR_GUI_VALIDATED){
+										if(hStr){
+											outputRes.y = std::max(std::stoi(std::string(hStr)), 0);
+											free(hStr);
+										}
+									}
+								}
+								if((inputCount > 0 || outputRes.x > 0 || outputRes.y > 0) && outputDir != nullptr){
 									std::vector<std::string> inputs;
 									for(uint i = 0u; i < uint(inputCount); ++i){
 										inputs.emplace_back(inputFiles[i]);
@@ -350,7 +368,10 @@ int main(int argc, char** argv){
 									}
 									std::string output(outputDir);
 
-									evaluate(*graph, errorContext, inputs, output);
+									if(evaluate(*graph, errorContext, inputs, output, outputRes)){
+										sr_gui_show_notification("Packo", "Processing complete!");
+									}
+								}
 								if(inputFiles){
 									free(inputFiles);
 								}
