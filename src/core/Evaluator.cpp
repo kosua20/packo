@@ -543,8 +543,49 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		for(const std::string& output : batch.outputs){
 			Log::Info() << "* '" << output << "'" << "\n";
 		}
+		// Load inputs
+		const uint inputCount = batch.inputs.size();
+		const uint outputCount = batch.outputs.size();
+		
+		SharedContext sharedContext;
+		sharedContext.inputImages.resize(inputCount);
+		for (uint i = 0u; i < inputCount; ++i) {
+			sharedContext.inputImages[i].load(batch.inputs[i]);
+		}
+		// Check all images have the same size.
+		uint w = 256; uint h = 256;
+		if (inputCount > 0) {
+			w = sharedContext.inputImages[0].w();
+			h = sharedContext.inputImages[0].h();
+			for (uint i = 1u; i < inputCount; ++i) {
+				w = (std::min)(w, sharedContext.inputImages[i].w());
+				h = (std::min)(h, sharedContext.inputImages[i].h());
+			}
+		}
+
+		// Create outputs
+		for (uint i = 0u; i < outputCount; ++i) {
+			sharedContext.outputImages.emplace_back(w, h);
+		}
+
+		// For each pixel
+		for (uint y = 0; y < h; ++y) {
+			for (uint x = 0; x < w; ++x) {
+				// Create local context (shared context + x,y coords)
+				LocalContext context(&sharedContext, { x,y }, stackSize);
+				
+				// run the compiled graph, assigning to registers, passing the context along.
+				for (const NodeAndRegisters& node : compiledNodes) {
+					node.node->evaluate(context, node.inputs, node.outputs);
+				}
+			}
+		}
+
+		// Save outputs
+		for (uint i = 0u; i < outputCount; ++i) {
+			sharedContext.outputImages[i].save(batch.outputs[i]);
+		}
 	}
-	// For each channel, evaluate the nodes using temporary storage.
 	return true;
 }
 
