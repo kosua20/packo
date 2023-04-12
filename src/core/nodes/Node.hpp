@@ -65,3 +65,12 @@ protected:
 	std::vector<Attribute> _attributes;
 
 };
+
+#define NODE_DECLARE_EVAL_TYPE_AND_VERSION() \
+void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override; \
+uint type() const override; \
+uint version() const override;
+
+#define NODE_DEFINE_TYPE_AND_VERSION(C, T, V) \
+uint C::type() const { return T; } \
+uint C::version() const { return V; }

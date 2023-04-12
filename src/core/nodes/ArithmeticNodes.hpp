@@ -9,9 +9,7 @@ public:
 
 	AddNode();
 
-	uint type() const override;
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 
-	uint version() const override;
-	
-	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
 };
+

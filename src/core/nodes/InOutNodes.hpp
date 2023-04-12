@@ -8,11 +8,7 @@ public:
 
 	ConstantFloatNode();
 
-	uint type() const override;
-
-	uint version() const override;
-
-	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
 class ConstantRGBANode : public Node {
@@ -20,11 +16,7 @@ public:
 
 	ConstantRGBANode();
 
-	uint type() const override;
-
-	uint version() const override;
-
-	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
 class InputNode : public Node {
@@ -33,12 +25,8 @@ public:
 	InputNode();
 
 	virtual ~InputNode();
-	
-	uint type() const override;
 
-	uint version() const override;
-
-	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 
 private:
 	unsigned int _index{0u};
@@ -51,11 +39,7 @@ public:
 
 	virtual ~OutputNode();
 
-	uint type() const override;
-
-	uint version() const override;
-
-	void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override;
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 
 	std::string generateFileName(uint batch) const;
 

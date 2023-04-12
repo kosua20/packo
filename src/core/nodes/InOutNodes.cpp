@@ -7,13 +7,7 @@ ConstantFloatNode::ConstantFloatNode(){
 	_attributes = { {"##X", Attribute::Type::FLOAT} };
 }
 
-uint ConstantFloatNode::type() const {
-	return NodeClass::CONST_FLOAT;
-}
-
-uint ConstantFloatNode::version() const{
-	return 1;
-}
+NODE_DEFINE_TYPE_AND_VERSION(ConstantFloatNode, NodeClass::CONST_FLOAT, 1)
 
 void ConstantFloatNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -27,13 +21,7 @@ ConstantRGBANode::ConstantRGBANode(){
 	_attributes = { {"##Val", Attribute::Type::COLOR} };
 }
 
-uint ConstantRGBANode::type() const {
-	return NodeClass::CONST_COLOR;
-}
-
-uint ConstantRGBANode::version() const{
-	return 1;
-}
+NODE_DEFINE_TYPE_AND_VERSION(ConstantRGBANode, NodeClass::CONST_COLOR, 1)
 
 void ConstantRGBANode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -55,13 +43,7 @@ InputNode::~InputNode(){
 	_freeList.returnIndex( _index );
 }
 
-uint InputNode::type() const {
-	return NodeClass::INPUT_IMG;
-}
-
-uint InputNode::version() const{
-	return 1;
-}
+NODE_DEFINE_TYPE_AND_VERSION(InputNode, NodeClass::INPUT_IMG, 1)
 
 void InputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -86,13 +68,7 @@ OutputNode::~OutputNode(){
 	_freeList.returnIndex( _index );
 }
 
-uint OutputNode::type() const {
-	return NodeClass::OUTPUT_IMG;
-}
-
-uint OutputNode::version() const{
-	return 1;
-}
+NODE_DEFINE_TYPE_AND_VERSION(OutputNode, NodeClass::OUTPUT_IMG, 1)
 
 void OutputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 4u);
