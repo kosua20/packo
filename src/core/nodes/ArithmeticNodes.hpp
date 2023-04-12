@@ -64,3 +64,34 @@ public:
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
+class PowerNode : public Node {
+public:
+
+	PowerNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class SqrtNode : public Node {
+public:
+
+	SqrtNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class ExponentialNode : public Node {
+public:
+
+	ExponentialNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class LogarithmNode : public Node {
+public:
+
+	LogarithmNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};

@@ -16,6 +16,10 @@ enum NodeClass : uint {
 	MINI,
 	MAXI,
 	CLAMP,
+	POWER,
+	SQRT,
+	EXPONENTIAL,
+	LOGARITHM,
 	COUNT_EXPOSED,
 	COUNT
 };

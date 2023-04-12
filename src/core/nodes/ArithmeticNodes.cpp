@@ -102,3 +102,61 @@ void ClampNode::evaluate(LocalContext& context, const std::vector<int>& inputs, 
 	assert(outputs.size() == 1);
 	context.stack[outputs[0]] = glm::clamp(context.stack[inputs[0]], _attributes[0].flt, _attributes[1].flt);
 }
+
+PowerNode::PowerNode(){
+	_name = "Power";
+	_inputNames = {"X", "Y"};
+	_outputNames = {"X^Y"};
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(PowerNode, NodeClass::POWER, 1)
+
+void PowerNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 2);
+	assert(outputs.size() == 1);
+	context.stack[outputs[0]] = glm::pow(context.stack[inputs[0]], context.stack[inputs[1]]);
+}
+
+SqrtNode::SqrtNode(){
+	_name = "Square root";
+	_inputNames = {"X"};
+	_outputNames = {"sqrt(X)"};
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(SqrtNode, NodeClass::SQRT, 1)
+
+void SqrtNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1);
+	assert(outputs.size() == 1);
+	context.stack[outputs[0]] = glm::sqrt(context.stack[inputs[0]]);
+}
+
+ExponentialNode::ExponentialNode(){
+	_name = "Exponential";
+	_inputNames = {"X"};
+	_outputNames = {"exp(X)"};
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(ExponentialNode, NodeClass::EXPONENTIAL, 1)
+
+void ExponentialNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1);
+	assert(outputs.size() == 1);
+	context.stack[outputs[0]] = glm::exp(context.stack[inputs[0]]);
+}
+
+LogarithmNode::LogarithmNode(){
+	_name = "Logarithm";
+	_inputNames = {"X"};
+	_outputNames = {"log(X)"};
+	_attributes = {{"Basis", Attribute::Type::FLOAT}};
+	_attributes[0].flt = glm::e<float>();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(LogarithmNode, NodeClass::LOGARITHM, 1)
+
+void LogarithmNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1);
+	assert(outputs.size() == 1);
+	context.stack[outputs[0]] = glm::log(context.stack[inputs[0]]) / glm::log(_attributes[0].flt);
+}
