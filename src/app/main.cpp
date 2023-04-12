@@ -25,8 +25,12 @@
 #include <unordered_map>
 
 #ifdef _WIN32
+#ifdef _DEBUG
+#pragma comment(linker, "/subsystem:\"console\" /entry:\"mainCRTStartup\"")
+#else
 // Avoid command prompt appearing on startup
 #pragma comment(linker, "/subsystem:\"windows\" /entry:\"mainCRTStartup\"")
+#endif
 #endif
 
 unsigned int packedColorFromVec4( const ImVec4& _col )
@@ -375,10 +379,12 @@ int main(int argc, char** argv){
 									if(data.is_discarded()){
 										errorContext.addError("Unable to parse graph from file at path \"" + path + "\"");
 									} else {
+										// Issue: numbered inputs/outputs are created before the freelist indices are reset...
 										std::unique_ptr<Graph> newGraph(new Graph());
 										if(newGraph->deserialize(data)){
 											// Remove the current graph.
 											graph.reset(nullptr);
+											errorContext.clear();
 											graph = std::move(newGraph);
 											if(data.contains("layout")){
 												std::string state = data["layout"];
@@ -420,6 +426,7 @@ int main(int argc, char** argv){
 					ImGui::Separator();
 					if(ImGui::MenuItem("Reset...")){
 						graph.reset(new Graph());
+						errorContext.clear();
 
 						GraphEditor editor(*graph);
 						editor.addNode(new InputNode());
