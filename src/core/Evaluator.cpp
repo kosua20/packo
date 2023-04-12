@@ -1,9 +1,17 @@
 #include "core/Evaluator.hpp"
 #include "core/Graph.hpp"
 #include "core/nodes/Nodes.hpp"
+#include "core/Image.hpp"
 
 #include <unordered_map>
 #include <sstream>
+#include <deque>
+
+struct NodeAndRegisters { 
+	const Node* node;
+	std::vector<int> inputs;
+	std::vector<int> outputs;
+};
 
 void ErrorContext::addError(const std::string& message, const Node* node, int slot){
 	_errors.emplace_back(message, node, slot);
@@ -238,24 +246,6 @@ public:
 		return !duplicated;
 	}
 
-	void collectInputsAndOutputs(std::vector<Vertex*>& inputs, std::vector<Vertex*>& outputs){
-		for(Vertex* node : nodes){
-			if(node->node->type() == NodeClass::INPUT_IMG ){
-				inputs.push_back(node);
-			}
-			if(node->node->type() == NodeClass::OUTPUT_IMG ){
-				outputs.push_back(node);
-			}
-		}
-		auto sortByName = [](const Vertex* a, const Vertex* b){
-			return a->node->name() < b->node->name();
-		};
-
-		std::sort(inputs.begin(), inputs.end(), sortByName);
-		std::sort(outputs.begin(), outputs.end(), sortByName);
-	}
-
-
 	void checkConnectionToOutputs(Vertex* vertex){
 		if(vertex->tmpData == 1u){
 			return;
@@ -305,7 +295,7 @@ public:
 		nodes.erase( itn, nodes.end() );
 	}
 
-	void orderNodes(){
+	uint compile(std::vector<NodeAndRegisters>& compiledNodes ){
 		std::vector<Vertex*> orderedNodes;
 		orderedNodes.reserve(nodes.size());
 		purgeTmpData();
@@ -349,74 +339,89 @@ public:
 			}
 		}
 		nodes = orderedNodes;
-		// Then assign registers
 		purgeTmpData();
-		uint id = 0;
-		for(Vertex* vert : nodes){
-			vert->tmpData = id;
-			++id;
-		}
 
-		FreeList availableRegisters;
-		struct Registers {
-			std::vector<int> inputs;
-			std::vector<int> outputs;
-			std::vector<uint> outputsRefCount;
-		};
-		std::vector<Registers> assignedRegisters(nodes.size());
-		for(Vertex* vert : nodes){
-			Registers& registers = assignedRegisters[vert->tmpData];
-			registers.inputs.resize(vert->node->inputs().size(), -1);
-			registers.outputs.resize(vert->node->outputs().size(), -1);
-			registers.outputsRefCount.resize(vert->node->outputs().size(), 0);
-			for(Neighbor& child : vert->children){
-				for(Edge& edge : child.edges){
-					++registers.outputsRefCount[edge.from];
+		std::vector<std::vector<uint>> registersRefCount;
+		const uint nodeCount = nodes.size();
+		compiledNodes.resize(nodeCount);
+		registersRefCount.resize(nodeCount);
+
+		for (uint nId = 0u; nId < nodeCount; ++nId) {
+			Vertex* vert = nodes[nId];
+			// Having indices will make things easier later on
+			vert->tmpData = nId;
+			compiledNodes[nId].node = vert->node;
+			// Initialize registers
+			const uint inputCount = vert->node->inputs().size();
+			const uint outputCount = vert->node->outputs().size();
+			compiledNodes[nId].inputs.resize(inputCount, -1);
+			compiledNodes[nId].outputs.resize(outputCount, -1);
+			// Initialize ref count based on childrens using each output slot.
+			registersRefCount[nId].resize(outputCount, 0);
+			for (Neighbor& child : vert->children) {
+				for (Edge& edge : child.edges) {
+					++(registersRefCount[nId][edge.from]);
 				}
 			}
 		}
 
+		FreeList availableRegisters;
+		int maxRegister = -1;
+
 		for(Vertex* vert : nodes){
-			Registers& registers = assignedRegisters[vert->tmpData];
+			NodeAndRegisters& compiledNode = compiledNodes[vert->tmpData];
+			// Retrieve registers used by parents for their outputs.
 			for(Neighbor& parent : vert->parents){
-				Registers& parentRegisters = assignedRegisters[parent.node->tmpData];
+				NodeAndRegisters& compiledParent = compiledNodes[parent.node->tmpData];
 				for(Edge& edge : parent.edges){
-					const int linkRegister = parentRegisters.outputs[edge.from];
-					assert(linkRegister >= 0);
-					registers.inputs[edge.to] = linkRegister;
+					// A parent must have been processed before the child node.
+					const int linkRegister = compiledParent.outputs[edge.from];
+					if (linkRegister < 0) {
+						_context.addError("Unassigned output node.", parent.node->node, edge.from);
+					}
+					compiledNode.inputs[edge.to] = linkRegister;
 
 					// We want to return registers from parents that have propagated them to all their children.
-					--parentRegisters.outputsRefCount[edge.from];
-					if(parentRegisters.outputsRefCount[edge.from] == 0u){
+					--registersRefCount[parent.node->tmpData][edge.from];
+					if(registersRefCount[parent.node->tmpData][edge.from] == 0u){
 						availableRegisters.returnIndex(linkRegister);
 					}
 				}
 
 			}
+			// Assign registers to children.
 			for(Neighbor& child : vert->children){
 				for(Edge& edge : child.edges){
-					if(registers.outputs[edge.from] == -1){
-						registers.outputs[edge.from] = availableRegisters.getIndex();
+					// Skip outputs that have already been assigned when processing a previous child.
+					if(compiledNode.outputs[edge.from] == -1){
+						const uint newRegister = availableRegisters.getIndex();
+						compiledNode.outputs[edge.from] = newRegister;
+						maxRegister = (std::max)(maxRegister, int(newRegister));
 					}
 				}
 			}
 
 		}
+		uint stackSize = (uint)(maxRegister + 1);
+		const uint dummyRegister = stackSize;
+		++stackSize;
 
-		for(const Vertex* vert : nodes){
-			Log::Info() << "Processing node: " << vert->node->name() << " of type " << getNodeName(NodeClass(vert->node->type())) << "\n";
-			const Registers& regs = assignedRegisters[vert->tmpData];
-			Log::Info() << "Inputs: " << "\n";
-			for(uint reg : regs.inputs){
-				Log::Info() << reg << ", ";
+		for (NodeAndRegisters& node : compiledNodes) {
+			// Safety check.
+			uint slotId = 0u;
+			for (int reg : node.inputs) {
+				if (reg < 0) {
+					_context.addError("Unassigned input node.", node.node, slotId);
+				}
+				++slotId;
 			}
-			Log::Info() << "\n";
-			Log::Info() << "Outputs: " << "\n";
-			for(uint reg : regs.outputs){
-				Log::Info() << reg << ", ";
+			for (int& reg : node.outputs) {
+				if (reg == -1) {
+					reg = dummyRegister;
+				}
 			}
-			Log::Info() << std::endl;
 		}
+		return stackSize;
 	}
 
 	std::vector<Vertex*> nodes;
@@ -470,22 +475,29 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	// We could have unconnected regions.
 	graph.cleanUnconnectedComponents();
 
-	// Split the graph and order nodes to evaluate them.
-	// For each node list all the flushing parent nodes, then greedily cluster them
-	graph.orderNodes();
-	// For now assume a unique subgraph
-	// Pick an input, queue all nodes that have no other dependencies.
-	// Pick another input, idem.
+	std::vector<NodeAndRegisters> compiledNodes;
+	const uint stackSize = graph.compile(compiledNodes);
 	// For now, assume a unique subgraph (no flush), we'll replace flush nodes by virtual inputs/outputs with appended inputs
 	
-
-	// Assign registers to each node
-
 	// Create a context with : input images, register stack, evaluation coordinates
 	// Create batches
-	std::vector<WorkGraph::Vertex*> inputs;
-	std::vector<WorkGraph::Vertex*> outputs;
-	graph.collectInputsAndOutputs(inputs, outputs);
+	std::vector<const Node*> inputs;
+	std::vector<const Node*> outputs;
+	auto sortByName = [](const Node* a, const Node* b) {
+		return a->name() < b->name();
+	};
+
+	for (const NodeAndRegisters& compiledNode : compiledNodes) {
+		if (compiledNode.node->type() == NodeClass::INPUT_IMG) {
+			inputs.push_back(compiledNode.node);
+		}
+		if (compiledNode.node->type() == NodeClass::OUTPUT_IMG) {
+			outputs.push_back(compiledNode.node);
+		}
+
+		std::sort(inputs.begin(), inputs.end(), sortByName);
+		std::sort(outputs.begin(), outputs.end(), sortByName);
+	}
 
 	// TODO: maps instead with pointers to the nodes?
 	struct Batch {
@@ -514,12 +526,11 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 			batch.inputs.push_back(inputPaths[pathId]);
 		}
 		for(uint outputId = 0u; outputId < outputCount; ++outputId){
-			const OutputNode* node = static_cast<const OutputNode*>(outputs[outputId]->node);
+			const OutputNode* node = static_cast<const OutputNode*>(outputs[outputId]);
 			const std::string outName = node->generateFileName(batchId);
 			batch.outputs.push_back(outputDir + "/" + outName);
 		}
 	}
-
 
 	// Load all inputs, allocate all outputs, for the current batch
 	for(const Batch& batch : batches){
