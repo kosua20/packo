@@ -204,7 +204,8 @@ int sr_gui_ask_string(const char* title, const char* message, char** result) {
 	[[[alert buttons] objectAtIndex:1] setTag:SR_GUI_BUTTON1];
 	// Add text field.
 	NSTextField* field = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 200, 20)];
-	[field setStringValue:[[NSString alloc] initWithUTF8String:*result]];
+	if(*result)
+		[field setStringValue:[[NSString alloc] initWithUTF8String:*result]];
 	[alert setAccessoryView:field];
 	// Run and release.
 	NSModalResponse rep = [alert runModal];

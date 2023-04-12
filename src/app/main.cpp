@@ -346,18 +346,22 @@ int main(int argc, char** argv){
 									std::vector<std::string> inputs;
 									for(uint i = 0u; i < uint(inputCount); ++i){
 										inputs.emplace_back(inputFiles[i]);
+										free(inputFiles[i]);
 									}
 									std::string output(outputDir);
 
 									evaluate(*graph, errorContext, inputs, output);
+								if(inputFiles){
+									free(inputFiles);
+								}
+								if(outputDir){
+									free(outputDir);
 								}
 							}
 						}
 					}
 
-					if(ImGui::MenuItem("Debug graph...")){
-						evaluate(*graph, errorContext, {"in/0.png", "in/1.png"}, "out/");
-					}
+
 					ImGui::Separator();
 					if(ImGui::MenuItem("Quit")){
 						wantsExit = true;
@@ -399,6 +403,12 @@ int main(int argc, char** argv){
 								} else {
 									errorContext.addError("Unable to load graph from file at path \"" + path + "\"");
 								}
+								for(uint i = 0; i < count; ++i){
+									free(paths[i]);
+								}
+							}
+							if(paths){
+								free(paths);
 							}
 						}
 					}
@@ -420,6 +430,7 @@ int main(int argc, char** argv){
 							} else {
 								errorContext.addError("Unable to create file at path \"" + path + "\"");
 							}
+							free(rawPath);
 						}
 					}
 
