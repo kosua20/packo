@@ -10,6 +10,57 @@ public:
 	AddNode();
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
 
+
+class SubtractNode : public Node {
+public:
+
+	SubtractNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class ProductNode : public Node {
+public:
+
+	ProductNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+
+class DivideNode : public Node {
+public:
+
+	DivideNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+
+class MinNode : public Node {
+public:
+
+	MinNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+
+class MaxNode : public Node {
+public:
+
+	MaxNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class ClampNode : public Node {
+public:
+
+	ClampNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 

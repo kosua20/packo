@@ -9,6 +9,12 @@ enum NodeClass : uint {
 	ADD,
 	CONST_FLOAT,
 	CONST_COLOR,
+	SUBTRACT,
+	PRODUCT,
+	DIVIDE,
+	MINI,
+	MAXI,
+	CLAMP,
 	COUNT
 };
 
