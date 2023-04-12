@@ -405,12 +405,10 @@ int main(int argc, char** argv){
 										errorContext.addError("Unable to parse graph from file at path \"" + path + "\"");
 									} else {
 										// Issue: numbered inputs/outputs are created before the freelist indices are reset...
-										std::unique_ptr<Graph> newGraph(new Graph());
-										if(newGraph->deserialize(data)){
-											// Remove the current graph.
-											graph.reset(nullptr);
-											errorContext.clear();
-											graph = std::move(newGraph);
+										// Remove the current graph.
+										graph.reset(new Graph());
+										errorContext.clear();
+										if(graph->deserialize(data)){
 											if(data.contains("layout")){
 												std::string state = data["layout"];
 												ImNodes::LoadCurrentEditorStateFromIniString(state.c_str(), state.size());
