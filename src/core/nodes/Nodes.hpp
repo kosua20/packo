@@ -2,6 +2,7 @@
 #include "core/nodes/Node.hpp"
 #include "core/nodes/InOutNodes.hpp"
 #include "core/nodes/ArithmeticNodes.hpp"
+#include "core/nodes/GenerativeNodes.hpp"
 
 enum NodeClass : uint {
 	INPUT_IMG = 0,
