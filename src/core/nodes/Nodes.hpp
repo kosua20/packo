@@ -3,6 +3,7 @@
 #include "core/nodes/InOutNodes.hpp"
 #include "core/nodes/ArithmeticNodes.hpp"
 #include "core/nodes/GenerativeNodes.hpp"
+#include "core/nodes/GlobalNodes.hpp"
 
 enum NodeClass : uint {
 	INPUT_IMG = 0,
@@ -20,6 +21,7 @@ enum NodeClass : uint {
 	SQRT,
 	EXPONENTIAL,
 	LOGARITHM,
+	FLIP,
 	COUNT_EXPOSED,
 	COUNT
 };

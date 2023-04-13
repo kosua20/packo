@@ -54,7 +54,8 @@ public:
 
 	virtual uint type() const = 0;
 	virtual uint version() const = 0;
-	
+	virtual bool global() const { return false; }
+
 	const std::string& name() const { return _name; }
 	const std::vector<std::string>& inputs() const { return _inputNames; }
 	const std::vector<std::string>& outputs() const { return _outputNames; }

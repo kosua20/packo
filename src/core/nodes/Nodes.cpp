@@ -33,6 +33,8 @@ Node* createNode(NodeClass type){
 			return new ExponentialNode();
 		case LOGARITHM:
 			return new LogarithmNode();
+		case FLIP:
+			return new FlipNode();
 		default:
 			assert(false);
 			break;
@@ -44,6 +46,7 @@ const std::string& getNodeName(NodeClass type){
 	static const std::vector<std::string> names = {
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
+		"Flip",
 		"Internal", "Unknown"
 	};
 	assert(names.size() == NodeClass::COUNT+1);
