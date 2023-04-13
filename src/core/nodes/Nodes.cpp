@@ -47,7 +47,8 @@ const std::string& getNodeName(NodeClass type){
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
 		"Flip",
-		"Internal", "Unknown"
+		"Internal", "Backup", "Restore",
+		"Unknown"
 	};
 	assert(names.size() == NodeClass::COUNT+1);
 	return names[uint(type)];

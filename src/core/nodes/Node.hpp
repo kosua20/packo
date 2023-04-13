@@ -9,6 +9,7 @@ constexpr unsigned int MAX_STR_LENGTH = 256;
 struct SharedContext {
 	std::vector<Image> inputImages;
 	std::vector<Image> outputImages;
+	std::vector<Image> tmpImages;
 };
 
 struct LocalContext {

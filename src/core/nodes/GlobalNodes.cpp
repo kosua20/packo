@@ -16,3 +16,38 @@ void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 
 }
 
+BackupNode::BackupNode(){
+	_name = "Backup";
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(BackupNode, NodeClass::INTERNAL_BACKUP, 1)
+
+void BackupNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(outputs.size() == 0u);
+	const uint count = inputs.size();
+	for(uint i = 0u; i < count; ++i){
+		const uint imgId = i / 4u;
+		const uint channelId = i % 4u;
+		Image& img = context.shared->tmpImages[imgId];
+		glm::vec4& pix = img.pixel(context.coords.x, context.coords.y);
+		pix[channelId] = context.stack[inputs[i]];
+	}
+}
+
+RestoreNode::RestoreNode(){
+	_name = "Backup";
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(RestoreNode, NodeClass::INTERNAL_RESTORE, 1)
+
+void RestoreNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 0u);
+	const uint count = outputs.size();
+	for(uint i = 0u; i < count; ++i){
+		const uint imgId = i / 4u;
+		const uint channelId = i % 4u;
+		const Image& img = context.shared->tmpImages[imgId];
+		const glm::vec4& pix = img.pixel(context.coords.x, context.coords.y);
+		context.stack[outputs[i]] = pix[channelId];
+	}
+}
