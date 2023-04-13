@@ -481,7 +481,7 @@ int main(int argc, char** argv){
 		const float menuBarHeight = ImGui::GetItemRectSize().y;
 
 		// TODO: Nodes
-		// * float AND RGBA versions?
+		// * RGBA versions?
 		// * comparisons and boolean selector? (still floats)
 		// * "full image" nodes: resize, flip, rotate, blur?
 		// * procedural nodes
@@ -539,7 +539,7 @@ int main(int argc, char** argv){
 
 					const uint attribWidth = 130u;
 
-					const uint nodeSize = attributeCount != 0u ? attribWidth : 50u;
+					const uint minNodeSize = attributeCount != 0u ? attribWidth : 50u;
 
 					for(uint attId = 0; attId < attributeCount; ++attId ){
 
@@ -570,20 +570,20 @@ int main(int argc, char** argv){
 					for(uint attId = 0; attId < maxCount; ++attId ){
 						const bool hasInput = attId < inputCount;
 						const bool hasOutput = attId < outputCount;
-						
+						uint inputWidth = 0;
 						if( hasInput ){
 							const std::string& name = inputs[attId];
 							ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
-							//ImGui::PushItemWidth( slotWidth );
 							ImGui::TextUnformatted(name.c_str());
-							//ImGui::PopItemWidth();
 							ImNodes::EndInputAttribute();
+							inputWidth = ImGui::CalcTextSize( name.c_str()).x + ImGui::GetStyle().IndentSpacing;
 						}
 						if(hasOutput){
 							bool indented = false;
 							const std::string& name = outputs[ attId ];
 
-							const uint offset = nodeSize -  ImGui::CalcTextSize( name.c_str()).x;
+							const uint labelSize = ImGui::CalcTextSize( name.c_str()).x;
+							const uint offset = inputWidth + (labelSize <= minNodeSize ? (minNodeSize - labelSize) : 0u) ;
 							if(hasInput){
 								ImGui::SameLine(offset);
 							} else {
@@ -591,9 +591,7 @@ int main(int argc, char** argv){
 								indented = true;
 							}
 							ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
-							//ImGui::PushItemWidth( slotWidth );
 							ImGui::TextUnformatted(name.c_str());
-							//ImGui::PopItemWidth();
 							ImNodes::EndOutputAttribute();
 							if(indented){
 								ImGui::Unindent(offset);

@@ -61,8 +61,7 @@ void DivideNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 MinNode::MinNode(){
 	_name = "Minimum";
 	_inputNames = {"X", "Y"};
-	// TODO: bug with longer labels
-	_outputNames = {"min"};
+	_outputNames = {"min(X,Y)"};
 }
 
 NODE_DEFINE_TYPE_AND_VERSION(MinNode, NodeClass::MINI, 1)
@@ -76,8 +75,7 @@ void MinNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 MaxNode::MaxNode(){
 	_name = "Maximum";
 	_inputNames = {"X", "Y"};
-	// TODO: bug with longer labels
-	_outputNames = {"max(X,y)"};
+	_outputNames = {"max(X,Y)"};
 }
 
 NODE_DEFINE_TYPE_AND_VERSION(MaxNode, NodeClass::MAXI, 1)
