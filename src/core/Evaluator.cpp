@@ -4,6 +4,7 @@
 #include "core/Image.hpp"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <sstream>
 #include <deque>
 
@@ -476,6 +477,78 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	std::vector<NodeAndRegisters> compiledNodes;
 	const uint stackSize = graph.compile(compiledNodes);
 	// For now, assume a unique subgraph (no flush), we'll replace flush nodes by virtual inputs/outputs with appended inputs
+	// Find all flush nodes, find all "in transit" registers, assign them images
+	// Then when executing, before each "flush" node have a "backup" node and afterwards a "restore" node
+	// the "flush" node will have 4 inputs and outputs, so we'll have to ensure this 4 are packed in the same image.
+	struct Split {
+		uint index;
+		std::unordered_set<uint> redirections;
+	};
+	const int dummyRegister = std::max(int(stackSize) - 1, 0);
+	std::vector<Split> splits;
+	std::unordered_set<uint> registersInFlight;
+
+	const int nodeCount = int(compiledNodes.size());
+	for(int i = nodeCount - 1; i >= 0; --i){
+		const NodeAndRegisters& compiledNode = compiledNodes[i];
+		// Remove in flight registers provided by this node.
+		for(int index : compiledNode.outputs){
+			if(index != dummyRegister){
+				registersInFlight.erase(index);
+			}
+		}
+		// If the node is global, list it.
+		if(compiledNodes[i].node->global()){
+			splits.insert(splits.begin(), {uint(i), registersInFlight});
+		}
+		// Inputs need to be provided if there is a flush node before.
+		for(int index : compiledNode.inputs){
+			if(index != dummyRegister){
+				registersInFlight.insert(index);
+			}
+		}
+	}
+	uint totalShift = 0u;
+	uint maxTmpChannelCount = 0u;
+	for(Split& split : splits){
+		const uint backupIndex  = split.index + totalShift;
+		const uint globalIndex  = backupIndex + 1u;
+		const uint restoreIndex = globalIndex + 1u;
+		compiledNodes.emplace(compiledNodes.begin() + backupIndex);
+		compiledNodes.emplace(compiledNodes.begin() + restoreIndex);
+		split.index = globalIndex;
+		totalShift += 2u;
+
+		NodeAndRegisters& backup  = compiledNodes[backupIndex];
+		NodeAndRegisters& global  = compiledNodes[globalIndex];
+		NodeAndRegisters& restore = compiledNodes[restoreIndex];
+		backup.node = new BackupNode();
+		restore.node = new RestoreNode();
+		// First put all registers used by the global node as inputs.
+		backup.inputs = global.inputs;
+		// Then all others registers to preserve if not already inserted
+		for(uint redir : split.redirections){
+			if(std::find(backup.inputs.begin(), backup.inputs.end(), redir) == backup.inputs.end()){
+				backup.inputs.push_back(redir);
+			}
+		}
+		// The global node will have access to all the backed up images.
+		// TODO: generate sequence accordingly to index in tmpImages array directly in evaluate.
+		global.inputs = {0, 1, 2, 3};
+		// Technically the global node can directly write its outputs to the registers for each pixel.
+		// As long as the operation is a gathering.
+
+		// Ignore the ones that are output by the global node, by directing them to the dummy register.
+		restore.outputs = backup.inputs;
+		for(int& restored : restore.outputs){
+			if(std::find(global.outputs.begin(), global.outputs.end(), restored) != global.outputs.end()){
+				restored = dummyRegister;
+			}
+		}
+
+		maxTmpChannelCount = (std::max)(maxTmpChannelCount, uint(backup.inputs.size()));
+	}
+	const uint tmpImageCount = maxTmpChannelCount / 4u;
 
 	// Collect file nodes.
 	std::vector<const Node*> inputs;
@@ -557,12 +630,19 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 				h = (std::min)(h, sharedContext.inputImages[i].h());
 			}
 		}
-
+		// TODO: a unique context for all batches?
 		// Create outputs
 		for (uint i = 0u; i < outputCount; ++i) {
 			sharedContext.outputImages.emplace_back(w, h);
 		}
+		// Create tmp images
+		for(uint i = 0u; i < tmpImageCount; ++i){
+			sharedContext.tmpImages.emplace_back(w, h);
+		}
 
+		// TODO: loop properly
+		const uint compiledNodeCount = compiledNodes.size();
+		//for(uint nId = 0; nId < compiledNodeCount; ++nId){
 		// For each pixel
 		for (uint y = 0; y < h; ++y) {
 			for (uint x = 0; x < w; ++x) {
@@ -575,12 +655,16 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 				}
 			}
 		}
+		//}
 
 		// Save outputs
 		for (uint i = 0u; i < outputCount; ++i) {
 			sharedContext.outputImages[i].save(batch.outputs[i]);
 		}
 	}
+
+	// TODO: clean extra compiled nodes
+
 	return true;
 }
 
