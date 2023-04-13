@@ -243,6 +243,15 @@ Graph::Slot fromLinkToSlot(uint link){
 	return {baseLink / kMaxSlotCount, (baseLink % kMaxSlotCount)};
 }
 
+bool getAttributeComboItem(void* data, int index, const char** str){
+	const auto& values = static_cast<Node::Attribute*>(data)->values;
+	if(size_t(index) >= values.size()){
+		return false;
+	}
+	*str = values[index].c_str();
+	return true;
+}
+
 int main(int argc, char** argv){
 
 	PackoConfig config(std::vector<std::string>(argv, argv+argc));
@@ -555,6 +564,9 @@ int main(int argc, char** argv){
 								break;
 							case Node::Attribute::Type::STRING:
 								ImGui::InputText( attribute.name.c_str(), &attribute.str[0], MAX_STR_LENGTH );
+								break;
+							case Node::Attribute::Type::COMBO:
+								ImGui::Combo(attribute.name.c_str(), &attribute.cmb, &getAttributeComboItem, &attribute, attribute.values.size());
 								break;
 							default:
 								assert( false );

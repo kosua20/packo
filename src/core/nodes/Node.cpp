@@ -10,6 +10,15 @@ Node::Attribute::Attribute( const std::string& aname, Type atype ) : name(aname)
 {
 	clr = glm::vec4( 0.0f, 0.0f, 0.0f, 1.0f );
 	flt = 0.f;
+	cmb = 0;
+	memset( str, 0, sizeof( str ) );
+}
+
+Node::Attribute::Attribute( const std::string& aname, const std::vector<std::string>& avalues ) : name(aname), values(avalues), type( Type::COMBO )
+{
+	clr = glm::vec4( 0.0f, 0.0f, 0.0f, 1.0f );
+	flt = 0.f;
+	cmb = 0;
 	memset( str, 0, sizeof( str ) );
 }
 
@@ -35,6 +44,9 @@ void Node::serialize(json& data) const {
 				break;
 			case Node::Attribute::Type::STRING:
 				attrData["str"] = std::string(att.str);
+				break;
+			case Node::Attribute::Type::COMBO:
+				attrData["cmb"] = att.cmb;
 				break;
 			default:
 				assert(false);
@@ -94,6 +106,13 @@ bool Node::deserialize(const json& data){
 					att.str[copySize] = '\0';
 				}
 			}
+				break;
+			case Node::Attribute::Type::COMBO:
+				if(attrData.contains("cmb")){
+					att.cmb = attrData["cmb"];
+					const int lastVal = std::max(int(att.values.size()), 1) - 1;
+					att.cmb = glm::clamp(att.cmb, 0, lastVal);
+				}
 				break;
 			default:
 				assert(false);

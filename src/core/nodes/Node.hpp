@@ -27,17 +27,21 @@ public:
 	{
 		enum class Type
 		{
-			FLOAT, STRING, COLOR
+			FLOAT, STRING, COLOR, COMBO
 		};
 
 		std::string name;
+		std::vector<std::string> values;
 		Type type;
 
 		char str[ MAX_STR_LENGTH ];
 		glm::vec4 clr;
 		float flt;
+		int cmb;
 
 		Attribute( const std::string& aname, Type atype );
+
+		Attribute( const std::string& aname, const std::vector<std::string>& avalues );
 
 		~Attribute();
 	};
