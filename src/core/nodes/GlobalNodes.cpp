@@ -11,9 +11,17 @@ FlipNode::FlipNode(){
 NODE_DEFINE_TYPE_AND_VERSION(FlipNode, NodeClass::FLIP, 1)
 
 void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
-	assert(inputs.size() == 4u);
-	assert(outputs.size() == 4u);
+	const bool horizontal = _attributes[0].cmb == 0;
+	// How does this behave for larger inputs?
+	const Image& src = context.shared->tmpImages[0];
 
+	const int x = context.coords.x;
+	const int y = context.coords.y;
+	const int xOld =  horizontal ? (src.w() - x - 1) : x;
+	const int yOld = !horizontal ? (src.h() - y - 1) : y;
+	for(uint i = 0; i < 4; ++i){
+		context.stack[outputs[i]] = src.pixel(xOld, yOld)[i];
+	}
 }
 
 BackupNode::BackupNode(){
