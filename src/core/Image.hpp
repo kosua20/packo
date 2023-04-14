@@ -21,7 +21,11 @@ public:
 	glm::vec4& pixel(int x, int y) { return _pixels[_w * y + x]; }
 
 	const glm::vec4& pixel(int x, int y) const { return _pixels[_w * y + x]; }
-	
+
+	glm::vec4& pixel( const glm::ivec2& c ) { return _pixels[ _w * c.y + c.x ]; }
+
+	const glm::vec4& pixel( const glm::ivec2& c ) const { return _pixels[ _w * c.y + c.x ]; }
+
 	uint w() const { return _w; }
 	uint h() const { return _h; }
 

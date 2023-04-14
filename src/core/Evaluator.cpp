@@ -493,9 +493,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		const NodeAndRegisters& compiledNode = compiledNodes[i];
 		// Remove in flight registers provided by this node.
 		for(int index : compiledNode.outputs){
-			if(index != dummyRegister){
-				registersInFlight.erase(index);
-			}
+			registersInFlight.erase(index);
 		}
 		// If the node is global, list it.
 		if(compiledNodes[i].node->global()){
@@ -524,28 +522,55 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		NodeAndRegisters& restore = compiledNodes[restoreIndex];
 		backup.node = new BackupNode();
 		restore.node = new RestoreNode();
-		// First put all registers used by the global node as inputs.
-		backup.inputs = global.inputs;
-		// Then all others registers to preserve if not already inserted
-		for(uint redir : split.redirections){
-			if(std::find(backup.inputs.begin(), backup.inputs.end(), redir) == backup.inputs.end()){
-				backup.inputs.push_back(redir);
+
+		// Backup nodesetup
+		{
+			// First put all registers used by the global node as inputs.
+			backup.inputs = global.inputs;
+			// Then all others registers to preserve if not already inserted
+			for( uint redir : split.redirections )
+			{
+				if( std::find( backup.inputs.begin(), backup.inputs.end(), redir ) == backup.inputs.end() )
+				{
+					backup.inputs.push_back( redir );
+				}
+			}
+			// Move each register to an image channel, in order.
+			const uint backupInputCount = backup.inputs.size();
+			backup.outputs.resize( backupInputCount );
+			for( uint i = 0; i < backupInputCount; ++i )
+			{
+				backup.outputs[ i ] = i;
 			}
 		}
-		// The global node will have access to all the backed up images.
-		// TODO: generate sequence accordingly to index in tmpImages array directly in evaluate.
-		global.inputs = {0, 1, 2, 3};
-		// Technically the global node can directly write its outputs to the registers for each pixel.
-		// As long as the operation is a gathering.
-
-		// Ignore the ones that are output by the global node, by directing them to the dummy register.
-		restore.outputs = backup.inputs;
-		for(int& restored : restore.outputs){
-			if(std::find(global.outputs.begin(), global.outputs.end(), restored) != global.outputs.end()){
-				restored = dummyRegister;
+		// Global node adjustments
+		{
+			// The global node will have access to all the backed up images.
+			// TODO: generate sequence accordingly to index in tmpImages array directly in evaluate.
+			const uint nodeInputCount = global.inputs.size();
+			for( uint i = 0; i < nodeInputCount; ++i )
+			{
+				global.inputs[ i ] = i;
+			}
+			// The global node will directly write its outputs to the registers for each pixel.
+			// As long as the operation is a gathering.
+		}
+		
+		// Restore node setup
+		{
+			restore.inputs = backup.outputs;
+			restore.outputs = backup.inputs;
+			// Ignore the ones that are output by the global node, by directing them to the dummy register.
+			for( int& restored : restore.outputs )
+			{
+				if( std::find( global.outputs.begin(), global.outputs.end(), restored ) != global.outputs.end() )
+				{
+					restored = dummyRegister;
+				}
 			}
 		}
 
+		// Number of backup channels needed.
 		maxTmpChannelCount = (std::max)(maxTmpChannelCount, uint(backup.inputs.size()));
 	}
 	const uint tmpImageCount = maxTmpChannelCount / 4u;
@@ -630,6 +655,8 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 				h = (std::min)(h, sharedContext.inputImages[i].h());
 			}
 		}
+		sharedContext.dims = { w, h };
+
 		// TODO: a unique context for all batches?
 		// Create outputs
 		for (uint i = 0u; i < outputCount; ++i) {
@@ -640,22 +667,32 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 			sharedContext.tmpImages.emplace_back(w, h);
 		}
 
-		// TODO: loop properly
 		const uint compiledNodeCount = compiledNodes.size();
-		//for(uint nId = 0; nId < compiledNodeCount; ++nId){
-		// For each pixel
-		for (uint y = 0; y < h; ++y) {
-			for (uint x = 0; x < w; ++x) {
-				// Create local context (shared context + x,y coords and a scratch space)
-				LocalContext context(&sharedContext, { x,y }, stackSize);
-				
-				// Run the compiled graph, assigning to registers, passing the context along.
-				for (const NodeAndRegisters& node : compiledNodes) {
-					node.node->evaluate(context, node.inputs, node.outputs);
+		uint currentStartNodeId = 0u;
+		while( currentStartNodeId < compiledNodeCount )
+		{
+			// Find the next global node
+			uint nextGlobalNodeId = currentStartNodeId + 1;
+			for( ; nextGlobalNodeId < compiledNodeCount; ++nextGlobalNodeId ){
+				if( compiledNodes[ nextGlobalNodeId ].node->global() )
+					break;
+			}
+			// Now we have a range [currentStartNode, nextGlobalNodeId[ to execute per-pixel.
+			for( uint y = 0; y < h; ++y ){
+				for( uint x = 0; x < w; ++x ){
+					// Create local context (shared context + x,y coords and a scratch space)
+					LocalContext context( &sharedContext, { x,y }, stackSize );
+
+					// Run the compiled graph, assigning to registers, passing the context along.
+					for( uint nodeId = currentStartNodeId; nodeId < nextGlobalNodeId; ++nodeId )
+					{
+						const NodeAndRegisters& compiledNode = compiledNodes[ nodeId ];
+						compiledNode.node->evaluate( context, compiledNode.inputs, compiledNode.outputs );
+					}
 				}
 			}
+			currentStartNodeId = nextGlobalNodeId;
 		}
-		//}
 
 		// Save outputs
 		for (uint i = 0u; i < outputCount; ++i) {
@@ -663,8 +700,13 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		}
 	}
 
-	// TODO: clean extra compiled nodes
-
+	// Clean extra compiled nodes
+	for( NodeAndRegisters& compiledNode : compiledNodes ){
+		if( compiledNode.node->type() > NodeClass::COUNT_EXPOSED ){
+			delete compiledNode.node;
+			compiledNode.node = nullptr;
+		}
+	}
 	return true;
 }
 
