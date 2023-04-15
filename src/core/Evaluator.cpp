@@ -234,7 +234,8 @@ public:
 			}
 			// Generate the filename
 			const OutputNode* outNode = static_cast<const OutputNode*>(node->node);
-			const std::string filename = outNode->generateFileName(0);
+			Image::Format tmpFormat;
+			const std::string filename = outNode->generateFileName(0, tmpFormat);
 			auto other = outputNames.find(filename);
 			if(other != outputNames.end()){
 				duplicated = true;
@@ -459,6 +460,17 @@ bool validate(const Graph& editGraph, ErrorContext& errors ){
 	return validate(graph);
 }
 
+struct Batch {
+
+	struct Output {
+		std::string path;
+		Image::Format format;
+	};
+
+	std::vector<std::string> inputs;
+	std::vector<Output> outputs;
+};
+
 
 bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& outputRes ){
 
@@ -594,10 +606,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	}
 
 	// Generate batches based on the number of file nodes and paths given.
-	struct Batch {
-		std::vector<std::string> inputs;
-		std::vector<std::string> outputs;
-	};
+
 	const uint inputCount = inputs.size();
 	const uint outputCount = outputs.size();
 	const uint pathCount = inputPaths.size();
@@ -620,24 +629,13 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		}
 		for(uint outputId = 0u; outputId < outputCount; ++outputId){
 			const OutputNode* node = static_cast<const OutputNode*>(outputs[outputId]);
-			const std::string outName = node->generateFileName(batchId);
-			batch.outputs.push_back(outputDir + "/" + outName);
+			Batch::Output& outFile = batch.outputs.emplace_back();
+			outFile.path = outputDir + "/" + node->generateFileName(batchId, outFile.format);
 		}
 	}
 
 	for(const Batch& batch : batches){
-		Log::Info() << "Processing batch: " << "\n";
-		Log::Info() << "Inputs: " << "\n";
-		for(const std::string& input : batch.inputs){
-			Log::Info() << "* '" << input << "'" << "\n";
-		}
-		Log::Info() << "Outputs: " << "\n";
-		for(const std::string& output : batch.outputs){
-			Log::Info() << "* '" << output << "'" << "\n";
-		}
-		Log::Info() << std::endl;
-		const uint inputCount = batch.inputs.size();
-		const uint outputCount = batch.outputs.size();
+		// TODO: log feedback.
 
 		// Load inputs
 		SharedContext sharedContext;
@@ -695,8 +693,9 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		}
 
 		// Save outputs
-		for (uint i = 0u; i < outputCount; ++i) {
-			sharedContext.outputImages[i].save(batch.outputs[i]);
+		for (uint i = 0u; i < outputCountInBatch; ++i) {
+			const Batch::Output& output = batch.outputs[i];
+			sharedContext.outputImages[i].save(output.path, output.format);
 		}
 	}
 

@@ -25,7 +25,7 @@ public:
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 
-	std::string generateFileName(uint batch) const;
+	std::string generateFileName(uint batch, Image::Format& format) const;
 
 private:
 	unsigned int _index{0u};
