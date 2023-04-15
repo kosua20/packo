@@ -65,16 +65,16 @@ bool Image::save(const std::string& path, Format format){
 	int res = -1;
 	switch (format) {
 		case Format::PNG:
-			res = stbi_write_png(path.c_str(), _w, _h, 4, data.data(), 4 * _w);
+			res = stbi_write_png(dstPath.c_str(), _w, _h, 4, data.data(), 4 * _w);
 			break;
 		case Format::BMP:
-			res = stbi_write_bmp(path.c_str(), _w, _h, 4, data.data());
+			res = stbi_write_bmp(dstPath.c_str(), _w, _h, 4, data.data());
 			break;
 		case Format::TGA:
-			res = stbi_write_tga(path.c_str(), _w, _h, 4, data.data());
+			res = stbi_write_tga(dstPath.c_str(), _w, _h, 4, data.data());
 			break;
 		case Format::JPEG:
-			res = stbi_write_jpg(path.c_str(), _w, _h, 4, data.data(), 12 /* quality */);
+			res = stbi_write_jpg(dstPath.c_str(), _w, _h, 4, data.data(), 100 /* quality */);
 			break;
 		default:
 			assert(false);
