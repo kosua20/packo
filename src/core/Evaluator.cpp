@@ -2,11 +2,14 @@
 #include "core/Graph.hpp"
 #include "core/nodes/Nodes.hpp"
 #include "core/Image.hpp"
+#include "core/system/System.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
 #include <sstream>
 #include <deque>
+
+#define PARALLEL_FOR
 
 struct NodeAndRegisters { 
 	const Node* node;
@@ -672,7 +675,11 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 					break;
 			}
 			// Now we have a range [currentStartNode, nextGlobalNodeId[ to execute per-pixel.
+#ifdef PARALLEL_FOR
+			System::forParallel(0, h, [&sharedContext, currentStartNodeId, nextGlobalNodeId, w, stackSize, &compiledNodes](size_t y){
+#else
 			for( uint y = 0; y < h; ++y ){
+#endif
 				for( uint x = 0; x < w; ++x ){
 					// Create local context (shared context + x,y coords and a scratch space)
 					LocalContext context(&sharedContext, {x,y}, stackSize);
@@ -684,6 +691,9 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 					}
 				}
 			}
+#ifdef PARALLEL_FOR
+			);
+#endif
 
 			std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
 
