@@ -656,8 +656,9 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 			sharedContext.outputImages.emplace_back(w, h);
 		}
 		// Create tmp images
-			sharedContext.tmpImages.emplace_back(w, h);
 		for(uint i = 0u; i < tmpImageCountInBatch; ++i){
+			sharedContext.tmpImagesRead.emplace_back(w, h);
+			sharedContext.tmpImagesWrite.emplace_back(w, h);
 		}
 
 		const uint compiledNodeCount = compiledNodes.size();
@@ -683,6 +684,9 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 					}
 				}
 			}
+
+			std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
+
 			currentStartNodeId = nextGlobalNodeId;
 		}
 
