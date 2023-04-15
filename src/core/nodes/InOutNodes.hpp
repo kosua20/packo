@@ -31,3 +31,21 @@ private:
 	unsigned int _index{0u};
 	static FreeList _freeList;
 };
+
+class BackupNode : public Node {
+public:
+
+	BackupNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+
+};
+
+class RestoreNode : public Node {
+public:
+
+	RestoreNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+
+};

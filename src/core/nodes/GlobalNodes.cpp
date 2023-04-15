@@ -31,47 +31,14 @@ void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 		context.stack[ dstId ] = src.pixel( xOld, yOld )[ channelId ];
 	}
 }
-
-BackupNode::BackupNode(){
-	_name = "Backup";
-}
-
-NODE_DEFINE_TYPE_AND_VERSION(BackupNode, NodeClass::INTERNAL_BACKUP, 1)
-
-void BackupNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
-	assert(outputs.size() == inputs.size());
 	
 	const uint count = inputs.size();
 	for(uint i = 0u; i < count; ++i){
 		const uint srcId = inputs[i];
 		const uint dstId = outputs[i];
 
-		const uint imageId = dstId / 4u;
-		const uint channelId = dstId % 4u;
-		Image& img = context.shared->tmpImages[ imageId ];
-
-		img.pixel(context.coords)[ channelId ] = context.stack[ srcId ];
-	}
-}
-
-RestoreNode::RestoreNode(){
-	_name = "Backup";
-}
-
-NODE_DEFINE_TYPE_AND_VERSION(RestoreNode, NodeClass::INTERNAL_RESTORE, 1)
-
-void RestoreNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
-	assert(inputs.size() == outputs.size());
-
-	const uint count = outputs.size();
-	for(uint i = 0u; i < count; ++i){
-		const uint srcId = inputs[i];
-		const uint dstId = outputs[i];
-
 		const uint imageId = srcId / 4u;
 		const uint channelId = srcId % 4u;
-		const Image& img = context.shared->tmpImages[ imageId ];
 
-		context.stack[ dstId ] = img.pixel( context.coords )[ channelId ];
 	}
 }
