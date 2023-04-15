@@ -540,29 +540,24 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 			// First put all registers used by the global node as inputs.
 			backup.inputs = global.inputs;
 			// Then all others registers to preserve if not already inserted
-			for( uint redir : split.redirections )
-			{
-				if( std::find( backup.inputs.begin(), backup.inputs.end(), redir ) == backup.inputs.end() )
-				{
-					backup.inputs.push_back( redir );
+			for(uint redir : split.redirections){
+				if(std::find(backup.inputs.begin(), backup.inputs.end(), redir) == backup.inputs.end()){
+					backup.inputs.push_back(redir);
 				}
 			}
 			// Move each register to an image channel, in order.
 			const uint backupInputCount = backup.inputs.size();
-			backup.outputs.resize( backupInputCount );
-			for( uint i = 0; i < backupInputCount; ++i )
-			{
-				backup.outputs[ i ] = i;
+			backup.outputs.resize(backupInputCount);
+			for(uint i = 0; i < backupInputCount; ++i){
+				backup.outputs[i] = i;
 			}
 		}
 		// Global node adjustments
 		{
 			// The global node will have access to all the backed up images.
-			// TODO: generate sequence accordingly to index in tmpImages array directly in evaluate.
 			const uint nodeInputCount = global.inputs.size();
-			for( uint i = 0; i < nodeInputCount; ++i )
-			{
-				global.inputs[ i ] = i;
+			for(uint i = 0; i < nodeInputCount; ++i){
+				global.inputs[i] = i;
 			}
 			// The global node will directly write its outputs to the registers for each pixel.
 			// As long as the operation is a gathering.
@@ -573,10 +568,8 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 			restore.inputs = backup.outputs;
 			restore.outputs = backup.inputs;
 			// Ignore the ones that are output by the global node, by directing them to the dummy register.
-			for( int& restored : restore.outputs )
-			{
-				if( std::find( global.outputs.begin(), global.outputs.end(), restored ) != global.outputs.end() )
-				{
+			for(int& restored : restore.outputs){
+				if(std::find(global.outputs.begin(), global.outputs.end(), restored) != global.outputs.end()){
 					restored = dummyRegister;
 				}
 			}
@@ -585,19 +578,19 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		// Number of backup channels needed.
 		maxTmpChannelCount = (std::max)(maxTmpChannelCount, uint(backup.inputs.size()));
 	}
-	const uint tmpImageCount = maxTmpChannelCount / 4u;
+	const uint tmpImageCountInBatch = (maxTmpChannelCount + 3u) / 4u;
 
 	// Collect file nodes.
 	std::vector<const Node*> inputs;
 	std::vector<const Node*> outputs;
-	auto sortByName = [](const Node* a, const Node* b) {
+	auto sortByName = [](const Node* a, const Node* b){
 		return a->name() < b->name();
 	};
-	for (const NodeAndRegisters& compiledNode : compiledNodes) {
-		if (compiledNode.node->type() == NodeClass::INPUT_IMG) {
+	for(const NodeAndRegisters& compiledNode : compiledNodes){
+		if(compiledNode.node->type() == NodeClass::INPUT_IMG){
 			inputs.push_back(compiledNode.node);
 		}
-		if (compiledNode.node->type() == NodeClass::OUTPUT_IMG) {
+		if(compiledNode.node->type() == NodeClass::OUTPUT_IMG){
 			outputs.push_back(compiledNode.node);
 		}
 
@@ -637,15 +630,18 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	for(const Batch& batch : batches){
 		// TODO: log feedback.
 
+		const uint inputCountInBatch = batch.inputs.size();
+		const uint outputCountInBatch = batch.outputs.size();
+
 		// Load inputs
 		SharedContext sharedContext;
-		sharedContext.inputImages.resize(inputCount);
-		for (uint i = 0u; i < inputCount; ++i) {
+		sharedContext.inputImages.resize(inputCountInBatch);
+		for(uint i = 0u; i < inputCountInBatch; ++i){
 			sharedContext.inputImages[i].load(batch.inputs[i]);
 		}
 		// Check that all images have the same size.
 		uint w = outputRes[0]; uint h = outputRes[1];
-		if (inputCount > 0) {
+		if(inputCountInBatch > 0){
 			w = sharedContext.inputImages[0].w();
 			h = sharedContext.inputImages[0].h();
 			for (uint i = 1u; i < inputCount; ++i) {
@@ -655,37 +651,35 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		}
 		sharedContext.dims = { w, h };
 
-		// TODO: a unique context for all batches?
 		// Create outputs
-		for (uint i = 0u; i < outputCount; ++i) {
+		for(uint i = 0u; i < outputCountInBatch; ++i){
 			sharedContext.outputImages.emplace_back(w, h);
 		}
 		// Create tmp images
-		for(uint i = 0u; i < tmpImageCount; ++i){
 			sharedContext.tmpImages.emplace_back(w, h);
+		for(uint i = 0u; i < tmpImageCountInBatch; ++i){
 		}
 
 		const uint compiledNodeCount = compiledNodes.size();
 		uint currentStartNodeId = 0u;
-		while( currentStartNodeId < compiledNodeCount )
-		{
+
+		while(currentStartNodeId < compiledNodeCount){
 			// Find the next global node
 			uint nextGlobalNodeId = currentStartNodeId + 1;
-			for( ; nextGlobalNodeId < compiledNodeCount; ++nextGlobalNodeId ){
-				if( compiledNodes[ nextGlobalNodeId ].node->global() )
+			for(; nextGlobalNodeId < compiledNodeCount; ++nextGlobalNodeId){
+				if(compiledNodes[ nextGlobalNodeId ].node->global())
 					break;
 			}
 			// Now we have a range [currentStartNode, nextGlobalNodeId[ to execute per-pixel.
 			for( uint y = 0; y < h; ++y ){
 				for( uint x = 0; x < w; ++x ){
 					// Create local context (shared context + x,y coords and a scratch space)
-					LocalContext context( &sharedContext, { x,y }, stackSize );
+					LocalContext context(&sharedContext, {x,y}, stackSize);
 
 					// Run the compiled graph, assigning to registers, passing the context along.
-					for( uint nodeId = currentStartNodeId; nodeId < nextGlobalNodeId; ++nodeId )
-					{
-						const NodeAndRegisters& compiledNode = compiledNodes[ nodeId ];
-						compiledNode.node->evaluate( context, compiledNode.inputs, compiledNode.outputs );
+					for(uint nodeId = currentStartNodeId; nodeId < nextGlobalNodeId; ++nodeId){
+						const NodeAndRegisters& compiledNode = compiledNodes[nodeId];
+						compiledNode.node->evaluate(context, compiledNode.inputs, compiledNode.outputs);
 					}
 				}
 			}
