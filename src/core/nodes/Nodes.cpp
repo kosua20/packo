@@ -35,6 +35,8 @@ Node* createNode(NodeClass type){
 			return new LogarithmNode();
 		case FLIP:
 			return new FlipNode();
+		case GAUSSIAN_BLUR:
+			return new GaussianBlurNode();
 		default:
 			assert(false);
 			break;
@@ -46,7 +48,7 @@ const std::string& getNodeName(NodeClass type){
 	static const std::vector<std::string> names = {
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
-		"Flip",
+		"Flip", "Gaussian Blur",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};

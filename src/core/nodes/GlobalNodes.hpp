@@ -11,3 +11,14 @@ public:
 
 	bool global() const override { return true; }
 };
+
+
+class GaussianBlurNode : public Node {
+public:
+
+	GaussianBlurNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+
+	bool global() const override { return true; }
+};
