@@ -31,7 +31,7 @@ OutputNode::OutputNode() {
 	_index = _freeList.getIndex();
 	_name = "Output " + std::to_string(_index);
 	_inputNames = { "R", "G", "B", "A" };
-	_attributes = { {"Prefix", Attribute::Type::STRING}, {"Suffix", Attribute::Type::STRING}, {"Format", {"PNG", "BMP", "JPEG", "TGA"}} };
+	_attributes = { {"Format", {"PNG", "BMP", "JPEG", "TGA"}}, {"Prefix", Attribute::Type::STRING}, {"Suffix", Attribute::Type::STRING} };
 }
 
 OutputNode::~OutputNode(){
