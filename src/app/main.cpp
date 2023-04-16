@@ -255,19 +255,46 @@ bool getAttributeComboItem(void* data, int index, const char** str){
 	return true;
 }
 
-void refreshFiles(const fs::path& dir, std::vector<fs::path>& paths){
+struct InputFile {
+	fs::path path;
+	bool active;
+};
+
+void refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	static const std::vector<std::string> validExts = {"png", "bmp", "tga", "jpeg"};
 
-	paths.clear();
+	std::vector<InputFile> newPaths;
 	// Don't recurse
 	for (const fs::directory_entry& file : fs::directory_iterator(dir)) {
 		const fs::path& path = file.path();
 		const std::string ext = TextUtilities::trim(TextUtilities::lowercase(path.extension()), ".");
 		if(std::find(validExts.begin(), validExts.end(), ext) != validExts.end()){
-			paths.push_back(path);
+			newPaths.emplace_back();
+			newPaths.back().path = path;
 		}
 	}
-	std::sort(paths.begin(), paths.end());
+	std::sort(newPaths.begin(), newPaths.end(), [](const InputFile& a, const InputFile& b){
+		return a.path < b.path;
+	});
+
+	// Transfer existing active status.
+	const uint newCount = newPaths.size();
+	const uint oldCount = paths.size();
+	uint currentOld = 0u;
+	for(uint currentNew = 0u; currentNew < newCount; ++currentNew){
+		const fs::path& currentPath = newPaths[currentNew].path;
+		while((currentOld < oldCount) && (paths[currentOld].path != currentPath)){
+			++currentOld;
+		}
+		if(currentOld < oldCount){
+			newPaths[currentNew].active = paths[currentOld].active;
+		} else {
+			newPaths[currentNew].active = true;
+		}
+		// No need to reset currentOld, paths are sorted.
+	}
+	// Done, swap
+	std::swap(paths, newPaths);
 }
 
 
@@ -340,9 +367,14 @@ int main(int argc, char** argv){
 
 	fs::path inputDirectory;
 	fs::path outputDirectory;
-	std::vector<fs::path> inputFiles; // TODO: selected or not, transfer when updating.
+	std::vector<InputFile> inputFiles; // TODO: selected or not, transfer when updating.
 	uint timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
+	uint selectedFirstInput = 0;
 
+	// tmp
+	inputDirectory = "/Users/simon/Developer/tools/Packo/ext/in";
+	outputDirectory = "/Users/simon/Developer/tools/Packo/ext/out";
+	//
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -371,6 +403,8 @@ int main(int argc, char** argv){
 		}
 
 		bool editedGraph = false;
+
+		ImGui::ShowDemoWindow();
 		// Menus and settings
 		{
 
@@ -511,7 +545,7 @@ int main(int argc, char** argv){
 								} else {
 									errorContext.addError("Unable to load graph from file at path \"" + path + "\"");
 								}
-								for(uint i = 0; i < count; ++i){
+								for(int i = 0; i < count; ++i){
 									free(paths[i]);
 								}
 							}
@@ -598,16 +632,20 @@ int main(int argc, char** argv){
 				ImGui::TextWrapped("Input: %s", inputDirectory.c_str());
 				ImGui::TextWrapped("Output: %s", outputDirectory.c_str());
 
-				if(ImGui::BeginTable("##Inputs", 1, ImGuiTableFlags_RowBg)){
+				if(ImGui::BeginTable("##Inputs", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
+					ImGui::TableSetupColumn("##Bullet");
 					ImGui::TableSetupColumn("Name");
 					ImGui::TableHeadersRow();
 					for( uint i = 0; i < inputFiles.size(); ++i ){
 
 						ImGui::PushID(i);
-
 						ImGui::TableNextColumn();
-						const fs::path filename = inputFiles[i].filename();
-						ImGui::TextUnformatted(  filename.c_str() );
+						ImGui::Bullet();
+						ImGui::TableNextColumn();
+						const fs::path filename = inputFiles[i].path.filename();
+						if( ImGui::Selectable( filename.c_str(), &inputFiles[i].active, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap )){
+							selectedFirstInput = i;
+						}
 						ImGui::PopID();
 
 					}
@@ -855,7 +893,7 @@ int main(int argc, char** argv){
 
 						ImGui::TableNextColumn();
 						if(node){
-							if( ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns ) )
+							if( ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap ) )
 							{
 								uint nodeId = graph->findNode( node );
 								ImNodes::EditorContextMoveToNode( nodeId );
