@@ -34,6 +34,8 @@
 #endif
 #endif
 
+const uint kMaxRefreshDelayInFrames = 60u;
+
 unsigned int packedColorFromVec4( const ImVec4& _col )
 {
 	unsigned char r = ( unsigned int )glm::clamp( std::round( _col.x * 255.f ), 0.f, 255.f );
@@ -253,6 +255,22 @@ bool getAttributeComboItem(void* data, int index, const char** str){
 	return true;
 }
 
+void refreshFiles(const fs::path& dir, std::vector<fs::path>& paths){
+	static const std::vector<std::string> validExts = {"png", "bmp", "tga", "jpeg"};
+
+	paths.clear();
+	// Don't recurse
+	for (const fs::directory_entry& file : fs::directory_iterator(dir)) {
+		const fs::path& path = file.path();
+		const std::string ext = TextUtilities::trim(TextUtilities::lowercase(path.extension()), ".");
+		if(std::find(validExts.begin(), validExts.end(), ext) != validExts.end()){
+			paths.push_back(path);
+		}
+	}
+	std::sort(paths.begin(), paths.end());
+}
+
+
 int main(int argc, char** argv){
 
 	PackoConfig config(std::vector<std::string>(argv, argv+argc));
@@ -316,7 +334,12 @@ int main(int argc, char** argv){
 	ErrorContext errorContext;
 
 	bool needAutoLayout = true;
-	
+
+	fs::path inputDirectory;
+	fs::path outputDirectory;
+	std::vector<fs::path> inputFiles; // TODO: selected or not, transfer when updating.
+	uint timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
+
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -338,62 +361,112 @@ int main(int argc, char** argv){
 			wantsExit = true;
 		}
 
+		++timeSinceLastInputUpdate;
+		if((timeSinceLastInputUpdate > kMaxRefreshDelayInFrames) && !inputDirectory.empty()){
+			refreshFiles(inputDirectory, inputFiles);
+			timeSinceLastInputUpdate = 0;
+		}
+
+		bool editedGraph = false;
 		// Menus and settings
 		{
 
 			if(ImGui::BeginMainMenuBar()){
 
 				if(ImGui::BeginMenu("File")){
-					if(ImGui::MenuItem("Validate graph...")){
-						validate(*graph, errorContext);
-					}
-					
-					if(ImGui::MenuItem("Execute graph...")){
-						char** inputFiles = nullptr;
-						int inputCount = 0;
-						char* outputDir = nullptr;
-						sr_gui_ask_load_files("Input directory", "", "", &inputFiles, &inputCount);
-						{
-							if(sr_gui_ask_directory("Output directory", "", &outputDir) == SR_GUI_VALIDATED){
-								glm::ivec2 outputRes{0};
-								if(inputCount == 0){
-									char* wStr = nullptr;
-									if(sr_gui_ask_string("Width requested", "Specify output width", &wStr) == SR_GUI_VALIDATED){
-										if(wStr){
-											outputRes.x = std::max(std::stoi(std::string(wStr)), 0);
-											free(wStr);
-										}
-									}
-									char* hStr = nullptr;
-									if(sr_gui_ask_string("Height requested", "Specify output height", &hStr) == SR_GUI_VALIDATED){
-										if(hStr){
-											outputRes.y = std::max(std::stoi(std::string(hStr)), 0);
-											free(hStr);
-										}
-									}
-								}
-								if((inputCount > 0 || outputRes.x > 0 || outputRes.y > 0) && outputDir != nullptr){
-									std::vector<std::string> inputs;
-									for(uint i = 0u; i < uint(inputCount); ++i){
-										inputs.emplace_back(inputFiles[i]);
-										free(inputFiles[i]);
-									}
-									std::string output(outputDir);
 
-									if(evaluate(*graph, errorContext, inputs, output, outputRes)){
-										sr_gui_show_notification("Packo", "Processing complete!");
-									}
+					char* rawInPath = nullptr;
+					char* rawOutPath = nullptr;
+
+					if(ImGui::MenuItem("Select directories...")){
+						if(sr_gui_ask_directory("Input directory", "", &rawInPath) == SR_GUI_VALIDATED){
+							if(rawInPath){
+								inputDirectory = rawInPath;
+								// Force refresh
+								timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
+							}
+						}
+						if(sr_gui_ask_directory("Output directory", "", &rawOutPath) == SR_GUI_VALIDATED){
+							if(rawOutPath){
+								outputDirectory = rawOutPath;
+							}
+						}
+					}
+
+					if(!inputDirectory.empty()){
+						if(ImGui::MenuItem("Change input directory...")){
+							if(sr_gui_ask_directory("Input directory", "", &rawInPath) == SR_GUI_VALIDATED){
+								if(rawInPath){
+									inputDirectory = rawInPath;
+									// Force refresh
+									timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 								}
-								if(inputFiles){
-									free(inputFiles);
-								}
-								if(outputDir){
-									free(outputDir);
+							}
+						}
+					}
+					if(!outputDirectory.empty()){
+						if(ImGui::MenuItem("Change output directory...")){
+							if(sr_gui_ask_directory("Output directory", "", &rawOutPath) == SR_GUI_VALIDATED){
+								if(rawOutPath){
+									outputDirectory = rawOutPath;
 								}
 							}
 						}
 					}
 
+					if(rawInPath){
+						free(rawInPath);
+					}
+					if(rawOutPath){
+						free(rawOutPath);
+					}
+
+					if(ImGui::MenuItem("Execute graph...")){
+//						char** inputFiles = nullptr;
+//						int inputCount = 0;
+//						char* outputDir = nullptr;
+//						sr_gui_ask_load_files("Input directory", "", "", &inputFiles, &inputCount);
+//						{
+//							if(sr_gui_ask_directory("Output directory", "", &outputDir) == SR_GUI_VALIDATED){
+//								glm::ivec2 outputRes{0};
+//								if(inputCount == 0){
+//									char* wStr = nullptr;
+//									if(sr_gui_ask_string("Width requested", "Specify output width", &wStr) == SR_GUI_VALIDATED){
+//										if(wStr){
+//											outputRes.x = std::max(std::stoi(std::string(wStr)), 0);
+//											free(wStr);
+//										}
+//									}
+//									char* hStr = nullptr;
+//									if(sr_gui_ask_string("Height requested", "Specify output height", &hStr) == SR_GUI_VALIDATED){
+//										if(hStr){
+//											outputRes.y = std::max(std::stoi(std::string(hStr)), 0);
+//											free(hStr);
+//										}
+//									}
+//								}
+//								if((inputCount > 0 || outputRes.x > 0 || outputRes.y > 0) && outputDir != nullptr){
+//									std::vector<std::string> inputs;
+//									for(uint i = 0u; i < uint(inputCount); ++i){
+//										inputs.emplace_back(inputFiles[i]);
+//										free(inputFiles[i]);
+//									}
+//									std::string output(outputDir);
+//
+//									if(evaluate(*graph, errorContext, inputs, output, outputRes)){
+//										sr_gui_show_notification("Packo", "Processing complete!");
+//									}
+//								}
+//								if(inputFiles){
+//									free(inputFiles);
+//								}
+//								if(outputDir){
+//									free(outputDir);
+//								}
+//							}
+//						}
+						
+					}
 
 					ImGui::Separator();
 					if(ImGui::MenuItem("Quit")){
@@ -421,6 +494,7 @@ int main(int argc, char** argv){
 										graph.reset(new Graph());
 										errorContext.clear();
 										if(graph->deserialize(data)){
+											editedGraph = true;
 											if(data.contains("layout")){
 												std::string state = data["layout"];
 												ImNodes::LoadCurrentEditorStateFromIniString(state.c_str(), state.size());
@@ -466,6 +540,13 @@ int main(int argc, char** argv){
 					}
 
 					ImGui::Separator();
+
+					if(ImGui::MenuItem("Validate graph...")){
+						validate(*graph, errorContext);
+					}
+
+					ImGui::Separator();
+
 					if(ImGui::MenuItem("Reset...")){
 						graph.reset(new Graph());
 						errorContext.clear();
@@ -478,6 +559,7 @@ int main(int argc, char** argv){
 						editor.commit();
 
 						needAutoLayout = true;
+						editedGraph = true;
 					}
 					ImGui::EndMenu();
 				}
@@ -495,7 +577,6 @@ int main(int argc, char** argv){
 		// TODO: RGBA/float toggle?
 		// TODO: comparisons and boolean selector? (still floats)
 		// TODO: resize, rotate?
-		// TODO: procedural nodes
 		// TODO: display preview of inputs/outputs if inputs have been selected?
 
 		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
@@ -503,212 +584,253 @@ int main(int argc, char** argv){
 		ImGui::SetNextWindowPos(ImVec2(0.0f, menuBarHeight));
 		ImGui::SetNextWindowSize(ImVec2(float(winW), float(winH) - menuBarHeight));
 
+		float editorWindowHeight = 0.f;
+		float editorWindowWidth = 0.f;
+
 		if(ImGui::Begin("PackoMainWindow", nullptr, winFlags)){
 
-			// Graph viewer.
 			{
-				ImNodes::BeginNodeEditor();
-				// Allowing unplugging of links conflicts with multiple outputs
-				ImNodes::PushAttributeFlag( 0 /*ImNodesAttributeFlags_EnableLinkDetachWithDragClick*/ );
+				ImGui::BeginChild("Inputs", ImVec2(200, 0), true);
+				ImGui::TextWrapped("Input: %s", inputDirectory.c_str());
+				ImGui::TextWrapped("Output: %s", outputDirectory.c_str());
 
-				// First, immediately register the position for a newly created node if there is one.
-				{
-					int createdNodeIndex = graph->findNode( createdNode );
-					if( createdNodeIndex >= 0 )
-						ImNodes::SetNodeScreenSpacePos( createdNodeIndex, mouseRightClick );
-					createdNode = nullptr;
-				}
+				if(ImGui::BeginTable("##Inputs", 1, ImGuiTableFlags_RowBg)){
+					ImGui::TableSetupColumn("Name");
+					ImGui::TableHeadersRow();
+					for( uint i = 0; i < inputFiles.size(); ++i ){
 
+						ImGui::PushID(i);
 
-				GraphNodes nodes(*graph);
+						ImGui::TableNextColumn();
+						const fs::path filename = inputFiles[i].filename();
+						ImGui::TextUnformatted(  filename.c_str() );
+						ImGui::PopID();
 
-				for(const uint nodeId : nodes){
-					 Node* node = graph->node(nodeId);
-					const bool nodeHasIssue = errorContext.contains( node );
-					if( nodeHasIssue )
-					{
-						ImNodes::PushColorStyle( ImNodesCol_TitleBar, errorTitleBar );
-						ImNodes::PushColorStyle( ImNodesCol_TitleBarHovered, errorTitleBarActive );
-						ImNodes::PushColorStyle( ImNodesCol_TitleBarSelected, errorTitleBarActive );
-						ImNodes::PushColorStyle( ImNodesCol_NodeBackground, errorBackground );
-						ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundHovered, errorBackgroundActive );
-						ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundSelected, errorBackgroundActive );
 					}
 
-					ImNodes::BeginNode(nodeId);
-
-					ImNodes::BeginNodeTitleBar();
-					ImGui::TextUnformatted(node->name().c_str());
-					ImNodes::EndNodeTitleBar();
-
-					const std::vector<std::string>& inputs = node->inputs();
-					const std::vector<std::string>& outputs = node->outputs();
-					std::vector<Node::Attribute>& attributes = node->attributes();
-					const uint attributeCount = attributes.size();
-
-					const uint attribWidth = 130u;
-
-					const uint minNodeSize = attributeCount != 0u ? attribWidth : 50u;
-
-					for(uint attId = 0; attId < attributeCount; ++attId ){
-
-						ImGui::PushItemWidth(attribWidth);
-						Node::Attribute& attribute = attributes[attId];
-						switch( attribute.type )
-						{
-							case Node::Attribute::Type::FLOAT:
-								ImGui::InputFloat( attribute.name.c_str(), &attribute.flt, 0.0f, 0.0f, "%.6f" );
-								break;
-							case Node::Attribute::Type::COLOR:
-								ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR );
-								break;
-							case Node::Attribute::Type::STRING:
-								ImGui::InputText( attribute.name.c_str(), &attribute.str[0], MAX_STR_LENGTH );
-								break;
-							case Node::Attribute::Type::COMBO:
-								ImGui::Combo(attribute.name.c_str(), &attribute.cmb, &getAttributeComboItem, &attribute, attribute.values.size());
-								break;
-							default:
-								assert( false );
-								break;
-						}
-						ImGui::PopItemWidth();
-					}
-
-					const uint inputCount = inputs.size();
-					const uint outputCount = outputs.size();
-					const uint maxCount = std::max(inputCount, outputCount);
-
-					for(uint attId = 0; attId < maxCount; ++attId ){
-						const bool hasInput = attId < inputCount;
-						const bool hasOutput = attId < outputCount;
-						uint inputWidth = 0;
-						if( hasInput ){
-							const std::string& name = inputs[attId];
-							ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
-							ImGui::TextUnformatted(name.c_str());
-							ImNodes::EndInputAttribute();
-							inputWidth = ImGui::CalcTextSize( name.c_str()).x + ImGui::GetStyle().IndentSpacing;
-						}
-						if(hasOutput){
-							bool indented = false;
-							const std::string& name = outputs[ attId ];
-
-							const uint labelSize = ImGui::CalcTextSize( name.c_str()).x;
-							const uint offset = inputWidth + (labelSize <= minNodeSize ? (minNodeSize - labelSize) : 0u) ;
-							if(hasInput){
-								ImGui::SameLine(offset);
-							} else {
-								ImGui::Indent(offset);
-								indented = true;
-							}
-							ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
-							ImGui::TextUnformatted(name.c_str());
-							ImNodes::EndOutputAttribute();
-							if(indented){
-								ImGui::Unindent(offset);
-							}
-						}
-					}
-
-					ImNodes::EndNode();
-					if( nodeHasIssue ) {
-						for(uint i = 0; i < 6; ++i )
-						ImNodes::PopColorStyle();
-					}
+					ImGui::EndTable();
 				}
-
-				uint linkCount = graph->getLinkCount();
-				for(uint linkId = 0u; linkId < linkCount; ++linkId ){
-					const Graph::Link& link = graph->link( linkId );
-					ImNodes::Link(linkId, fromOutputSlotToLink(link.from), fromInputSlotToLink(link.to));
-				}
-
-				ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_BottomRight);
-				ImNodes::PopAttributeFlag();
-				ImNodes::EndNodeEditor();
-
-				if( needAutoLayout )
-				{
-					autoLayout( *graph );
-					needAutoLayout = false;
-				}
+				ImGui::EndChild();
 			}
 
-			// Graph edition.
+			ImGui::SameLine();
+
 			{
-				GraphEditor editor(*graph);
+				ImGui::BeginChild("Editor");
+				// Graph viewer.
+				{
+					ImNodes::BeginNodeEditor();
+					// Allowing unplugging of links conflicts with multiple outputs
+					ImNodes::PushAttributeFlag( 0 /*ImNodesAttributeFlags_EnableLinkDetachWithDragClick*/ );
 
-				int startLink, endLink;
-				if(ImNodes::IsLinkCreated(&startLink, &endLink)){
-					Graph::Slot from = fromLinkToSlot(startLink);
-					Graph::Slot to = fromLinkToSlot(endLink);
-					editor.addLink(from.node, from.slot, to.node, to.slot);
-				}
-
-				int linkId;
-				if(ImNodes::IsLinkDestroyed(&linkId)){
-					editor.removeLink(linkId);
-				}
-
-				if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
-				   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)))){
-					const uint nodesCount = ImNodes::NumSelectedNodes();
-					if( nodesCount > 0u )
+					// First, immediately register the position for a newly created node if there is one.
 					{
-						std::vector<int> nodeIds( nodesCount );
-						ImNodes::GetSelectedNodes( nodeIds.data() );
-						for( const int nodeId : nodeIds )
+						int createdNodeIndex = graph->findNode( createdNode );
+						if( createdNodeIndex >= 0 )
+							ImNodes::SetNodeScreenSpacePos( createdNodeIndex, mouseRightClick );
+						createdNode = nullptr;
+					}
+
+
+					GraphNodes nodes(*graph);
+
+					for(const uint nodeId : nodes){
+						 Node* node = graph->node(nodeId);
+						const bool nodeHasIssue = errorContext.contains( node );
+						if( nodeHasIssue )
 						{
-							editor.removeNode( ( uint )nodeId );
+							ImNodes::PushColorStyle( ImNodesCol_TitleBar, errorTitleBar );
+							ImNodes::PushColorStyle( ImNodesCol_TitleBarHovered, errorTitleBarActive );
+							ImNodes::PushColorStyle( ImNodesCol_TitleBarSelected, errorTitleBarActive );
+							ImNodes::PushColorStyle( ImNodesCol_NodeBackground, errorBackground );
+							ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundHovered, errorBackgroundActive );
+							ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundSelected, errorBackgroundActive );
+						}
+
+						ImNodes::BeginNode(nodeId);
+
+						ImNodes::BeginNodeTitleBar();
+						ImGui::TextUnformatted(node->name().c_str());
+						ImNodes::EndNodeTitleBar();
+
+						const std::vector<std::string>& inputs = node->inputs();
+						const std::vector<std::string>& outputs = node->outputs();
+						std::vector<Node::Attribute>& attributes = node->attributes();
+						const uint attributeCount = attributes.size();
+
+						const uint attribWidth = 130u;
+
+						const uint minNodeSize = attributeCount != 0u ? attribWidth : 50u;
+
+						for(uint attId = 0; attId < attributeCount; ++attId ){
+
+							ImGui::PushItemWidth(attribWidth);
+							Node::Attribute& attribute = attributes[attId];
+							switch( attribute.type )
+							{
+								case Node::Attribute::Type::FLOAT:
+									editedGraph |= ImGui::InputFloat( attribute.name.c_str(), &attribute.flt, 0.0f, 0.0f, "%.6f" );
+									break;
+								case Node::Attribute::Type::COLOR:
+									editedGraph |= ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR );
+									break;
+								case Node::Attribute::Type::STRING:
+									editedGraph |= ImGui::InputText( attribute.name.c_str(), &attribute.str[0], MAX_STR_LENGTH );
+									break;
+								case Node::Attribute::Type::COMBO:
+									editedGraph |= ImGui::Combo(attribute.name.c_str(), &attribute.cmb, &getAttributeComboItem, &attribute, attribute.values.size());
+									break;
+								default:
+									assert( false );
+									break;
+							}
+							ImGui::PopItemWidth();
+						}
+
+						const uint inputCount = inputs.size();
+						const uint outputCount = outputs.size();
+						const uint maxCount = std::max(inputCount, outputCount);
+
+						for(uint attId = 0; attId < maxCount; ++attId ){
+							const bool hasInput = attId < inputCount;
+							const bool hasOutput = attId < outputCount;
+							uint inputWidth = 0;
+							if( hasInput ){
+								const std::string& name = inputs[attId];
+								ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
+								ImGui::TextUnformatted(name.c_str());
+								ImNodes::EndInputAttribute();
+								inputWidth = ImGui::CalcTextSize( name.c_str()).x + ImGui::GetStyle().IndentSpacing;
+							}
+							if(hasOutput){
+								bool indented = false;
+								const std::string& name = outputs[ attId ];
+
+								const uint labelSize = ImGui::CalcTextSize( name.c_str()).x;
+								const uint offset = inputWidth + (labelSize <= minNodeSize ? (minNodeSize - labelSize) : 0u) ;
+								if(hasInput){
+									ImGui::SameLine(offset);
+								} else {
+									ImGui::Indent(offset);
+									indented = true;
+								}
+								ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
+								ImGui::TextUnformatted(name.c_str());
+								ImNodes::EndOutputAttribute();
+								if(indented){
+									ImGui::Unindent(offset);
+								}
+							}
+						}
+
+						ImNodes::EndNode();
+						if( nodeHasIssue ) {
+							for(uint i = 0; i < 6; ++i )
+							ImNodes::PopColorStyle();
 						}
 					}
-					const uint linkCount = ImNodes::NumSelectedLinks();
-					if( linkCount > 0 )
+
+					uint linkCount = graph->getLinkCount();
+					for(uint linkId = 0u; linkId < linkCount; ++linkId ){
+						const Graph::Link& link = graph->link( linkId );
+						ImNodes::Link(linkId, fromOutputSlotToLink(link.from), fromInputSlotToLink(link.to));
+					}
+
+					ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
+					ImNodes::PopAttributeFlag();
+					ImNodes::EndNodeEditor();
+
+					if( needAutoLayout )
 					{
-						std::vector<int> linkIds( linkCount );
-						ImNodes::GetSelectedLinks( linkIds.data() );
-						for( const int linkId : linkIds )
+						autoLayout( *graph );
+						needAutoLayout = false;
+					}
+				}
+
+				// Graph edition.
+				{
+					GraphEditor editor(*graph);
+
+					int startLink, endLink;
+					if(ImNodes::IsLinkCreated(&startLink, &endLink)){
+						Graph::Slot from = fromLinkToSlot(startLink);
+						Graph::Slot to = fromLinkToSlot(endLink);
+						editor.addLink(from.node, from.slot, to.node, to.slot);
+						editedGraph = true;
+					}
+
+					int linkId;
+					if(ImNodes::IsLinkDestroyed(&linkId)){
+						editor.removeLink(linkId);
+						editedGraph = true;
+					}
+
+					if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
+					   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)))){
+						const uint nodesCount = ImNodes::NumSelectedNodes();
+						if( nodesCount > 0u )
 						{
-							editor.removeLink( ( uint )linkId );
+							std::vector<int> nodeIds( nodesCount );
+							ImNodes::GetSelectedNodes( nodeIds.data() );
+							for( const int nodeId : nodeIds )
+							{
+								editor.removeNode( ( uint )nodeId );
+							}
+							editedGraph = true;
+						}
+						const uint linkCount = ImNodes::NumSelectedLinks();
+						if( linkCount > 0 )
+						{
+							std::vector<int> linkIds( linkCount );
+							ImNodes::GetSelectedLinks( linkIds.data() );
+							for( const int linkId : linkIds )
+							{
+								editor.removeLink( ( uint )linkId );
+							}
+							editedGraph = true;
 						}
 					}
-				}
 
-				if(ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
-					ImGui::OpenPopup( "Create node" );
-					// Save position for placing the new node on screen.
-					mouseRightClick = ImGui::GetMousePos();
-				}
+					if(ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
+						ImGui::OpenPopup( "Create node" );
+						// Save position for placing the new node on screen.
+						mouseRightClick = ImGui::GetMousePos();
+					}
 
-				if( ImGui::BeginPopup("Create node")){
-					NodeClass typeToCreate = NodeClass::COUNT_EXPOSED;
+					if( ImGui::BeginPopup("Create node")){
+						NodeClass typeToCreate = NodeClass::COUNT_EXPOSED;
 
-					for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
-						NodeClass type = NodeClass(i);
-						const std::string& label = getNodeName(type);
-						if( ImGui::Selectable(label.c_str())){
-							typeToCreate = type;
+						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
+							NodeClass type = NodeClass(i);
+							const std::string& label = getNodeName(type);
+							if( ImGui::Selectable(label.c_str())){
+								typeToCreate = type;
+							}
 						}
+						if(typeToCreate < NodeClass::COUNT_EXPOSED){
+							createdNode = createNode(typeToCreate);
+							editor.addNode( createdNode );
+							editedGraph = true;
+						}
+						ImGui::EndPopup();
 					}
-					if(typeToCreate < NodeClass::COUNT_EXPOSED){
-						createdNode = createNode(typeToCreate);
-						editor.addNode( createdNode );
-					}
-					ImGui::EndPopup();
+
+					editor.commit();
 				}
-				
-				editor.commit();
+				editorWindowHeight = ImGui::GetWindowHeight();
+				editorWindowWidth = ImGui::GetWindowWidth();
+				ImGui::EndChild();
 			}
+
 
 		}
-		const float mainWindowHeight = ImGui::GetWindowHeight();
-		const float mainWindowWidth = ImGui::GetWindowWidth();
+		const float totalWindowHeight = ImGui::GetWindowHeight();
+		const float totalWindowWidth = ImGui::GetWindowWidth();
 		ImGui::End();
 
 		if(errorContext.hasErrors()){
 
-			ImGui::SetNextWindowPos(ImVec2(0, mainWindowHeight + menuBarHeight), ImGuiCond_Always, ImVec2(0.0f, 1.0f));
+			ImGui::SetNextWindowPos(ImVec2(totalWindowWidth, totalWindowHeight + menuBarHeight), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
 			if(ImGui::Begin("Error messages", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)){
 				const uint errorCount = errorContext.errorCount();
 
@@ -737,8 +859,8 @@ int main(int argc, char** argv){
 								ImNodes::EditorContextMoveToNode( nodeId );
 								ImVec2 pan = ImNodes::EditorContextGetPanning();
 								ImVec2 size = ImNodes::GetNodeDimensions(nodeId);
-								pan.x += 0.5f * (mainWindowWidth - size.x);
-								pan.y += 0.5f * (mainWindowHeight - size.y);
+								pan.x += 0.5f * (editorWindowWidth - size.x);
+								pan.y += 0.5f * (editorWindowHeight - size.y);
 								ImNodes::EditorContextResetPanning( pan );
 							}
 						}
