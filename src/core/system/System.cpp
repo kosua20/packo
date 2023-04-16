@@ -1,3 +1,7 @@
+// Include before header including the ghc forward declarations.
+#define GHC_FILESYSTEM_IMPLEMENTATION
+#include <ghc/filesystem.hpp>
+
 #include "core/system/System.hpp"
 
 #ifdef _WIN32
@@ -9,44 +13,14 @@
 #endif
 #include <iomanip>
 
-#ifdef _WIN32
-
-std::wstring widen(const std::string & str) {
-	const int size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, nullptr, 0);
-	WCHAR * arr	= new WCHAR[size];
-	MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, static_cast<LPWSTR>(arr), size);
-	std::wstring res( arr );
-	delete[] arr;
-	return res;
-}
-
-std::string narrow(WCHAR * str) {
-	const int size = WideCharToMultiByte(CP_UTF8, 0, str, -1, nullptr, 0, nullptr, nullptr);
-	std::string res(size - 1, 0);
-	WideCharToMultiByte(CP_UTF8, 0, str, -1, &res[0], size, nullptr, nullptr);
-	return res;
-}
-
-#else
-
-std::string widen(const std::string & str) {
-	return str;
-}
-std::string narrow(char * str) {
-	return std::string(str);
-}
-
-#endif
-
-
 void System::ping() {
 	Log::Info() << '\a' << std::endl;
 }
 
-std::string System::loadStringFromFile(const std::string & path){
-	std::ifstream file(widen(path));
+std::string System::loadStringFromFile(const fs::path& path){
+	std::ifstream file(path);
 	if(file.bad() || file.fail()) {
-		Log::Error() << "Unable to load file at path \"" << path << "\"." << std::endl;
+		Log::Error() << "Unable to load file at path \"" << path.string() << "\"." << std::endl;
 		return "";
 	}
 	std::stringstream buffer;
@@ -58,10 +32,10 @@ std::string System::loadStringFromFile(const std::string & path){
 	return line;
 }
 
-bool System::writeStringToFile(const std::string & str, const std::string & path){
-	std::ofstream file(widen(path));
+bool System::writeStringToFile(const std::string & str, const fs::path & path){
+	std::ofstream file(path);
 	if(file.bad() || file.fail()) {
-		Log::Error() << "Unable to write to file at path \"" << path << "\"." << std::endl;
+		Log::Error() << "Unable to write to file at path \"" << path.string() << "\"." << std::endl;
 		return false;
 	}
 	file << str << std::endl;
@@ -69,11 +43,11 @@ bool System::writeStringToFile(const std::string & str, const std::string & path
 	return true;
 }
 
-bool System::writeDataToFile(unsigned char * data, size_t size, const std::string & path) {
-	std::ofstream outputFile(widen(path), std::ios::binary);
+bool System::writeDataToFile(unsigned char * data, size_t size, const fs::path & path) {
+	std::ofstream outputFile(path, std::ios::binary);
 
 	if(!outputFile.is_open()) {
-		Log::Error() << "Unable to save file at path \"" << path << "\"." << std::endl;
+		Log::Error() << "Unable to save file at path \"" << path.string() << "\"." << std::endl;
 		return false;
 	}
 	outputFile.write(reinterpret_cast<char*>(data), size);
@@ -92,13 +66,4 @@ std::string System::timestamp(){
 	std::stringstream str;
 	str << std::put_time(&ltime, "%Y_%m_%d_%H_%M_%S");
 	return str.str();
-}
-
-bool System::fileExists(const std::string& path){
-	FILE* file = fopen( path.c_str(), "rb" );
-	if(!file) {
-		return false;
-	}
-	fclose(file);
-	return true;
 }

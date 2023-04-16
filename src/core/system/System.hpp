@@ -3,6 +3,11 @@
 #include "core/system/Config.hpp"
 #include "core/Common.hpp"
 
+#define GHC_FILESYSTEM_FWD
+#include <ghc/filesystem.hpp>
+
+namespace fs = ghc::filesystem;
+
 #include <thread>
 
 /**
@@ -15,15 +20,13 @@ public:
 	/** Notify the user by sending a 'Bell' signal. */
 	static void ping();
 
-	static std::string loadStringFromFile(const std::string & path);
+	static std::string loadStringFromFile(const fs::path& path);
 	
-	static bool writeStringToFile(const std::string & str, const std::string & path);
+	static bool writeStringToFile(const std::string & str, const fs::path& path);
 
-	static bool writeDataToFile(unsigned char * data, size_t size, const std::string & path);
+	static bool writeDataToFile(unsigned char * data, size_t size, const fs::path& path);
 
 	static std::string timestamp();
-
-	static bool fileExists(const std::string& path);
 
 	template<typename ThreadFunc>
 	static void forParallel(size_t low, size_t high, ThreadFunc func) {

@@ -12,11 +12,6 @@
 
 #define PARALLEL_FOR
 
-struct NodeAndRegisters { 
-	const Node* node;
-	std::vector<int> inputs;
-	std::vector<int> outputs;
-};
 
 void ErrorContext::addError(const std::string& message, const Node* node, int slot){
 	_errors.emplace_back(message, node, slot);
@@ -301,7 +296,7 @@ public:
 		nodes.erase( itn, nodes.end() );
 	}
 
-	uint compile(std::vector<NodeAndRegisters>& compiledNodes ){
+	void compile(CompiledGraph& compiledGraph ){
 		std::vector<Vertex*> orderedNodes;
 		orderedNodes.reserve(nodes.size());
 		purgeTmpData();
@@ -347,10 +342,11 @@ public:
 		nodes = orderedNodes;
 		purgeTmpData();
 
-		std::vector<std::vector<uint>> registersRefCount;
 		const uint nodeCount = nodes.size();
+		std::vector<std::vector<uint>> registersRefCount(nodeCount);
+
+		std::vector<CompiledNode>& compiledNodes = compiledGraph.nodes;
 		compiledNodes.resize(nodeCount);
-		registersRefCount.resize(nodeCount);
 
 		for (uint nId = 0u; nId < nodeCount; ++nId) {
 			Vertex* vert = nodes[nId];
@@ -375,10 +371,10 @@ public:
 		int maxRegister = -1;
 
 		for(Vertex* vert : nodes){
-			NodeAndRegisters& compiledNode = compiledNodes[vert->tmpData];
+			CompiledNode& compiledNode = compiledNodes[vert->tmpData];
 			// Retrieve registers used by parents for their outputs.
 			for(Neighbor& parent : vert->parents){
-				NodeAndRegisters& compiledParent = compiledNodes[parent.node->tmpData];
+				CompiledNode& compiledParent = compiledNodes[parent.node->tmpData];
 				for(Edge& edge : parent.edges){
 					// A parent must have been processed before the child node.
 					const int linkRegister = compiledParent.outputs[edge.from];
@@ -410,9 +406,9 @@ public:
 		}
 		uint stackSize = (uint)(maxRegister + 1);
 		const uint dummyRegister = stackSize;
-		++stackSize;
+		compiledGraph.stackSize = stackSize + 1;
 
-		for (NodeAndRegisters& node : compiledNodes) {
+		for (CompiledNode& node : compiledGraph.nodes) {
 			// Safety check.
 			uint slotId = 0u;
 			for (int reg : node.inputs) {
@@ -427,7 +423,9 @@ public:
 				}
 			}
 		}
-		return stackSize;
+
+		// By default, assume we'll want to store all registers in image channels.
+		compiledGraph.tmpImageCount = (compiledGraph.stackSize + 3u)/4u;
 	}
 
 	std::vector<Vertex*> nodes;
@@ -467,15 +465,15 @@ bool validate(const Graph& editGraph, ErrorContext& errors ){
 struct Batch {
 
 	struct Output {
-		std::string path;
+		fs::path path;
 		Image::Format format;
 	};
 
-	std::vector<std::string> inputs;
+	std::vector<fs::path> inputs;
 	std::vector<Output> outputs;
 };
 
-uint ensureGlobalNodesConsistency(std::vector<NodeAndRegisters>& compiledNodes, uint stackSize){
+void CompiledGraph::ensureGlobalNodesConsistency(){
 	// Find all flush nodes, find all "in transit" registers, assign them images.
 	// Then when executing, before each "flush" node have a "backup" node and afterwards a "restore" node.
 	struct Split {
@@ -486,15 +484,15 @@ uint ensureGlobalNodesConsistency(std::vector<NodeAndRegisters>& compiledNodes, 
 	std::vector<Split> splits;
 	std::unordered_set<uint> registersInFlight;
 
-	const int nodeCount = int(compiledNodes.size());
+	const int nodeCount = int(nodes.size());
 	for(int i = nodeCount - 1; i >= 0; --i){
-		const NodeAndRegisters& compiledNode = compiledNodes[i];
+		const CompiledNode& compiledNode = nodes[i];
 		// Remove in flight registers provided by this node.
 		for(int index : compiledNode.outputs){
 			registersInFlight.erase(index);
 		}
 		// If the node is global, list it.
-		if(compiledNodes[i].node->global()){
+		if(compiledNode.node->global()){
 			splits.insert(splits.begin(), {uint(i), registersInFlight});
 		}
 		// Inputs need to be provided if there is a flush node before.
@@ -511,14 +509,14 @@ uint ensureGlobalNodesConsistency(std::vector<NodeAndRegisters>& compiledNodes, 
 		const uint backupIndex  = split.index + totalShift;
 		const uint globalIndex  = backupIndex + 1u;
 		const uint restoreIndex = globalIndex + 1u;
-		compiledNodes.emplace(compiledNodes.begin() + backupIndex);
-		compiledNodes.emplace(compiledNodes.begin() + restoreIndex);
+		nodes.emplace(nodes.begin() + backupIndex);
+		nodes.emplace(nodes.begin() + restoreIndex);
 		split.index = globalIndex;
 		totalShift += 2u;
 
-		NodeAndRegisters& backup  = compiledNodes[backupIndex];
-		NodeAndRegisters& global  = compiledNodes[globalIndex];
-		NodeAndRegisters& restore = compiledNodes[restoreIndex];
+		CompiledNode& backup  = nodes[backupIndex];
+		CompiledNode& global  = nodes[globalIndex];
+		CompiledNode& restore = nodes[restoreIndex];
 		backup.node = new BackupNode();
 		restore.node = new RestoreNode();
 
@@ -565,35 +563,44 @@ uint ensureGlobalNodesConsistency(std::vector<NodeAndRegisters>& compiledNodes, 
 		// Number of backup channels needed.
 		maxTmpChannelCount = (std::max)(maxTmpChannelCount, uint(backup.inputs.size()));
 	}
-	const uint tmpImageCountInBatch = (maxTmpChannelCount + 3u) / 4u;
-	return tmpImageCountInBatch;
+	tmpImageCount = (maxTmpChannelCount + 3u) / 4u;
 }
 
-void collectInputsAndOutputs(const std::vector<NodeAndRegisters>& compiledNodes, std::vector<const Node*>& inputs, std::vector<const Node*>& outputs){
+void CompiledGraph::collectInputsAndOutputs(std::vector<const Node*>& inputs, std::vector<const Node*>& outputs){
 
-	auto sortByName = [](const Node* a, const Node* b){
-		return a->name() < b->name();
-	};
-	for(const NodeAndRegisters& compiledNode : compiledNodes){
+	for(const CompiledNode& compiledNode : nodes){
 		if(compiledNode.node->type() == NodeClass::INPUT_IMG){
 			inputs.push_back(compiledNode.node);
 		}
 		if(compiledNode.node->type() == NodeClass::OUTPUT_IMG){
 			outputs.push_back(compiledNode.node);
 		}
-
-		std::sort(inputs.begin(), inputs.end(), sortByName);
-		std::sort(outputs.begin(), outputs.end(), sortByName);
 	}
+
+	auto sortByName = [](const Node* a, const Node* b){
+		return a->name() < b->name();
+	};
+
+	std::sort(inputs.begin(), inputs.end(), sortByName);
+	std::sort(outputs.begin(), outputs.end(), sortByName);
 }
 
-void cleanInternalNodes(std::vector<NodeAndRegisters>& compiledNodes){
-	for(NodeAndRegisters& compiledNode : compiledNodes){
-		if(compiledNode.node->type() > NodeClass::COUNT_EXPOSED){
-			delete compiledNode.node;
-			compiledNode.node = nullptr;
-		}
+void CompiledGraph::clearInternalNodes(){
+	auto itp = std::remove_if(nodes.begin(), nodes.end(), [](const CompiledNode& node){
+		return node.node->type() > NodeClass::COUNT_EXPOSED;
+	});
+	for(auto itn = itp; itn != nodes.end(); ++itn){
+		CompiledNode& node = *(itn);
+		delete node.node;
+		node.node = nullptr;
 	}
+
+	nodes.erase( itp, nodes.end() );
+
+}
+
+CompiledGraph::~CompiledGraph(){
+	clearInternalNodes();
 }
 
 bool generateBatches(const std::vector<const Node*>& inputs, const std::vector<const Node*>& outputs, const std::vector<std::string>& inputPaths, const std::string& outputPath, std::vector<Batch>& batches){
@@ -654,10 +661,10 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	// We could have unconnected regions.
 	graph.cleanUnconnectedComponents();
 
-	std::vector<NodeAndRegisters> compiledNodes;
-	const uint stackSize = graph.compile(compiledNodes);
+	CompiledGraph compiledGraph;
+	graph.compile(compiledGraph);
 
-	const uint tmpImageCountInBatch = ensureGlobalNodesConsistency(compiledNodes, stackSize);
+	compiledGraph.ensureGlobalNodesConsistency();
 
 	// Populate batches with file info.
 	std::vector<Batch> batches;
@@ -666,7 +673,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 		// TODO: display feedback, maybe load input directory and display list in GUI
 		std::vector<const Node*> inputs;
 		std::vector<const Node*> outputs;
-		collectInputsAndOutputs(compiledNodes, inputs, outputs);
+		compiledGraph.collectInputsAndOutputs(inputs, outputs);
 
 		if(!generateBatches(inputs, outputs, inputPaths, outputDir, batches)){
 			errors.addError("Not enough input files.");
@@ -694,12 +701,12 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 			sharedContext.outputImages.emplace_back(w, h);
 		}
 		// Allocate tmp images
-		for(uint i = 0u; i < tmpImageCountInBatch; ++i){
+		for(uint i = 0u; i < compiledGraph.tmpImageCount; ++i){
 			sharedContext.tmpImagesRead.emplace_back(w, h);
 			sharedContext.tmpImagesWrite.emplace_back(w, h);
 		}
 
-		const uint compiledNodeCount = compiledNodes.size();
+		const uint compiledNodeCount = compiledGraph.nodes.size();
 		uint currentStartNodeId = 0u;
 
 		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
@@ -708,22 +715,22 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 			// Find the next global node
 			uint nextGlobalNodeId = currentStartNodeId + 1;
 			for(; nextGlobalNodeId < compiledNodeCount; ++nextGlobalNodeId){
-				if(compiledNodes[ nextGlobalNodeId ].node->global())
+				if(compiledGraph.nodes[ nextGlobalNodeId ].node->global())
 					break;
 			}
 			// Now we have a range [currentStartNode, nextGlobalNodeId[ to execute per-pixel.
 #ifdef PARALLEL_FOR
-			System::forParallel(0, h, [&sharedContext, currentStartNodeId, nextGlobalNodeId, w, stackSize, &compiledNodes](size_t y){
+			System::forParallel(0, h, [&sharedContext, currentStartNodeId, nextGlobalNodeId, w, &compiledGraph](size_t y){
 #else
 			for( uint y = 0; y < h; ++y ){
 #endif
 				for( uint x = 0; x < w; ++x ){
 					// Create local context (shared context + x,y coords and a scratch space)
-					LocalContext context(&sharedContext, {x,y}, stackSize);
+					LocalContext context(&sharedContext, {x,y}, compiledGraph.stackSize);
 
 					// Run the compiled graph, assigning to registers, passing the context along.
 					for(uint nodeId = currentStartNodeId; nodeId < nextGlobalNodeId; ++nodeId){
-						const NodeAndRegisters& compiledNode = compiledNodes[nodeId];
+						const CompiledNode& compiledNode = compiledGraph.nodes[nodeId];
 						compiledNode.node->evaluate(context, compiledNode.inputs, compiledNode.outputs);
 					}
 				}
@@ -739,7 +746,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 
 		std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
 		const long long duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		Log::Info() << "Grouped took " << duration << "ms." << std::endl;
+		Log::Info() << "Batch took " << duration << "ms." << std::endl;
 
 		// Save outputs
 		for (uint i = 0u; i < outputCountInBatch; ++i) {
@@ -749,7 +756,106 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	}
 
 	// Clean extra compiled nodes
-	cleanInternalNodes(compiledNodes);
+	compiledGraph.clearInternalNodes();
 	return true;
 }
 
+
+bool evaluateStaggered(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& fallbackRes){
+
+	errors.clear();
+
+	// Validate the graph.
+	WorkGraph graph(editGraph, errors);
+
+	if(!validate(graph)){
+		return false;
+	}
+	// We dont have incomplete nodes anymore.
+	// We could have unconnected regions.
+	graph.cleanUnconnectedComponents();
+
+	CompiledGraph compiledGraph;
+	graph.compile(compiledGraph);
+
+	// Populate batches with file info.
+	std::vector<Batch> batches;
+	{
+		// Collect file nodes.
+		std::vector<const Node*> inputs;
+		std::vector<const Node*> outputs;
+		compiledGraph.collectInputsAndOutputs(inputs, outputs);
+
+		if(!generateBatches(inputs, outputs, inputPaths, outputDir, batches)){
+			errors.addError("Not enough input files.");
+			return false;
+		}
+	}
+
+	for(const Batch& batch : batches){
+		const uint inputCountInBatch  = batch.inputs.size();
+		const uint outputCountInBatch = batch.outputs.size();
+
+		// Load inputs
+		SharedContext sharedContext;
+		sharedContext.inputImages.resize(inputCountInBatch);
+		for(uint i = 0u; i < inputCountInBatch; ++i){
+			sharedContext.inputImages[i].load(batch.inputs[i]);
+		}
+		// Check that all images have the same size.
+		sharedContext.dims = computeOutputResolution(sharedContext.inputImages, fallbackRes);
+
+		// Allocate outputs
+		const uint w = sharedContext.dims.x;
+		const uint h = sharedContext.dims.y;
+		for(uint i = 0u; i < outputCountInBatch; ++i){
+			sharedContext.outputImages.emplace_back(w, h);
+		}
+		// Allocate tmp images
+		for(uint i = 0u; i < compiledGraph.tmpImageCount; ++i){
+			sharedContext.tmpImagesRead.emplace_back(w, h);
+			sharedContext.tmpImagesWrite.emplace_back(w, h);
+		}
+
+		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
+
+		for(const CompiledNode& compiledNode : compiledGraph.nodes){
+#ifdef PARALLEL_FOR
+			System::forParallel(0, h, [&sharedContext, w, &compiledGraph, &compiledNode](size_t y){
+#else
+			for( uint y = 0; y < h; ++y ){
+#endif
+				const uint stackSize = compiledGraph.stackSize;
+				for( uint x = 0; x < w; ++x ){
+					// Create local context (shared context + x,y coords and a scratch space)
+					LocalContext context(&sharedContext, {x,y}, stackSize);
+					// Populate stack
+					for(uint sid = 0u; sid < stackSize; ++sid){
+						context.stack[sid] = sharedContext.tmpImagesRead[sid/4].pixel(x, y)[sid%4];
+					}
+					compiledNode.node->evaluate(context, compiledNode.inputs, compiledNode.outputs);
+					// Retrieve stack
+					for(uint sid = 0u; sid < stackSize; ++sid){
+						sharedContext.tmpImagesWrite[sid/4].pixel(x, y)[sid%4] = context.stack[sid];
+					}
+				}
+			}
+#ifdef PARALLEL_FOR
+			);
+#endif
+			std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
+		}
+
+		std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
+		const long long duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		Log::Info() << "Staggered took " << duration << "ms." << std::endl;
+
+		// Save outputs
+		for (uint i = 0u; i < outputCountInBatch; ++i) {
+			const Batch::Output& output = batch.outputs[i];
+			sharedContext.outputImages[i].save(output.path, output.format);
+		}
+	}
+
+	return true;
+}
