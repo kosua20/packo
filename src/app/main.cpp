@@ -303,6 +303,7 @@ int main(int argc, char** argv){
 	sr_gui_init();
 
 	int winW, winH;
+	glfwGetWindowSize(window, &winW, &winH);
 
 	std::unique_ptr<Graph> graph(new Graph());
 
@@ -334,6 +335,8 @@ int main(int argc, char** argv){
 	ErrorContext errorContext;
 
 	bool needAutoLayout = true;
+	float inputsWindowWidth = (std::min)(300.0f, 0.25f * float(winW));
+	const float kSplitBarWidth = 8.0f;
 
 	fs::path inputDirectory;
 	fs::path outputDirectory;
@@ -581,16 +584,17 @@ int main(int argc, char** argv){
 
 		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
 
-		ImGui::SetNextWindowPos(ImVec2(0.0f, menuBarHeight));
-		ImGui::SetNextWindowSize(ImVec2(float(winW), float(winH) - menuBarHeight));
+		float editorWindowHeight = float(winH) - menuBarHeight;
+		float editorWindowWidth  = float(winW) - inputsWindowWidth - kSplitBarWidth - 2.f * ImGui::GetStyle().FramePadding.x;
 
-		float editorWindowHeight = 0.f;
-		float editorWindowWidth = 0.f;
+		ImGui::SetNextWindowPos(ImVec2(0.0f, menuBarHeight));
+		ImGui::SetNextWindowSize(ImVec2(float(winW), editorWindowHeight));
 
 		if(ImGui::Begin("PackoMainWindow", nullptr, winFlags)){
 
+			ImGui::Splitter(true, kSplitBarWidth, &inputsWindowWidth, &editorWindowWidth, 200, 300);
 			{
-				ImGui::BeginChild("Inputs", ImVec2(200, 0), true);
+				ImGui::BeginChild("Inputs", ImVec2(inputsWindowWidth, 0), true);
 				ImGui::TextWrapped("Input: %s", inputDirectory.c_str());
 				ImGui::TextWrapped("Output: %s", outputDirectory.c_str());
 
@@ -616,7 +620,7 @@ int main(int argc, char** argv){
 			ImGui::SameLine();
 
 			{
-				ImGui::BeginChild("Editor");
+				ImGui::BeginChild("Editor", ImVec2(editorWindowWidth, 0));
 				// Graph viewer.
 				{
 					ImNodes::BeginNodeEditor();
@@ -817,8 +821,6 @@ int main(int argc, char** argv){
 
 					editor.commit();
 				}
-				editorWindowHeight = ImGui::GetWindowHeight();
-				editorWindowWidth = ImGui::GetWindowWidth();
 				ImGui::EndChild();
 			}
 
