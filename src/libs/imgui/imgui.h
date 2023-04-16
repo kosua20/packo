@@ -2332,6 +2332,12 @@ struct ImGuiListClipper
 #endif
 };
 
+namespace ImGui {
+
+	bool Splitter(bool split_vertically, float thickness, float* size1, float* size2, float min_size1, float min_size2, float splitter_long_axis_size = -1.0f);
+
+}
+
 // Helpers: ImVec2/ImVec4 operators
 // - It is important that we are keeping those disabled by default so they don't leak in user space.
 // - This is in order to allow user enabling implicit cast operators between ImVec2/ImVec4 and their own types (using IM_VEC2_CLASS_EXTRA in imconfig.h)
@@ -3119,6 +3125,7 @@ enum ImGuiModFlags_ { ImGuiModFlags_None = 0, ImGuiModFlags_Ctrl = ImGuiMod_Ctrl
 // Include imgui_user.h at the end of imgui.h (convenient for user to only explicitly include vanilla imgui.h)
 #ifdef IMGUI_INCLUDE_IMGUI_USER_H
 #include "imgui_user.h"
+
 #endif
 
 #endif // #ifndef IMGUI_DISABLE
