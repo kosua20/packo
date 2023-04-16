@@ -1,7 +1,7 @@
 #include "core/nodes/GlobalNodes.hpp"
 #include "core/nodes/Nodes.hpp"
 
-// TODO: costly nodes should ignore outputs that go to the dummy register.
+// TODO: costly nodes should ignore outputs that go to the dummy register. Could be ignored if 1/4 switch supported.
 
 FlipNode::FlipNode(){
 	_name = "Flip";

@@ -51,11 +51,11 @@ void OutputNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 }
 
 std::string OutputNode::generateFileName(uint batch, Image::Format& format) const {
-	std::string prefix(_attributes[0].str);
-	std::string suffix(_attributes[1].str);
+	std::string prefix(_attributes[1].str);
+	std::string suffix(_attributes[2].str);
 
 	static const std::vector<Image::Format> formats = { Image::Format::PNG, Image::Format::BMP, Image::Format::JPEG, Image::Format::TGA };
-	const int fmtIndex = glm::clamp(_attributes[2].cmb, 0, int(formats.size()) - 1);
+	const int fmtIndex = glm::clamp(_attributes[0].cmb, 0, int(formats.size()) - 1);
 	format = formats[fmtIndex];
 
 	// Special case if no suffix or prefix
