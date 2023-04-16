@@ -17,3 +17,19 @@ public:
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
+
+class UniformRandomNode : public Node {
+public:
+
+	UniformRandomNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class RandomColorNode : public Node {
+public:
+
+	RandomColorNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};

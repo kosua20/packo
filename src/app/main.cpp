@@ -1,5 +1,6 @@
 #include "core/Common.hpp"
 #include "core/Settings.hpp"
+#include "core/Random.hpp"
 
 #include "core/Graph.hpp"
 #include "core/nodes/Nodes.hpp"
@@ -268,6 +269,8 @@ int main(int argc, char** argv){
 		return 0;
 	}
 
+	Random::seed(743936);
+
 	GLFWwindow* window = createWindow(830, 620);
 	const uint errorTitleBar			= IM_COL32( 190, 15, 15, 255 ); 
 	const uint errorTitleBarActive		= IM_COL32( 220, 15, 15, 255 ); 
@@ -489,13 +492,10 @@ int main(int argc, char** argv){
 		}
 		const float menuBarHeight = ImGui::GetItemRectSize().y;
 
-		// TODO: Nodes
-		// * RGBA versions?
-		// * comparisons and boolean selector? (still floats)
-		// * "full image" nodes: resize, flip, rotate, blur?
-		// * procedural nodes
-		// * ...
-
+		// TODO: RGBA/float toggle?
+		// TODO: comparisons and boolean selector? (still floats)
+		// TODO: resize, rotate?
+		// TODO: procedural nodes
 		// TODO: display preview of inputs/outputs if inputs have been selected?
 
 		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;

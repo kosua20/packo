@@ -37,6 +37,10 @@ Node* createNode(NodeClass type){
 			return new FlipNode();
 		case GAUSSIAN_BLUR:
 			return new GaussianBlurNode();
+		case RANDOM_FLOAT:
+			return new UniformRandomNode();
+		case RANDOM_COLOR:
+			return new RandomColorNode();
 		default:
 			assert(false);
 			break;
@@ -48,7 +52,7 @@ const std::string& getNodeName(NodeClass type){
 	static const std::vector<std::string> names = {
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
-		"Flip", "Gaussian Blur",
+		"Flip", "Gaussian Blur", "Random Scalar", "Random Color",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};

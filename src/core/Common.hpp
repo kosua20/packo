@@ -16,6 +16,7 @@
 #include <glm/common.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/color_space.hpp>
 
 #include <json/json_fwd.hpp>
 using json = nlohmann::json;
