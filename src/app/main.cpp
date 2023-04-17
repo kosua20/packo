@@ -262,7 +262,10 @@ struct InputFile {
 
 void refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	static const std::vector<std::string> validExts = {"png", "bmp", "tga", "jpeg"};
-
+	if(!fs::exists(dir)){
+		paths.clear();
+		return;
+	}
 	std::vector<InputFile> newPaths;
 	// Don't recurse
 	for (const fs::directory_entry& file : fs::directory_iterator(dir)) {
@@ -373,8 +376,8 @@ int main(int argc, char** argv){
 	uint selectedFirstInput = 0;
 
 	// tmp
-	inputDirectory = "/Users/simon/Developer/tools/Packo/ext/in";
-	outputDirectory = "/Users/simon/Developer/tools/Packo/ext/out";
+	inputDirectory = "C:\\Users\\s-rodriguez\\Documents\\Personnel\\packo\\ext\\in";
+	outputDirectory = "C:\\Users\\s-rodriguez\\Documents\\Personnel\\packo\\ext\\out";
 	//
 
 	while(!glfwWindowShouldClose(window)) {
@@ -630,23 +633,32 @@ int main(int argc, char** argv){
 			ImGui::Splitter(true, kSplitBarWidth, &inputsWindowWidth, &editorWindowWidth, 200, 300);
 			{
 				ImGui::BeginChild("Inputs", ImVec2(inputsWindowWidth, 0), true);
-				ImGui::TextWrapped("Input: %s", inputDirectory.c_str());
-				ImGui::TextWrapped("Output: %s", outputDirectory.c_str());
+				const std::string inputDirStr = inputDirectory.string();
+				const std::string outputDirStr = outputDirectory.string();
+				ImGui::TextWrapped("Input: %s", inputDirStr.c_str());
+				ImGui::TextWrapped("Output: %s", outputDirStr.c_str());
 
-				if(ImGui::BeginTable("##Inputs", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)){
-					ImGui::TableSetupColumn("##Bullet");
+				if( ImGui::BeginTable( "##Inputs", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg ) )
+				{
+					ImGui::TableSetupColumn( "##bullet", ImGuiTableColumnFlags_WidthFixed, 12 );
 					ImGui::TableSetupColumn("Name");
 					ImGui::TableHeadersRow();
 					for( uint i = 0; i < inputFiles.size(); ++i ){
 
 						ImGui::PushID(i);
 						ImGui::TableNextColumn();
-						ImGui::Bullet();
-						ImGui::TableNextColumn();
-						const std::string filename = inputFiles[i].path.filename().string();
-						if( ImGui::Selectable( filename.c_str(), &inputFiles[i].active, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap )){
+						if( ImGui::Selectable("##selec", &inputFiles[i].active, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, 13))){
 							selectedFirstInput = i;
 						}
+						ImGui::SameLine(-5,0);
+						if( inputFiles[ i ].active )
+							ImGui::Bullet();
+
+						ImGui::TableNextColumn();
+						const std::string filename = inputFiles[ i ].path.filename().string();
+						
+						ImGui::Text( filename.c_str() );
+						
 						ImGui::PopID();
 
 					}
