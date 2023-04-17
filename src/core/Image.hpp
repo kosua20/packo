@@ -1,5 +1,6 @@
 #pragma once
 #include "core/Common.hpp"
+#include "core/system/System.hpp"
 
 struct Image {
 public:
@@ -18,9 +19,9 @@ public:
 	Image( Image&&) = default;
 	Image& operator=( Image&&) = delete;
 
-	bool load(const std::string& path);
+	bool load(const fs::path& path);
 
-	bool save(const std::string& path, Format format);
+	bool save(const fs::path& path, Format format);
 	
 	glm::vec4& pixel(int x, int y) { assert(x >= 0 && x < _w && y >= 0 && y < _h); return _pixels[_w * y + x]; }
 

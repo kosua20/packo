@@ -15,13 +15,14 @@ Image::Image(uint w, uint h, const glm::vec4& defaultColor) {
 	_pixels.resize(_w * _h, defaultColor);
 }
 
-bool Image::load(const std::string& path){
-	
+bool Image::load(const fs::path& path){
+
+	const std::string dstPathStr = path.string();
 	// Load image.
 	int wi = 0;
 	int hi = 0;
 	int n;
-	unsigned char* data = stbi_load(path.c_str(), &wi, &hi, &n, 4);
+	unsigned char* data = stbi_load( dstPathStr.c_str(), &wi, &hi, &n, 4);
 	if(data == nullptr || wi == 0 || hi == 0){
 		return false;
 	}
@@ -42,7 +43,7 @@ bool Image::load(const std::string& path){
 	return true;
 }
 
-bool Image::save(const std::string& path, Format format){
+bool Image::save(const fs::path& path, Format format){
 
 	const std::unordered_map<Format, std::string> extensions = {
 		{Format::PNG, "png"},
@@ -51,7 +52,8 @@ bool Image::save(const std::string& path, Format format){
 		{Format::JPEG, "jpg"},
 	};
 
-	const std::string dstPath = path + "." + extensions.at(format);
+	fs::path dstPath = path;
+	dstPath.replace_extension( extensions.at( format ) );
 
 	// Convert data to LDR
 	std::vector<unsigned char> data(_w * _h * 4);
@@ -63,18 +65,19 @@ bool Image::save(const std::string& path, Format format){
 		}
 	}
 	int res = -1;
+	const std::string dstPathStr = dstPath.string();
 	switch (format) {
 		case Format::PNG:
-			res = stbi_write_png(dstPath.c_str(), _w, _h, 4, data.data(), 4 * _w);
+			res = stbi_write_png( dstPathStr.c_str(), _w, _h, 4, data.data(), 4 * _w);
 			break;
 		case Format::BMP:
-			res = stbi_write_bmp(dstPath.c_str(), _w, _h, 4, data.data());
+			res = stbi_write_bmp( dstPathStr.c_str(), _w, _h, 4, data.data());
 			break;
 		case Format::TGA:
-			res = stbi_write_tga(dstPath.c_str(), _w, _h, 4, data.data());
+			res = stbi_write_tga( dstPathStr.c_str(), _w, _h, 4, data.data());
 			break;
 		case Format::JPEG:
-			res = stbi_write_jpg(dstPath.c_str(), _w, _h, 4, data.data(), 100 /* quality */);
+			res = stbi_write_jpg( dstPathStr.c_str(), _w, _h, 4, data.data(), 100 /* quality */);
 			break;
 		default:
 			assert(false);

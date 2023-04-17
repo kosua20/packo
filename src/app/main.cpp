@@ -267,7 +267,8 @@ void refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	// Don't recurse
 	for (const fs::directory_entry& file : fs::directory_iterator(dir)) {
 		const fs::path& path = file.path();
-		const std::string ext = TextUtilities::trim(TextUtilities::lowercase(path.extension()), ".");
+		std::string ext = path.extension().string();
+		ext = TextUtilities::trim( ext, ".");
 		if(std::find(validExts.begin(), validExts.end(), ext) != validExts.end()){
 			newPaths.emplace_back();
 			newPaths.back().path = path;
@@ -642,7 +643,7 @@ int main(int argc, char** argv){
 						ImGui::TableNextColumn();
 						ImGui::Bullet();
 						ImGui::TableNextColumn();
-						const fs::path filename = inputFiles[i].path.filename();
+						const std::string filename = inputFiles[i].path.filename().string();
 						if( ImGui::Selectable( filename.c_str(), &inputFiles[i].active, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap )){
 							selectedFirstInput = i;
 						}
