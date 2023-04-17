@@ -635,9 +635,39 @@ int main(int argc, char** argv){
 				ImGui::BeginChild("Inputs", ImVec2(inputsWindowWidth, 0), true);
 				const std::string inputDirStr = inputDirectory.string();
 				const std::string outputDirStr = outputDirectory.string();
-				ImGui::TextWrapped("Input: %s", inputDirStr.c_str());
-				ImGui::TextWrapped("Output: %s", outputDirStr.c_str());
+				
+				ImGui::Text( "Output:" ); ImGui::SameLine();
+				if( ImGui::SmallButton( "...##output" ) )
+				{
+					char* rawPath = nullptr;
+					if( sr_gui_ask_directory( "Output directory", "", &rawPath ) == SR_GUI_VALIDATED )
+					{
+						if( rawPath )
+						{
+							outputDirectory = rawPath;
+							free( rawPath );
+						}
+					}
+				}
+				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
 
+				ImGui::Text( "Input:" ); ImGui::SameLine(); 
+				if( ImGui::SmallButton( "...##input" ) )
+				{
+					char* rawPath = nullptr;
+					if( sr_gui_ask_directory( "Input directory", "", &rawPath ) == SR_GUI_VALIDATED )
+					{
+						if( rawPath )
+						{
+							inputDirectory = rawPath;
+							// Force refresh
+							timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
+							free( rawPath );
+						}
+					}
+				}
+				ImGui::TextWrapped( "%s", inputDirStr.c_str());
+				
 				if( ImGui::BeginTable( "##Inputs", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg ) )
 				{
 					ImGui::TableSetupColumn( "##bullet", ImGuiTableColumnFlags_WidthFixed, 12 );
@@ -874,8 +904,6 @@ int main(int argc, char** argv){
 				}
 				ImGui::EndChild();
 			}
-
-
 		}
 		const float totalWindowHeight = ImGui::GetWindowHeight();
 		const float totalWindowWidth = ImGui::GetWindowWidth();
@@ -936,6 +964,11 @@ int main(int argc, char** argv){
 				}
 			}
 			ImGui::End();
+		}
+
+		bool editedInputs = false;
+		if( editedGraph || editedInputs ){
+			CompiledGraph compiledGraph;
 		}
 
 		// We *might* want to exit, ask the user for confirmation.

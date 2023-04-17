@@ -426,6 +426,8 @@ public:
 
 		// By default, assume we'll want to store all registers in image channels.
 		compiledGraph.tmpImageCount = (compiledGraph.stackSize + 3u)/4u;
+		// Refresh in/out nodes.
+		compiledGraph.collectInputsAndOutputs();
 	}
 
 	std::vector<Vertex*> nodes;
@@ -460,6 +462,23 @@ bool validate(const Graph& editGraph, ErrorContext& errors ){
 	WorkGraph graph(editGraph, errors);
 
 	return validate(graph);
+}
+
+bool compile( const Graph& editGraph, ErrorContext& errors, CompiledGraph& compiledGraph ){
+	
+	// Validate the graph.
+	WorkGraph graph( editGraph, errors );
+
+	if( !validate( graph ) ){
+		return false;
+	}
+	// We dont have incomplete nodes anymore.
+	// We could have unconnected regions.
+	graph.cleanUnconnectedComponents();
+	// Compile the graph for real.
+	graph.compile( compiledGraph );
+	// Don't alter global nodes. (or boolean?)
+
 }
 
 struct Batch {
@@ -566,7 +585,10 @@ void CompiledGraph::ensureGlobalNodesConsistency(){
 	tmpImageCount = (maxTmpChannelCount + 3u) / 4u;
 }
 
-void CompiledGraph::collectInputsAndOutputs(std::vector<const Node*>& inputs, std::vector<const Node*>& outputs){
+void CompiledGraph::collectInputsAndOutputs(){
+
+	inputs.clear();
+	outputs.clear();
 
 	for(const CompiledNode& compiledNode : nodes){
 		if(compiledNode.node->type() == NodeClass::INPUT_IMG){
@@ -670,12 +692,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	std::vector<Batch> batches;
 	{
 		// Collect file nodes.
-		// TODO: display feedback, maybe load input directory and display list in GUI
-		std::vector<const Node*> inputs;
-		std::vector<const Node*> outputs;
-		compiledGraph.collectInputsAndOutputs(inputs, outputs);
-
-		if(!generateBatches(inputs, outputs, inputPaths, outputDir, batches)){
+		if(!generateBatches( compiledGraph.inputs, compiledGraph.outputs, inputPaths, outputDir, batches)){
 			errors.addError("Not enough input files.");
 			return false;
 		}
@@ -781,12 +798,8 @@ bool evaluateStaggered(const Graph& editGraph, ErrorContext& errors, const std::
 	// Populate batches with file info.
 	std::vector<Batch> batches;
 	{
-		// Collect file nodes.
-		std::vector<const Node*> inputs;
-		std::vector<const Node*> outputs;
-		compiledGraph.collectInputsAndOutputs(inputs, outputs);
 
-		if(!generateBatches(inputs, outputs, inputPaths, outputDir, batches)){
+		if(!generateBatches( compiledGraph.inputs, compiledGraph.outputs, inputPaths, outputDir, batches)){
 			errors.addError("Not enough input files.");
 			return false;
 		}

@@ -45,19 +45,24 @@ struct CompiledNode {
 class CompiledGraph {
 public:
 	std::vector<CompiledNode> nodes;
+	std::vector<const Node*> inputs;
+	std::vector<const Node*> outputs;
 	uint stackSize{0u};
 	uint tmpImageCount{0u};
 
-	void ensureGlobalNodesConsistency();
+	void collectInputsAndOutputs();
 
-	void collectInputsAndOutputs(std::vector<const Node*>& inputs, std::vector<const Node*>& outputs);
+	void ensureGlobalNodesConsistency();
 
 	void clearInternalNodes();
 
 	~CompiledGraph();
+
 };
 
 bool validate(const Graph& editGraph, ErrorContext& context );
+
+bool compile( const Graph& editGraph, CompiledGraph& compiledGraph );
 
 bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& outputRes);
 
