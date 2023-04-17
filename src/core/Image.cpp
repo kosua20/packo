@@ -43,7 +43,7 @@ bool Image::load(const fs::path& path){
 	return true;
 }
 
-bool Image::save(const fs::path& path, Format format){
+bool Image::save(const fs::path& path, Format format) const {
 
 	const std::unordered_map<Format, std::string> extensions = {
 		{Format::PNG, "png"},

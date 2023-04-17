@@ -260,11 +260,11 @@ struct InputFile {
 	bool active;
 };
 
-void refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
+bool refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	static const std::vector<std::string> validExts = {"png", "bmp", "tga", "jpeg"};
 	if(!fs::exists(dir)){
 		paths.clear();
-		return;
+		return false;
 	}
 	std::vector<InputFile> newPaths;
 	// Don't recurse
@@ -284,6 +284,7 @@ void refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	// Transfer existing active status.
 	const uint newCount = newPaths.size();
 	const uint oldCount = paths.size();
+	uint reusedCount = 0u;
 	uint currentOld = 0u;
 	for(uint currentNew = 0u; currentNew < newCount; ++currentNew){
 		const fs::path& currentPath = newPaths[currentNew].path;
@@ -291,6 +292,7 @@ void refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 			++currentOld;
 		}
 		if(currentOld < oldCount){
+			++reusedCount;
 			newPaths[currentNew].active = paths[currentOld].active;
 		} else {
 			newPaths[currentNew].active = true;
@@ -299,6 +301,7 @@ void refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	}
 	// Done, swap
 	std::swap(paths, newPaths);
+	return (reusedCount == newCount) && (newCount == oldCount);
 }
 
 
@@ -373,11 +376,10 @@ int main(int argc, char** argv){
 	fs::path outputDirectory;
 	std::vector<InputFile> inputFiles; // TODO: selected or not, transfer when updating.
 	uint timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
-	uint selectedFirstInput = 0;
 
 	// tmp
-	inputDirectory = "C:\\Users\\s-rodriguez\\Documents\\Personnel\\packo\\ext\\in";
-	outputDirectory = "C:\\Users\\s-rodriguez\\Documents\\Personnel\\packo\\ext\\out";
+	inputDirectory = "/Users/simon/Developer/tools/packo/ext/in";
+	outputDirectory = "/Users/simon/Developer/tools/packo/ext/out";
 	//
 
 	while(!glfwWindowShouldClose(window)) {
@@ -400,13 +402,16 @@ int main(int argc, char** argv){
 			wantsExit = true;
 		}
 
+
+		bool editedGraph = false;
+		bool editedInputList = false;
+
 		++timeSinceLastInputUpdate;
 		if((timeSinceLastInputUpdate > kMaxRefreshDelayInFrames) && !inputDirectory.empty()){
-			refreshFiles(inputDirectory, inputFiles);
+			editedInputList = refreshFiles(inputDirectory, inputFiles);
 			timeSinceLastInputUpdate = 0;
 		}
 
-		bool editedGraph = false;
 
 		ImGui::ShowDemoWindow();
 		// Menus and settings
@@ -463,49 +468,7 @@ int main(int argc, char** argv){
 					}
 
 					if(ImGui::MenuItem("Execute graph...")){
-//						char** inputFiles = nullptr;
-//						int inputCount = 0;
-//						char* outputDir = nullptr;
-//						sr_gui_ask_load_files("Input directory", "", "", &inputFiles, &inputCount);
-//						{
-//							if(sr_gui_ask_directory("Output directory", "", &outputDir) == SR_GUI_VALIDATED){
-//								glm::ivec2 outputRes{0};
-//								if(inputCount == 0){
-//									char* wStr = nullptr;
-//									if(sr_gui_ask_string("Width requested", "Specify output width", &wStr) == SR_GUI_VALIDATED){
-//										if(wStr){
-//											outputRes.x = std::max(std::stoi(std::string(wStr)), 0);
-//											free(wStr);
-//										}
-//									}
-//									char* hStr = nullptr;
-//									if(sr_gui_ask_string("Height requested", "Specify output height", &hStr) == SR_GUI_VALIDATED){
-//										if(hStr){
-//											outputRes.y = std::max(std::stoi(std::string(hStr)), 0);
-//											free(hStr);
-//										}
-//									}
-//								}
-//								if((inputCount > 0 || outputRes.x > 0 || outputRes.y > 0) && outputDir != nullptr){
-//									std::vector<std::string> inputs;
-//									for(uint i = 0u; i < uint(inputCount); ++i){
-//										inputs.emplace_back(inputFiles[i]);
-//										free(inputFiles[i]);
-//									}
-//									std::string output(outputDir);
-//
-//									if(evaluate(*graph, errorContext, inputs, output, outputRes)){
-//										sr_gui_show_notification("Packo", "Processing complete!");
-//									}
-//								}
-//								if(inputFiles){
-//									free(inputFiles);
-//								}
-//								if(outputDir){
-//									free(outputDir);
-//								}
-//							}
-//						}
+
 						
 					}
 
@@ -632,7 +595,7 @@ int main(int argc, char** argv){
 
 			ImGui::Splitter(true, kSplitBarWidth, &inputsWindowWidth, &editorWindowWidth, 200, 300);
 			{
-				ImGui::BeginChild("Inputs", ImVec2(inputsWindowWidth, 0), true);
+				ImGui::BeginChild("Inputs & Outputs", ImVec2(inputsWindowWidth, 0), true);
 				const std::string inputDirStr = inputDirectory.string();
 				const std::string outputDirStr = outputDirectory.string();
 				
@@ -678,7 +641,7 @@ int main(int argc, char** argv){
 						ImGui::PushID(i);
 						ImGui::TableNextColumn();
 						if( ImGui::Selectable("##selec", &inputFiles[i].active, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, 13))){
-							selectedFirstInput = i;
+							editedInputList = true;
 						}
 						ImGui::SameLine(-5,0);
 						if( inputFiles[ i ].active )
@@ -966,9 +929,14 @@ int main(int argc, char** argv){
 			ImGui::End();
 		}
 
-		bool editedInputs = false;
-		if( editedGraph || editedInputs ){
+		if( editedGraph || editedInputList ){
 			CompiledGraph compiledGraph;
+			ErrorContext dummyContext;
+			compile(*graph, dummyContext, compiledGraph);
+			if(!dummyContext.hasErrors()){
+				// We can evaluate the graph to generate textures.
+				// Prepare a batch by hand
+			}
 		}
 
 		// We *might* want to exit, ask the user for confirmation.

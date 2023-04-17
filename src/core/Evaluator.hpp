@@ -60,10 +60,20 @@ public:
 
 };
 
+struct Batch {
+
+	struct Output {
+		fs::path path;
+		Image::Format format;
+	};
+
+	std::vector<fs::path> inputs;
+	std::vector<Output> outputs;
+};
+
 bool validate(const Graph& editGraph, ErrorContext& context );
 
-bool compile( const Graph& editGraph, CompiledGraph& compiledGraph );
+bool compile( const Graph& editGraph, ErrorContext& context, CompiledGraph& compiledGraph );
 
 bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& outputRes);
 
-bool evaluateStaggered(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& fallbackRes);

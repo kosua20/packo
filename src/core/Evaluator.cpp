@@ -440,58 +440,6 @@ private:
 
 };
 
-bool validate(WorkGraph& graph){
-	bool success = true;
-
-	if(!graph.validateInputs()){
-		success = false;
-	}
-	if(!graph.validateCycles()){
-		success = false;
-	}
-	if(!graph.validateOutputNames()){
-		success = false;
-	}
-	return success;
-}
-
-bool validate(const Graph& editGraph, ErrorContext& errors ){
-
-	errors.clear();
-
-	WorkGraph graph(editGraph, errors);
-
-	return validate(graph);
-}
-
-bool compile( const Graph& editGraph, ErrorContext& errors, CompiledGraph& compiledGraph ){
-	
-	// Validate the graph.
-	WorkGraph graph( editGraph, errors );
-
-	if( !validate( graph ) ){
-		return false;
-	}
-	// We dont have incomplete nodes anymore.
-	// We could have unconnected regions.
-	graph.cleanUnconnectedComponents();
-	// Compile the graph for real.
-	graph.compile( compiledGraph );
-	// Don't alter global nodes. (or boolean?)
-
-}
-
-struct Batch {
-
-	struct Output {
-		fs::path path;
-		Image::Format format;
-	};
-
-	std::vector<fs::path> inputs;
-	std::vector<Output> outputs;
-};
-
 void CompiledGraph::ensureGlobalNodesConsistency(){
 	// Find all flush nodes, find all "in transit" registers, assign them images.
 	// Then when executing, before each "flush" node have a "backup" node and afterwards a "restore" node.
@@ -669,9 +617,168 @@ glm::ivec2 computeOutputResolution(const std::vector<Image>& images, const glm::
 	return tgtRes;
 }
 
-bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& fallbackRes){
+bool validate(WorkGraph& graph){
+	bool success = true;
+
+	if(!graph.validateInputs()){
+		success = false;
+	}
+	if(!graph.validateCycles()){
+		success = false;
+	}
+	if(!graph.validateOutputNames()){
+		success = false;
+	}
+	return success;
+}
+
+bool validate(const Graph& editGraph, ErrorContext& errors ){
 
 	errors.clear();
+
+	WorkGraph graph(editGraph, errors);
+
+	return validate(graph);
+}
+
+bool compile( const Graph& editGraph, ErrorContext& errors, CompiledGraph& compiledGraph ){
+
+	errors.clear();
+
+	// Validate the graph.
+	WorkGraph graph( editGraph, errors );
+
+	if( !validate( graph ) ){
+		return false;
+	}
+	// We dont have incomplete nodes anymore.
+	// We could have unconnected regions.
+	graph.cleanUnconnectedComponents();
+	// Compile the graph for real.
+	graph.compile( compiledGraph );
+	// Don't alter global nodes. (or boolean?)
+	return true;
+}
+
+void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, SharedContext& sharedContext){
+
+	const uint inputCountInBatch  = batch.inputs.size();
+	const uint outputCountInBatch = batch.outputs.size();
+
+	sharedContext.inputImages.resize(inputCountInBatch);
+	for(uint i = 0u; i < inputCountInBatch; ++i){
+		sharedContext.inputImages[i].load(batch.inputs[i]);
+	}
+	// Check that all images have the same size.
+	sharedContext.dims = computeOutputResolution(sharedContext.inputImages, fallbackRes);
+
+	// Allocate outputs
+	const uint w = sharedContext.dims.x;
+	const uint h = sharedContext.dims.y;
+	for(uint i = 0u; i < outputCountInBatch; ++i){
+		sharedContext.outputImages.emplace_back(w, h);
+	}
+	// Allocate tmp images
+	for(uint i = 0u; i < compiledGraph.tmpImageCount; ++i){
+		sharedContext.tmpImagesRead.emplace_back(w, h);
+		sharedContext.tmpImagesWrite.emplace_back(w, h);
+	}
+}
+
+void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize, SharedContext& sharedContext){
+
+	const uint w = sharedContext.dims.x;
+	const uint h = sharedContext.dims.y;
+
+#ifdef PARALLEL_FOR
+	System::forParallel(0, h, [&sharedContext, w, &compiledNode, stackSize](size_t y){
+#else
+	for( uint y = 0; y < h; ++y ){
+#endif
+		for( uint x = 0; x < w; ++x ){
+			// Create local context (shared context + x,y coords and a scratch space)
+			LocalContext context(&sharedContext, {x,y}, stackSize);
+			// Transfer inputs to registers
+			for(uint sid = 0; sid < stackSize; ++sid){
+				context.stack[sid] = context.shared->tmpImagesRead[sid/4].pixel(x,y)[sid%4];
+			}
+			// Run the compiled graph, assigning to registers, passing the context along.
+			compiledNode.node->evaluate(context, compiledNode.inputs, compiledNode.outputs);
+			// Transfer registers to outputs
+			for(uint sid = 0; sid < stackSize; ++sid){
+				context.shared->tmpImagesRead[sid/4].pixel(x,y)[sid%4] = context.stack[sid];
+			}
+		}
+	}
+#ifdef PARALLEL_FOR
+	);
+#endif
+}
+
+void evaluateGraphForBatchLockstep(const CompiledGraph& compiledGraph, SharedContext& sharedContext){
+	const uint nodeCount = compiledGraph.nodes.size();
+	for(uint nodeId = 0u; nodeId < nodeCount; ++nodeId){
+		evaluateGraphStepForBatch(compiledGraph.nodes[nodeId], compiledGraph.stackSize, sharedContext);
+		std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
+	}
+}
+
+void evaluateGraphForBatchOptimized(const CompiledGraph& compiledGraph, SharedContext& sharedContext){
+	const uint compiledNodeCount = compiledGraph.nodes.size();
+	const uint w = sharedContext.dims.x;
+	const uint h = sharedContext.dims.y;
+	uint currentStartNodeId = 0u;
+
+	std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
+
+	while(currentStartNodeId < compiledNodeCount){
+		// Find the next global node
+		uint nextGlobalNodeId = currentStartNodeId + 1;
+		for(; nextGlobalNodeId < compiledNodeCount; ++nextGlobalNodeId){
+			if(compiledGraph.nodes[ nextGlobalNodeId ].node->global())
+				break;
+		}
+		// Now we have a range [currentStartNode, nextGlobalNodeId[ to execute per-pixel.
+#ifdef PARALLEL_FOR
+		System::forParallel(0, h, [&sharedContext, currentStartNodeId, nextGlobalNodeId, w, &compiledGraph](size_t y){
+#else
+		for( uint y = 0; y < h; ++y ){
+#endif
+			for( uint x = 0; x < w; ++x ){
+				// Create local context (shared context + x,y coords and a scratch space)
+				LocalContext context(&sharedContext, {x,y}, compiledGraph.stackSize);
+
+				// Run the compiled graph, assigning to registers, passing the context along.
+				for(uint nodeId = currentStartNodeId; nodeId < nextGlobalNodeId; ++nodeId){
+					const CompiledNode& compiledNode = compiledGraph.nodes[nodeId];
+					compiledNode.node->evaluate(context, compiledNode.inputs, compiledNode.outputs);
+				}
+			}
+		}
+#ifdef PARALLEL_FOR
+		);
+#endif
+
+		std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
+
+		currentStartNodeId = nextGlobalNodeId;
+	}
+
+	std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
+	const long long duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	Log::Info() << "Batch took " << duration << "ms." << std::endl;
+}
+
+void saveContextForBatch(const Batch& batch, const SharedContext& context){
+	// Save outputs
+	for (uint i = 0u; i < batch.outputs.size(); ++i) {
+		const Batch::Output& output = batch.outputs[i];
+		context.outputImages[i].save(output.path, output.format);
+	}
+}
+
+
+bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& fallbackRes){
 
 	// Validate the graph.
 	WorkGraph graph(editGraph, errors);
@@ -690,185 +797,24 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 
 	// Populate batches with file info.
 	std::vector<Batch> batches;
-	{
-		// Collect file nodes.
-		if(!generateBatches( compiledGraph.inputs, compiledGraph.outputs, inputPaths, outputDir, batches)){
-			errors.addError("Not enough input files.");
-			return false;
-		}
+
+	// Collect file nodes.
+	if(!generateBatches( compiledGraph.inputs, compiledGraph.outputs, inputPaths, outputDir, batches)){
+		errors.addError("Not enough input files.");
+		return false;
 	}
 
 	for(const Batch& batch : batches){
-		const uint inputCountInBatch  = batch.inputs.size();
-		const uint outputCountInBatch = batch.outputs.size();
 
-		// Load inputs
 		SharedContext sharedContext;
-		sharedContext.inputImages.resize(inputCountInBatch);
-		for(uint i = 0u; i < inputCountInBatch; ++i){
-			sharedContext.inputImages[i].load(batch.inputs[i]);
-		}
-		// Check that all images have the same size.
-		sharedContext.dims = computeOutputResolution(sharedContext.inputImages, fallbackRes);
+		allocateContextForBatch(batch, compiledGraph, fallbackRes, sharedContext);
 
-		// Allocate outputs
-		const uint w = sharedContext.dims.x;
-		const uint h = sharedContext.dims.y;
-		for(uint i = 0u; i < outputCountInBatch; ++i){
-			sharedContext.outputImages.emplace_back(w, h);
-		}
-		// Allocate tmp images
-		for(uint i = 0u; i < compiledGraph.tmpImageCount; ++i){
-			sharedContext.tmpImagesRead.emplace_back(w, h);
-			sharedContext.tmpImagesWrite.emplace_back(w, h);
-		}
+		evaluateGraphForBatchOptimized(compiledGraph, sharedContext);
 
-		const uint compiledNodeCount = compiledGraph.nodes.size();
-		uint currentStartNodeId = 0u;
-
-		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
-
-		while(currentStartNodeId < compiledNodeCount){
-			// Find the next global node
-			uint nextGlobalNodeId = currentStartNodeId + 1;
-			for(; nextGlobalNodeId < compiledNodeCount; ++nextGlobalNodeId){
-				if(compiledGraph.nodes[ nextGlobalNodeId ].node->global())
-					break;
-			}
-			// Now we have a range [currentStartNode, nextGlobalNodeId[ to execute per-pixel.
-#ifdef PARALLEL_FOR
-			System::forParallel(0, h, [&sharedContext, currentStartNodeId, nextGlobalNodeId, w, &compiledGraph](size_t y){
-#else
-			for( uint y = 0; y < h; ++y ){
-#endif
-				for( uint x = 0; x < w; ++x ){
-					// Create local context (shared context + x,y coords and a scratch space)
-					LocalContext context(&sharedContext, {x,y}, compiledGraph.stackSize);
-
-					// Run the compiled graph, assigning to registers, passing the context along.
-					for(uint nodeId = currentStartNodeId; nodeId < nextGlobalNodeId; ++nodeId){
-						const CompiledNode& compiledNode = compiledGraph.nodes[nodeId];
-						compiledNode.node->evaluate(context, compiledNode.inputs, compiledNode.outputs);
-					}
-				}
-			}
-#ifdef PARALLEL_FOR
-			);
-#endif
-
-			std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
-
-			currentStartNodeId = nextGlobalNodeId;
-		}
-
-		std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
-		const long long duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		Log::Info() << "Batch took " << duration << "ms." << std::endl;
-
-		// Save outputs
-		for (uint i = 0u; i < outputCountInBatch; ++i) {
-			const Batch::Output& output = batch.outputs[i];
-			sharedContext.outputImages[i].save(output.path, output.format);
-		}
+		saveContextForBatch(batch, sharedContext);
 	}
 
 	// Clean extra compiled nodes
 	compiledGraph.clearInternalNodes();
-	return true;
-}
-
-
-bool evaluateStaggered(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& fallbackRes){
-
-	errors.clear();
-
-	// Validate the graph.
-	WorkGraph graph(editGraph, errors);
-
-	if(!validate(graph)){
-		return false;
-	}
-	// We dont have incomplete nodes anymore.
-	// We could have unconnected regions.
-	graph.cleanUnconnectedComponents();
-
-	CompiledGraph compiledGraph;
-	graph.compile(compiledGraph);
-
-	// Populate batches with file info.
-	std::vector<Batch> batches;
-	{
-
-		if(!generateBatches( compiledGraph.inputs, compiledGraph.outputs, inputPaths, outputDir, batches)){
-			errors.addError("Not enough input files.");
-			return false;
-		}
-	}
-
-	for(const Batch& batch : batches){
-		const uint inputCountInBatch  = batch.inputs.size();
-		const uint outputCountInBatch = batch.outputs.size();
-
-		// Load inputs
-		SharedContext sharedContext;
-		sharedContext.inputImages.resize(inputCountInBatch);
-		for(uint i = 0u; i < inputCountInBatch; ++i){
-			sharedContext.inputImages[i].load(batch.inputs[i]);
-		}
-		// Check that all images have the same size.
-		sharedContext.dims = computeOutputResolution(sharedContext.inputImages, fallbackRes);
-
-		// Allocate outputs
-		const uint w = sharedContext.dims.x;
-		const uint h = sharedContext.dims.y;
-		for(uint i = 0u; i < outputCountInBatch; ++i){
-			sharedContext.outputImages.emplace_back(w, h);
-		}
-		// Allocate tmp images
-		for(uint i = 0u; i < compiledGraph.tmpImageCount; ++i){
-			sharedContext.tmpImagesRead.emplace_back(w, h);
-			sharedContext.tmpImagesWrite.emplace_back(w, h);
-		}
-
-		std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
-
-		for(const CompiledNode& compiledNode : compiledGraph.nodes){
-#ifdef PARALLEL_FOR
-			System::forParallel(0, h, [&sharedContext, w, &compiledGraph, &compiledNode](size_t y){
-#else
-			for( uint y = 0; y < h; ++y ){
-#endif
-				const uint stackSize = compiledGraph.stackSize;
-				for( uint x = 0; x < w; ++x ){
-					// Create local context (shared context + x,y coords and a scratch space)
-					LocalContext context(&sharedContext, {x,y}, stackSize);
-					// Populate stack
-					for(uint sid = 0u; sid < stackSize; ++sid){
-						context.stack[sid] = sharedContext.tmpImagesRead[sid/4].pixel(x, y)[sid%4];
-					}
-					compiledNode.node->evaluate(context, compiledNode.inputs, compiledNode.outputs);
-					// Retrieve stack
-					for(uint sid = 0u; sid < stackSize; ++sid){
-						sharedContext.tmpImagesWrite[sid/4].pixel(x, y)[sid%4] = context.stack[sid];
-					}
-				}
-			}
-#ifdef PARALLEL_FOR
-			);
-#endif
-			std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
-		}
-
-		std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
-		const long long duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		Log::Info() << "Staggered took " << duration << "ms." << std::endl;
-
-		// Save outputs
-		for (uint i = 0u; i < outputCountInBatch; ++i) {
-			const Batch::Output& output = batch.outputs[i];
-			sharedContext.outputImages[i].save(output.path, output.format);
-		}
-	}
-
 	return true;
 }

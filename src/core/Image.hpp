@@ -21,7 +21,7 @@ public:
 
 	bool load(const fs::path& path);
 
-	bool save(const fs::path& path, Format format);
+	bool save(const fs::path& path, Format format) const;
 	
 	glm::vec4& pixel(int x, int y) { assert(x >= 0 && x < _w && y >= 0 && y < _h); return _pixels[_w * y + x]; }
 
