@@ -301,7 +301,7 @@ bool refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	}
 	// Done, swap
 	std::swap(paths, newPaths);
-	return (reusedCount == newCount) && (newCount == oldCount);
+	return (reusedCount != newCount) || (newCount != oldCount);
 }
 
 
@@ -929,13 +929,68 @@ int main(int argc, char** argv){
 			ImGui::End();
 		}
 
+		const uint previewSize = 64;
 		if( editedGraph || editedInputList ){
 			CompiledGraph compiledGraph;
 			ErrorContext dummyContext;
 			compile(*graph, dummyContext, compiledGraph);
 			if(!dummyContext.hasErrors()){
+				// TODO: purge GL texture pool.
 				// We can evaluate the graph to generate textures.
 				// Prepare a batch by hand
+				Batch batch;
+				// Find the N first selected inputs
+				const uint inputCount = compiledGraph.inputs.size();
+				for(const InputFile& input : inputFiles){
+					if(!input.active){
+						continue;
+					}
+					batch.inputs.push_back(input.path);
+					if(batch.inputs.size() == inputCount){
+						break;
+					}
+				}
+				while(batch.inputs.size() < inputCount){
+					// Not enough input images, repeat the last one?
+					batch.inputs.push_back(batch.inputs.back());
+				}
+				// Dummy output names.
+				for(uint i = 0; i < compiledGraph.outputs.size(); ++i ){
+					Batch::Output& output = batch.outputs.emplace_back();
+					output.path = std::to_string(i);
+					output.format = Image::Format::PNG;
+				}
+				
+				SharedContext sharedContext;
+				allocateContextForBatch(batch, compiledGraph, {previewSize, previewSize}, true, sharedContext);
+				for(const CompiledNode& node : compiledGraph.nodes){
+					evaluateGraphStepForBatch(node, compiledGraph.stackSize, sharedContext);
+					Image outputImg(previewSize, previewSize, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+					{
+						// Use inputs for outputs nodes, to be able to preview the result.
+						const bool useInputs = node.outputs.empty();
+						const std::vector<int>& registers = useInputs ? node.inputs : node.outputs;
+						const std::vector<Image>& images = useInputs ? sharedContext.tmpImagesRead : sharedContext.tmpImagesWrite;
+						const bool useAlpha = registers.size() >= 4;
+						for(int c = 0; c < 4; ++c){
+							// Skip alpha if not needed (initialized to 1).
+							if(c == 3 && !useAlpha){
+								continue;
+							}
+							// Clamp if fewer registers.
+							const uint inputIndex = glm::clamp(c, 0, int(registers.size())-1);
+							const uint reg = registers[inputIndex];
+
+							for(uint y = 0; y < previewSize; ++y){
+								for(uint x = 0; x < previewSize; ++x){
+									outputImg.pixel(x,y)[c] = images[reg/4].pixel(x,y)[reg%4];
+								}
+							}
+						}
+					}
+					// TODO: upload GL texture and associated to node.
+					std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
+				}
 			}
 		}
 
