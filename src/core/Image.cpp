@@ -7,6 +7,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image/stb_image_write.h>
 
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb_image/stb_image_resize.h>
+
 #include <unordered_map>
 
 Image::Image(uint w, uint h, const glm::vec4& defaultColor) {
@@ -87,3 +90,20 @@ bool Image::save(const fs::path& path, Format format) const {
 	return res == 0;
 }
 
+void Image::resize(const glm::ivec2& newRes){
+	if(_w == 0 || _h == 0){
+		return;
+	}
+
+	std::vector<glm::vec4> newPixels(newRes.x * newRes.y);
+	float* input = &(_pixels[0][0]);
+	float* output = &(newPixels[0][0]);
+	int res = stbir_resize_float(input, _w, _h , sizeof(glm::vec4) * _w, output, newRes.x, newRes.y, sizeof(glm::vec4) * newRes.x, 4);
+	if(res == 1){
+		// Success
+		_w = newRes.x;
+		_h = newRes.y;
+		std::swap(newPixels, _pixels);
+	}
+
+}
