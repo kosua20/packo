@@ -660,7 +660,7 @@ bool compile( const Graph& editGraph, ErrorContext& errors, CompiledGraph& compi
 	return true;
 }
 
-void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, SharedContext& sharedContext){
+void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, bool forceRes, SharedContext& sharedContext){
 
 	const uint inputCountInBatch  = batch.inputs.size();
 	const uint outputCountInBatch = batch.outputs.size();
@@ -670,8 +670,12 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 		sharedContext.inputImages[i].load(batch.inputs[i]);
 	}
 	// Check that all images have the same size.
-	sharedContext.dims = computeOutputResolution(sharedContext.inputImages, fallbackRes);
-
+	sharedContext.dims = forceRes ? fallbackRes : computeOutputResolution(sharedContext.inputImages, fallbackRes);
+	if(forceRes){
+		for(uint i = 0u; i < inputCountInBatch; ++i){
+			sharedContext.inputImages[i].resize(sharedContext.dims);
+		}
+	}
 	// Allocate outputs
 	const uint w = sharedContext.dims.x;
 	const uint h = sharedContext.dims.y;
@@ -807,7 +811,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<st
 	for(const Batch& batch : batches){
 
 		SharedContext sharedContext;
-		allocateContextForBatch(batch, compiledGraph, fallbackRes, sharedContext);
+		allocateContextForBatch(batch, compiledGraph, fallbackRes, false, sharedContext);
 
 		evaluateGraphForBatchOptimized(compiledGraph, sharedContext);
 

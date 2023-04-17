@@ -75,5 +75,9 @@ bool validate(const Graph& editGraph, ErrorContext& context );
 
 bool compile( const Graph& editGraph, ErrorContext& context, CompiledGraph& compiledGraph );
 
+void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, bool forceRes, SharedContext& sharedContext);
+
+void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize, SharedContext& sharedContext);
+
 bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& outputRes);
 
