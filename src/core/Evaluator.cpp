@@ -710,7 +710,7 @@ void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize,
 			compiledNode.node->evaluate(context, compiledNode.inputs, compiledNode.outputs);
 			// Transfer registers to outputs
 			for(uint sid = 0; sid < stackSize; ++sid){
-				context.shared->tmpImagesRead[sid/4].pixel(x,y)[sid%4] = context.stack[sid];
+				context.shared->tmpImagesWrite[sid/4].pixel(x,y)[sid%4] = context.stack[sid];
 			}
 		}
 	}

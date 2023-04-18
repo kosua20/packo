@@ -334,6 +334,8 @@ int main(int argc, char** argv){
 		return 1;
 	}
 
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	sr_gui_init();
 
 	int winW, winH;
@@ -653,7 +655,7 @@ int main(int argc, char** argv){
 						ImGui::TableNextColumn();
 						const std::string filename = inputFiles[ i ].path.filename().string();
 						
-						ImGui::Text( filename.c_str() );
+						ImGui::Text( "%s", filename.c_str() );
 						
 						ImGui::PopID();
 
@@ -778,7 +780,7 @@ int main(int argc, char** argv){
 						if( texKey != textures.end() )
 						{
 							GLuint tex = texKey->second;
-							ImGui::Image( (ImTextureID)tex, ImVec2( previewSize, previewSize ) );
+							ImGui::Image( (ImTextureID)tex, ImVec2( previewSize * 2, previewSize * 2 ) );
 						}
 
 						ImNodes::EndNode();
@@ -1006,12 +1008,12 @@ int main(int argc, char** argv){
 					GLuint tex = 0;
 					glGenTextures( 1, &tex );
 					glBindTexture( GL_TEXTURE_2D, tex );
+					glTexImage2D( GL_TEXTURE_2D, 0,  GL_RGBA32F, previewSize, previewSize, 0, GL_RGBA, GL_FLOAT,  outputImg.rawPixels() );
+					glGenerateMipmap( GL_TEXTURE_2D );
 					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
 					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
 					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-					glTexImage2D( GL_TEXTURE_2D, 0,  GL_RGBA32F, previewSize, previewSize,  0, GL_RGBA, GL_FLOAT,  outputImg.rawPixels() );
-					glGenerateMipmap( GL_TEXTURE_2D );
 					glBindTexture( GL_TEXTURE_2D, 0 );
 					textures[ node.node ] = tex;
 
