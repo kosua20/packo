@@ -377,9 +377,12 @@ int main(int argc, char** argv){
 	std::vector<InputFile> inputFiles; // TODO: selected or not, transfer when updating.
 	uint timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 
+	const uint previewSize = 64;
+	std::unordered_map<const Node*, GLuint> textures;
+
 	// tmp
-	inputDirectory = "/Users/simon/Developer/tools/packo/ext/in";
-	outputDirectory = "/Users/simon/Developer/tools/packo/ext/out";
+	inputDirectory  = "C:/Users/s-rodriguez/Documents/Personnel/packo/ext/in";
+	outputDirectory = "C:/Users/s-rodriguez/Documents/Personnel/packo/ext/out";
 	//
 
 	while(!glfwWindowShouldClose(window)) {
@@ -771,6 +774,13 @@ int main(int argc, char** argv){
 							}
 						}
 
+						auto texKey = textures.find( node );
+						if( texKey != textures.end() )
+						{
+							GLuint tex = texKey->second;
+							ImGui::Image( (ImTextureID)tex, ImVec2( previewSize, previewSize ) );
+						}
+
 						ImNodes::EndNode();
 						if( nodeHasIssue ) {
 							for(uint i = 0; i < 6; ++i )
@@ -929,13 +939,17 @@ int main(int argc, char** argv){
 			ImGui::End();
 		}
 
-		const uint previewSize = 64;
 		if( editedGraph || editedInputList ){
 			CompiledGraph compiledGraph;
 			ErrorContext dummyContext;
 			compile(*graph, dummyContext, compiledGraph);
 			if(!dummyContext.hasErrors()){
-				// TODO: purge GL texture pool.
+				// Purge GL texture pool.
+				for( const auto& texture : textures ){
+					GLuint tex = texture.second;
+					glDeleteTextures( 1, &tex );
+				}
+				textures.clear();
 				// We can evaluate the graph to generate textures.
 				// Prepare a batch by hand
 				Batch batch;
@@ -989,6 +1003,19 @@ int main(int argc, char** argv){
 						}
 					}
 					// TODO: upload GL texture and associated to node.
+					GLuint tex = 0;
+					glGenTextures( 1, &tex );
+					glBindTexture( GL_TEXTURE_2D, tex );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+					glTexImage2D( GL_TEXTURE_2D, 0,  GL_RGBA32F, previewSize, previewSize,  0, GL_RGBA, GL_FLOAT,  outputImg.rawPixels() );
+					glGenerateMipmap( GL_TEXTURE_2D );
+					glBindTexture( GL_TEXTURE_2D, 0 );
+					textures[ node.node ] = tex;
+
+					// And swap for next node.
 					std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
 				}
 			}
@@ -1024,6 +1051,13 @@ int main(int argc, char** argv){
 
 
 		glfwSwapBuffers(window);
+	}
+
+	// Purge GL texture pool.
+	for( const auto& texture : textures )
+	{
+		GLuint tex = texture.second;
+		glDeleteTextures( 1, &tex );
 	}
 
 	// Cleanup.

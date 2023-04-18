@@ -36,6 +36,7 @@ public:
 	uint w() const { return _w; }
 	uint h() const { return _h; }
 
+	float* rawPixels() { return (_w*_h == 0) ? nullptr : &( _pixels[ 0 ][ 0 ] ); }
 private:
 
 	std::vector<glm::vec4> _pixels;
