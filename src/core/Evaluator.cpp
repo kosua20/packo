@@ -556,17 +556,12 @@ void CompiledGraph::collectInputsAndOutputs(){
 }
 
 void CompiledGraph::clearInternalNodes(){
-	auto itp = std::remove_if(nodes.begin(), nodes.end(), [](const CompiledNode& node){
-		return node.node->type() > NodeClass::COUNT_EXPOSED;
-	});
-	for(auto itn = itp; itn != nodes.end(); ++itn){
-		CompiledNode& node = *(itn);
-		delete node.node;
-		node.node = nullptr;
+	for(CompiledNode& node : nodes){
+		if(node.node && node.node->type() >= NodeClass::COUNT_EXPOSED){
+			delete node.node;
+			node.node = nullptr;
+		}
 	}
-
-	nodes.erase( itp, nodes.end() );
-
 }
 
 CompiledGraph::~CompiledGraph(){
@@ -818,7 +813,5 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs
 		saveContextForBatch(batch, sharedContext);
 	}
 
-	// Clean extra compiled nodes
-	compiledGraph.clearInternalNodes();
 	return true;
 }
