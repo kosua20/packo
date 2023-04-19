@@ -376,7 +376,7 @@ int main(int argc, char** argv){
 
 	fs::path inputDirectory;
 	fs::path outputDirectory;
-	std::vector<InputFile> inputFiles; // TODO: selected or not, transfer when updating.
+	std::vector<InputFile> inputFiles;
 	uint timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 
 	const uint previewSize = 64;
@@ -585,9 +585,8 @@ int main(int argc, char** argv){
 
 		// TODO: RGBA/float toggle?
 		// TODO: comparisons and boolean selector? (still floats)
-		// TODO: resize, rotate?
-		// TODO: display preview of inputs/outputs if inputs have been selected?
-
+		// TODO: tile, rotate?
+		// TODO: improve node layout (especially with preview)
 		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
 
 		float editorWindowHeight = float(winH) - menuBarHeight;
@@ -636,6 +635,7 @@ int main(int argc, char** argv){
 				}
 				ImGui::TextWrapped( "%s", inputDirStr.c_str());
 				
+				// TODO: Apply button, select all, select none.
 				if( ImGui::BeginTable( "##Inputs", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg ) )
 				{
 					ImGui::TableSetupColumn( "##bullet", ImGuiTableColumnFlags_WidthFixed, 12 );
@@ -945,6 +945,7 @@ int main(int argc, char** argv){
 			CompiledGraph compiledGraph;
 			ErrorContext dummyContext;
 			compile(*graph, dummyContext, compiledGraph);
+			// TODO: when errors or unused nodes, do something to give feedback to the user.
 			if(!dummyContext.hasErrors()){
 				// Purge GL texture pool.
 				for( const auto& texture : textures ){
@@ -1004,7 +1005,7 @@ int main(int argc, char** argv){
 							}
 						}
 					}
-					// TODO: upload GL texture and associated to node.
+					// Upload GL texture and associate to node.
 					GLuint tex = 0;
 					glGenTextures( 1, &tex );
 					glBindTexture( GL_TEXTURE_2D, tex );
