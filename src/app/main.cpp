@@ -352,7 +352,8 @@ int main(int argc, char** argv){
 		editor.commit();
 	}
 
-	Node* createdNode = nullptr;
+	std::unordered_map<NodeClass, uint> nodesPasteboard;
+	std::vector<Node*> createdNodes;
 	ImVec2 mouseRightClick( 0.f, 0.f );
 	ErrorContext errorContext;
 
@@ -681,12 +682,17 @@ int main(int argc, char** argv){
 					ImNodes::PushAttributeFlag( 0 /*ImNodesAttributeFlags_EnableLinkDetachWithDragClick*/ );
 
 					// First, immediately register the position for a newly created node if there is one.
-					{
-						int createdNodeIndex = graph->findNode( createdNode );
-						if( createdNodeIndex >= 0 )
+
+					for(uint nodeId = 0; nodeId < createdNodes.size(); ++nodeId){
+
+						int createdNodeIndex = graph->findNode( createdNodes[nodeId] );
+						if( createdNodeIndex >= 0 ){
 							ImNodes::SetNodeScreenSpacePos( createdNodeIndex, mouseRightClick );
-						createdNode = nullptr;
+							mouseRightClick.x += 20.f;
+							mouseRightClick.y += 20.f;
+						}
 					}
+					createdNodes.clear();
 
 
 					GraphNodes nodes(*graph);
@@ -861,26 +867,47 @@ int main(int argc, char** argv){
 					if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
 					   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)))){
 						const uint nodesCount = ImNodes::NumSelectedNodes();
-						if( nodesCount > 0u )
-						{
-							std::vector<int> nodeIds( nodesCount );
-							ImNodes::GetSelectedNodes( nodeIds.data() );
-							for( const int nodeId : nodeIds )
-							{
-								editor.removeNode( ( uint )nodeId );
+						if(nodesCount > 0u){
+							std::vector<int> nodeIds(nodesCount);
+							ImNodes::GetSelectedNodes(nodeIds.data());
+							for(const int nodeId : nodeIds){
+								editor.removeNode((uint)nodeId);
 							}
 							editedGraph = true;
 						}
 						const uint linkCount = ImNodes::NumSelectedLinks();
-						if( linkCount > 0 )
-						{
-							std::vector<int> linkIds( linkCount );
-							ImNodes::GetSelectedLinks( linkIds.data() );
-							for( const int linkId : linkIds )
-							{
-								editor.removeLink( ( uint )linkId );
+						if(linkCount > 0){
+							std::vector<int> linkIds(linkCount);
+							ImNodes::GetSelectedLinks(linkIds.data());
+							for(const int linkId : linkIds){
+								editor.removeLink((uint)linkId);
 							}
 							editedGraph = true;
+						}
+					}
+
+					if(ImGui::IsKeyReleased(ImGuiKey_C) && (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightSuper))){
+						const uint nodesCount = ImNodes::NumSelectedNodes();
+						if(nodesCount > 0u){
+							std::vector<int> nodeIds(nodesCount);
+							ImNodes::GetSelectedNodes(nodeIds.data());
+							for(const int nodeId : nodeIds){
+								const Node* const node = graph->node(nodeId);
+								if(node){
+									NodeClass type = NodeClass(node->type());
+									nodesPasteboard[type] += 1u;
+								}
+							}
+						}
+					}
+
+					std::unordered_map<NodeClass, uint> nodesToCreate;
+
+					if(ImGui::IsKeyReleased(ImGuiKey_V) && (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightSuper))){
+						// Save position for placing the new node on screen.
+						mouseRightClick = ImGui::GetMousePos();
+						for(const auto& nodeTypeCount : nodesPasteboard){
+							nodesToCreate[nodeTypeCount.first] += nodeTypeCount.second;
 						}
 					}
 
@@ -891,21 +918,27 @@ int main(int argc, char** argv){
 					}
 
 					if( ImGui::BeginPopup("Create node")){
-						NodeClass typeToCreate = NodeClass::COUNT_EXPOSED;
-
 						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
 							NodeClass type = NodeClass(i);
 							const std::string& label = getNodeName(type);
 							if( ImGui::Selectable(label.c_str())){
-								typeToCreate = type;
+								nodesToCreate[type] += 1;
 							}
 						}
-						if(typeToCreate < NodeClass::COUNT_EXPOSED){
-							createdNode = createNode(typeToCreate);
-							editor.addNode( createdNode );
-							editedGraph = true;
-						}
 						ImGui::EndPopup();
+					}
+					// Create pasted and new nodes.
+					for(const auto& nodeTypeToCreate : nodesToCreate){
+						if(nodeTypeToCreate.first >= NodeClass::COUNT_EXPOSED){
+							continue;
+						}
+						for(uint i = 0u; i < nodeTypeToCreate.second; ++i){
+							Node* createdNode = createNode(nodeTypeToCreate.first);
+							editor.addNode( createdNode );
+							// Register for placement at next frame.
+							createdNodes.push_back(createdNode);
+						}
+						editedGraph = true;
 					}
 
 					editor.commit();
