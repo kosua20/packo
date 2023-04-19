@@ -717,7 +717,7 @@ int main(int argc, char** argv){
 
 						const uint attribWidth = 130u;
 
-						const uint minNodeSize = attributeCount != 0u ? attribWidth : 50u;
+						const uint minNodeSize = attributeCount != 0u ? attribWidth : previewSize;
 
 						for(uint attId = 0; attId < attributeCount; ++attId ){
 
@@ -823,6 +823,14 @@ int main(int argc, char** argv){
 						Graph::Slot from = fromLinkToSlot(startLink);
 						Graph::Slot to = fromLinkToSlot(endLink);
 						editor.addLink(from.node, from.slot, to.node, to.slot);
+						if(ImGui::IsKeyDown(ImGuiKey_LeftShift) && from.slot == to.slot){
+							const Node* const fromNode = graph->node(from.node);
+							const Node* const toNode = graph->node(to.node);
+							const uint toAddCount = (std::min)(fromNode->outputs().size(), toNode->inputs().size());
+							for(uint i = 0; i < toAddCount; ++i){
+								editor.addLink(from.node, i, to.node, i);
+							}
+						}
 						editedGraph = true;
 					}
 

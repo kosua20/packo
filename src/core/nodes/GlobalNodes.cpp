@@ -143,6 +143,7 @@ GaussianBlurNode::GaussianBlurNode(){
 	_inputNames = {"R", "G", "B", "A"};
 	_outputNames = {"R", "G", "B", "A"};
 	_attributes = { {"Radius", Attribute::Type::FLOAT}};
+	_attributes[0].flt = 2.f;
 }
 
 NODE_DEFINE_TYPE_AND_VERSION(GaussianBlurNode, NodeClass::GAUSSIAN_BLUR, 1)
