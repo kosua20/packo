@@ -4,6 +4,7 @@
 #include "core/nodes/ArithmeticNodes.hpp"
 #include "core/nodes/GenerativeNodes.hpp"
 #include "core/nodes/GlobalNodes.hpp"
+#include "core/nodes/BooleanNodes.hpp"
 
 enum NodeClass : uint {
 	INPUT_IMG = 0,
@@ -27,6 +28,12 @@ enum NodeClass : uint {
 	RANDOM_COLOR,
 	TILE,
 	ROTATE,
+	SELECT,
+	EQUAL,
+	DIFFERENT,
+	NOT,
+	GREATER,
+	LESSER,
 	MIX,
 	COUNT_EXPOSED,
 	INTERNAL_BACKUP,

@@ -45,6 +45,18 @@ Node* createNode(NodeClass type){
 			return new TileNode();
 		case ROTATE:
 			return new RotateNode();
+		case SELECT:
+			return new SelectNode();
+		case EQUAL:
+			return new EqualNode();
+		case DIFFERENT:
+			return new DifferentNode();
+		case NOT:
+			return new NegateNode();
+		case GREATER:
+			return new GreaterNode();
+		case LESSER:
+			return new LessNode();
 		case MIX:
 			return new MixNode();
 		default:
@@ -59,6 +71,7 @@ const std::string& getNodeName(NodeClass type){
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
+		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
