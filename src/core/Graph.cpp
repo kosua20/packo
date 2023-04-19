@@ -6,14 +6,21 @@ Graph::~Graph(){
 	clear();
 }
 
-int Graph::findNode( const Node* const node ){
-	if( node == nullptr )
+int Graph::findNode(const Node* const node){
+	if(node == nullptr)
 		return -1;
 
-	for( uint nodeIndex = 0u; nodeIndex < _nodes.size(); ++nodeIndex )
-	{
-		if( _nodes[ nodeIndex ] == node )
+	for(uint nodeIndex = 0u; nodeIndex < _nodes.size(); ++nodeIndex){
+		if(_nodes[ nodeIndex ] == node)
 			return (int)nodeIndex;
+	}
+	return -1;
+}
+
+int Graph::findLink( const Link& link ){
+	for( uint linkIndex = 0u; linkIndex < _links.size(); ++linkIndex ){
+		if( _links[ linkIndex ] == link )
+			return (int)linkIndex;
 	}
 	return -1;
 }

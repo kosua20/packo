@@ -823,11 +823,11 @@ int main(int argc, char** argv){
 						Graph::Slot from = fromLinkToSlot(startLink);
 						Graph::Slot to = fromLinkToSlot(endLink);
 						editor.addLink(from.node, from.slot, to.node, to.slot);
-						if(ImGui::IsKeyDown(ImGuiKey_LeftShift) && from.slot == to.slot){
+						if(ImGui::IsKeyDown(ImGuiKey_LeftShift) && (from.slot == to.slot)){
 							const Node* const fromNode = graph->node(from.node);
 							const Node* const toNode = graph->node(to.node);
-							const uint toAddCount = (std::min)(fromNode->outputs().size(), toNode->inputs().size());
-							for(uint i = 0; i < toAddCount; ++i){
+							const uint sharedSlotCount = (std::min)(fromNode->outputs().size(), toNode->inputs().size());
+							for(uint i = 0; i < sharedSlotCount; ++i){
 								editor.addLink(from.node, i, to.node, i);
 							}
 						}
@@ -836,6 +836,24 @@ int main(int argc, char** argv){
 
 					int linkId;
 					if(ImNodes::IsLinkDestroyed(&linkId)){
+
+						if(ImGui::IsKeyDown(ImGuiKey_LeftShift)){
+							const Graph::Link& link = graph->link(linkId);
+							if(link.to.slot == link.from.slot){
+								// Find other links between the two nodes, matching channels.
+								const Node* const fromNode = graph->node(link.from.node);
+								const Node* const toNode = graph->node(link.to.node);
+								const uint sharedSlotCount = (std::min)(fromNode->outputs().size(), toNode->inputs().size());
+								for(uint i = 0; i < sharedSlotCount; ++i){
+									Graph::Link oLink = link;
+									oLink.from.slot = oLink.to.slot = i;
+									const int oLinkId = graph->findLink(oLink);
+									if(oLinkId >= 0){
+										editor.removeLink(oLinkId);
+									}
+								}
+							}
+						}
 						editor.removeLink(linkId);
 						editedGraph = true;
 					}

@@ -27,6 +27,7 @@ public:
 	~Graph();
 
 	int findNode( const Node* node );
+	int findLink( const Link& link );
 
 	const Node* node( uint node ) const { return _nodes[ node ]; }
 
