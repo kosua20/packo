@@ -346,23 +346,9 @@ int main(int argc, char** argv){
 	{
 		GraphEditor editor(*graph);
 		editor.addNode(new InputNode());
-		editor.addNode( new OutputNode() ); // 1
-		editor.addNode( new OutputNode() ); // 2
-		editor.addNode( new AddNode() ); // 3
-		editor.addNode( new AddNode() ); // 4
-
-		editor.addLink( 0, 0, 3, 1 );
-		editor.addLink( 0, 1, 1, 1 );
-		editor.addLink( 0, 1, 2, 0 );
-
-		editor.addLink( 0, 2, 4, 0 );
-		editor.addLink( 0, 3, 1, 3 );
-		editor.addLink( 0, 3, 2, 2 );
-
-		editor.addLink( 3, 0, 4, 1 );
-		editor.addLink( 4, 0, 1, 0 );
-		editor.addLink( 4, 0, 3, 0 );
-
+		editor.addNode( new OutputNode() );
+		for(uint i = 0; i < 4; ++i)
+			editor.addLink( 0, i, 1, i );
 		editor.commit();
 	}
 
@@ -379,7 +365,7 @@ int main(int argc, char** argv){
 	std::vector<InputFile> inputFiles;
 	uint timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 
-	const uint previewSize = 64;
+	const uint previewSize = 128;
 	std::unordered_map<const Node*, GLuint> textures;
 
 	// tmp
@@ -417,8 +403,6 @@ int main(int argc, char** argv){
 			timeSinceLastInputUpdate = 0;
 		}
 
-
-		ImGui::ShowDemoWindow();
 		// Menus and settings
 		{
 
@@ -584,8 +568,6 @@ int main(int argc, char** argv){
 		const float menuBarHeight = ImGui::GetItemRectSize().y;
 
 		// TODO: RGBA/float toggle?
-		// TODO: comparisons and boolean selector? (still floats)
-		// TODO: tile, rotate?
 		// TODO: improve node layout (especially with preview)
 		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
 
@@ -600,6 +582,17 @@ int main(int argc, char** argv){
 			ImGui::Splitter(true, kSplitBarWidth, &inputsWindowWidth, &editorWindowWidth, 200, 300);
 			{
 				ImGui::BeginChild("Inputs & Outputs", ImVec2(inputsWindowWidth, 0), true);
+
+				if(ImGui::Button("Run")){
+					std::vector<fs::path> inputPaths;
+					for(InputFile& file : inputFiles){
+						if(file.active){
+							inputPaths.push_back(file.path);
+						}
+					}
+					evaluate(*graph, errorContext, inputPaths, outputDirectory, {64,64});
+				}
+
 				const std::string inputDirStr = inputDirectory.string();
 				const std::string outputDirStr = outputDirectory.string();
 				
@@ -634,8 +627,19 @@ int main(int argc, char** argv){
 					}
 				}
 				ImGui::TextWrapped( "%s", inputDirStr.c_str());
-				
-				// TODO: Apply button, select all, select none.
+
+				if(ImGui::SmallButton("Select all")){
+					for(InputFile& file : inputFiles ){
+						file.active = true;
+					}
+				}
+				ImGui::SameLine();
+				if(ImGui::SmallButton("Select none")){
+					for(InputFile& file : inputFiles ){
+						file.active = false;
+					}
+				}
+
 				if( ImGui::BeginTable( "##Inputs", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg ) )
 				{
 					ImGui::TableSetupColumn( "##bullet", ImGuiTableColumnFlags_WidthFixed, 12 );
@@ -783,7 +787,7 @@ int main(int argc, char** argv){
 						if( texKey != textures.end() )
 						{
 							GLuint tex = texKey->second;
-							ImGui::Image( (ImTextureID)tex, ImVec2( previewSize * 2, previewSize * 2 ) );
+							ImGui::Image( (ImTextureID)tex, ImVec2( previewSize, previewSize ) );
 						}
 
 						ImNodes::EndNode();
@@ -944,7 +948,7 @@ int main(int argc, char** argv){
 			ImGui::End();
 		}
 
-		if( editedGraph || editedInputList ){
+		if( (editedGraph || editedInputList) && !inputFiles.empty() ){
 			CompiledGraph compiledGraph;
 			ErrorContext dummyContext;
 			compile(*graph, dummyContext, compiledGraph);
