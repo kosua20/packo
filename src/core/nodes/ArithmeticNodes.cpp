@@ -158,3 +158,17 @@ void LogarithmNode::evaluate(LocalContext& context, const std::vector<int>& inpu
 	assert(outputs.size() == 1);
 	context.stack[outputs[0]] = glm::log(context.stack[inputs[0]]) / glm::log(_attributes[0].flt);
 }
+
+MixNode::MixNode(){
+	_name = "Interpolate";
+	_inputNames = {"X", "Y", "T"};
+	_outputNames = {"mix(X,Y,T)"};
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(MixNode, NodeClass::MIX, 1)
+
+void MixNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 3);
+	assert(outputs.size() == 1);
+	context.stack[outputs[0]] = glm::mix(context.stack[inputs[0]], context.stack[inputs[1]], context.stack[inputs[2]]);
+}

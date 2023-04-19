@@ -2,8 +2,6 @@
 #include "core/Common.hpp"
 #include "core/nodes/Node.hpp"
 
-#include "core/FreeList.hpp"
-
 class AddNode : public Node {
 public:
 
@@ -95,3 +93,12 @@ public:
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
+
+class MixNode : public Node {
+public:
+
+	MixNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+

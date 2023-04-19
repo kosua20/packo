@@ -45,6 +45,8 @@ Node* createNode(NodeClass type){
 			return new TileNode();
 		case ROTATE:
 			return new RotateNode();
+		case MIX:
+			return new MixNode();
 		default:
 			assert(false);
 			break;
