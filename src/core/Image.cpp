@@ -70,7 +70,7 @@ bool Image::save(const fs::path& path, Format format) const {
 		}
 	}
 	int res = -1;
-	const std::string dstPathStr = dstPath.string();
+	const auto dstPathStr = dstPath.u8string();
 	switch (format) {
 		case Format::PNG:
 			res = stbi_write_png( dstPathStr.c_str(), _w, _h, 4, data.data(), 4 * _w);

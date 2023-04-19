@@ -573,7 +573,7 @@ CompiledGraph::~CompiledGraph(){
 	clearInternalNodes();
 }
 
-bool generateBatches(const std::vector<const Node*>& inputs, const std::vector<const Node*>& outputs, const std::vector<std::string>& inputPaths, const std::string& outputPath, std::vector<Batch>& batches){
+bool generateBatches(const std::vector<const Node*>& inputs, const std::vector<const Node*>& outputs, const std::vector<fs::path>& inputPaths, const fs::path& outputPath, std::vector<Batch>& batches){
 
 	// Generate batches based on the number of file nodes and paths given.
 	const uint inputCount = inputs.size();
@@ -598,7 +598,7 @@ bool generateBatches(const std::vector<const Node*>& inputs, const std::vector<c
 		for(uint outputId = 0u; outputId < outputCount; ++outputId){
 			const OutputNode* node = static_cast<const OutputNode*>(outputs[outputId]);
 			Batch::Output& outFile = batch.outputs.emplace_back();
-			outFile.path = outputPath + "/" + node->generateFileName(batchId, outFile.format);
+			outFile.path = outputPath / node->generateFileName(batchId, outFile.format);
 		}
 	}
 	return true;
@@ -782,7 +782,7 @@ void saveContextForBatch(const Batch& batch, const SharedContext& context){
 }
 
 
-bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& fallbackRes){
+bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& fallbackRes){
 
 	// Validate the graph.
 	WorkGraph graph(editGraph, errors);

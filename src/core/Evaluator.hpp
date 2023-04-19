@@ -79,5 +79,5 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 
 void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize, SharedContext& sharedContext);
 
-bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<std::string>& inputPaths, const std::string& outputDir, const glm::ivec2& outputRes);
+bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes);
 
