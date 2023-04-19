@@ -35,33 +35,37 @@ void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 }
 
 
-TileNode::TileNode()
-{
+TileNode::TileNode(){
 	_name = "Tile";
 	_inputNames = { "R", "G", "B", "A" };
 	_outputNames = { "R", "G", "B", "A" };
-	_attributes = { {"Scale", Attribute::Type::FLOAT} };
+	_attributes = { {"Scale", Attribute::Type::FLOAT} , {"Offset X", Attribute::Type::FLOAT} , {"Offset Y", Attribute::Type::FLOAT} };
 	_attributes[ 0 ].flt = 1.0f;
 }
 
 NODE_DEFINE_TYPE_AND_VERSION( TileNode, NodeClass::TILE, 1 )
 
-void TileNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
-{
+void TileNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert( outputs.size() == 4 );
 	assert( inputs.size() == 4 );
 
 	const float scale = _attributes[ 0 ].flt;
-	const int x = context.coords.x;
-	const int y = context.coords.y;
-	int xOld = std::round( scale * x );
-	int yOld = std::round( scale * y );
-	xOld = xOld % context.shared->dims.x;
-	yOld = yOld % context.shared->dims.y;
+	glm::vec2 offset = glm::vec2(_attributes[ 1 ].flt, _attributes[ 2 ].flt);
+	offset *= 0.5f;
+	const glm::vec2 size(context.shared->dims);
 
-	// TODO: bilinear
-	for( uint i = 0u; i < 4u; ++i )
-	{
+	glm::vec2 unitCoords = (glm::vec2(context.coords) + 0.5f) / size - 0.5f;
+	unitCoords *= scale;
+	unitCoords += offset;
+	const glm::vec2 coords = glm::fract(unitCoords + 0.5f) * size - 0.5f;
+
+	glm::ivec2 corner = glm::floor(coords);
+	const glm::vec2 frac = coords - glm::vec2(corner);
+	corner += context.shared->dims;
+	const glm::ivec2 c00 = glm::ivec2(corner.x % context.shared->dims.x, corner.y % context.shared->dims.y);
+	const glm::ivec2 c11 = glm::ivec2((corner.x+1) % context.shared->dims.x, (corner.y+1) % context.shared->dims.y);
+
+	for(uint i = 0u; i < 4u; ++i){
 		const uint srcId = inputs[ i ];
 		const uint dstId = outputs[ i ];
 
@@ -69,17 +73,23 @@ void TileNode::evaluate( LocalContext& context, const std::vector<int>& inputs, 
 		const uint channelId = srcId % 4u;
 
 		const Image& src = context.shared->tmpImagesRead[ imageId ];
-		context.stack[ dstId ] = src.pixel( xOld, yOld )[ channelId ];
+
+		const float px0y0 = src.pixel(c00.x, c00.y)[channelId];
+		const float px1y0 = src.pixel(c11.x, c00.y)[channelId];
+		const float px0y1 = src.pixel(c00.x, c11.y)[channelId];
+		const float px1y1 = src.pixel(c11.x, c11.y)[channelId];
+
+		const float value = (1.f - frac.x) * (1.f - frac.y) * px0y0 + (frac.x) * (1.f - frac.y) * px1y0 + (1.f - frac.x) * (frac.y) * px0y1 + (frac.x) * (frac.y) * px1y1;
+		context.stack[ dstId ] = value;
 	}
 }
 
 
-RotateNode::RotateNode()
-{
+RotateNode::RotateNode(){
 	_name = "Rotate";
 	_inputNames = { "R", "G", "B", "A" };
 	_outputNames = { "R", "G", "B", "A" };
-	_attributes = { {"Angle", {"0", "90", "180", "270"}}};
+	_attributes = { {"Anglee", Attribute::Type::FLOAT}};
 }
 
 NODE_DEFINE_TYPE_AND_VERSION( RotateNode, NodeClass::ROTATE, 1 )
@@ -89,15 +99,25 @@ void RotateNode::evaluate( LocalContext& context, const std::vector<int>& inputs
 	assert( outputs.size() == 4 );
 	assert( inputs.size() == 4 );
 
-	const int mode = _attributes[ 0 ].cmb;
-	int cosTheta[] = { 1, 0, -1, 0};
-	int sinTheta[] = { 0, 1, 0, -1 };
+	const float angle = _attributes[ 0 ].flt * glm::pi<float>() / 180.0f;
+	const float c = std::cos(angle);
+	const float s = std::sin(angle);
+	const glm::vec2 size(context.shared->dims);
 
-	const int x = context.coords.x;
-	const int y = context.coords.y;
-	const int xOld = ( cosTheta[ mode ] * x + sinTheta[ mode ] * y + context.shared->dims.x ) % context.shared->dims.x;
-	const int yOld = ( -sinTheta[ mode ] * x + cosTheta[ mode ] * y + context.shared->dims.y) % context.shared->dims.y;
-	// No need to filter, integer coordinates
+	// Move to unit space.
+	const glm::vec2 unitCoords = (glm::vec2(context.coords) + 0.5f) / size - 0.5f;
+	glm::vec2 rotCoords;
+	rotCoords.x =  c * unitCoords.x + s * unitCoords.y;
+	rotCoords.y = -s * unitCoords.x + c * unitCoords.y;
+	const glm::vec2 coords = glm::fract(rotCoords + 0.5f) * size - 0.5f;
+
+	glm::ivec2 corner = glm::floor(coords);
+	const glm::vec2 frac = coords - glm::vec2(corner);
+	corner += context.shared->dims;
+	const glm::ivec2 c00 = glm::ivec2(corner.x % context.shared->dims.x, corner.y % context.shared->dims.y);
+	const glm::ivec2 c11 = glm::ivec2((corner.x+1) % context.shared->dims.x, (corner.y+1) % context.shared->dims.y);
+
+
 	for( uint i = 0u; i < 4u; ++i )
 	{
 		const uint srcId = inputs[ i ];
@@ -107,7 +127,14 @@ void RotateNode::evaluate( LocalContext& context, const std::vector<int>& inputs
 		const uint channelId = srcId % 4u;
 
 		const Image& src = context.shared->tmpImagesRead[ imageId ];
-		context.stack[ dstId ] = src.pixel( xOld, yOld )[ channelId ];
+
+		const float px0y0 = src.pixel(c00.x, c00.y)[channelId];
+		const float px1y0 = src.pixel(c11.x, c00.y)[channelId];
+		const float px0y1 = src.pixel(c00.x, c11.y)[channelId];
+		const float px1y1 = src.pixel(c11.x, c11.y)[channelId];
+
+		const float value = (1.f - frac.x) * (1.f - frac.y) * px0y0 + (frac.x) * (1.f - frac.y) * px1y0 + (1.f - frac.x) * (frac.y) * px0y1 + (frac.x) * (frac.y) * px1y1;
+		context.stack[ dstId ] = value;
 	}
 }
 
