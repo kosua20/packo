@@ -1,5 +1,6 @@
 #include "core/Image.hpp"
 #include "core/system/TextUtilities.hpp"
+#define STBI_WINDOWS_UTF8
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image/stb_image.h>
@@ -20,11 +21,12 @@ Image::Image(uint w, uint h, const glm::vec4& defaultColor) {
 
 bool Image::load(const fs::path& path){
 
-	const std::string dstPathStr = path.string();
+	const auto dstPathStr = path.u8string();
 	// Load image.
 	int wi = 0;
 	int hi = 0;
 	int n;
+	
 	unsigned char* data = stbi_load( dstPathStr.c_str(), &wi, &hi, &n, 4);
 	if(data == nullptr || wi == 0 || hi == 0){
 		return false;
