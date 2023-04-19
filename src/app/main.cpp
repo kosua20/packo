@@ -733,6 +733,9 @@ int main(int argc, char** argv){
 								case Node::Attribute::Type::COMBO:
 									editedGraph |= ImGui::Combo(attribute.name.c_str(), &attribute.cmb, &getAttributeComboItem, &attribute, attribute.values.size());
 									break;
+								case Node::Attribute::Type::BOOL:
+									editedGraph |= ImGui::Checkbox( attribute.name.c_str(), &attribute.bln );
+									break;
 								default:
 									assert( false );
 									break;

@@ -30,7 +30,7 @@ public:
 	{
 		enum class Type
 		{
-			FLOAT, STRING, COLOR, COMBO
+			FLOAT, STRING, COLOR, COMBO, BOOL
 		};
 
 		std::string name;
@@ -41,6 +41,7 @@ public:
 		glm::vec4 clr;
 		float flt;
 		int cmb;
+		bool bln;
 
 		Attribute( const std::string& aname, Type atype );
 
