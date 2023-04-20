@@ -852,6 +852,15 @@ int main(int argc, char** argv){
 					}
 				}
 
+
+#ifdef _MACOS
+				const bool ctrlModifierHeld = ImGui::GetIO().KeySuper;
+				const bool shftModifierHeld = ImGui::GetIO().KeyShift;
+#else
+				const bool ctrlModifierHeld = ImGui::GetIO().KeyCtrl;
+				const bool shftModifierHeld = ImGui::GetIO().KeyShift;
+#endif
+
 				// Graph edition.
 				{
 					GraphEditor editor(*graph);
@@ -875,7 +884,7 @@ int main(int argc, char** argv){
 						Graph::Slot from = fromLinkToSlot(startLink);
 						Graph::Slot to = fromLinkToSlot(endLink);
 						editor.addLink(from.node, from.slot, to.node, to.slot);
-						if(ImGui::IsKeyDown(ImGuiKey_LeftShift) && (from.slot == to.slot)){
+						if(shftModifierHeld && (from.slot == to.slot)){
 							const Node* const fromNode = graph->node(from.node);
 							const Node* const toNode = graph->node(to.node);
 							const uint sharedSlotCount = (std::min)(fromNode->outputs().size(), toNode->inputs().size());
@@ -889,7 +898,7 @@ int main(int argc, char** argv){
 					int linkId;
 					if(ImNodes::IsLinkDestroyed(&linkId)){
 
-						if(ImGui::IsKeyDown(ImGuiKey_LeftShift)){
+						if(shftModifierHeld){
 							const Graph::Link& link = graph->link(linkId);
 							if(link.to.slot == link.from.slot){
 								// Find other links between the two nodes, matching channels.
@@ -910,8 +919,9 @@ int main(int argc, char** argv){
 						editedGraph = true;
 					}
 
+
 					if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
-					   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl)))){
+					   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && ctrlModifierHeld)){
 						const uint nodesCount = ImNodes::NumSelectedNodes();
 						if(nodesCount > 0u){
 							std::vector<int> nodeIds(nodesCount);
@@ -933,7 +943,7 @@ int main(int argc, char** argv){
 					}
 
 					// Add nodes to the pasteboard when copying.
-					if(ImGui::IsKeyReleased(ImGuiKey_C) && (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightSuper))){
+					if(ImGui::IsKeyReleased(ImGuiKey_C) && ctrlModifierHeld){
 						const uint nodesCount = ImNodes::NumSelectedNodes();
 						if(nodesCount > 0u){
 							nodesPasteboard.clear();
@@ -952,7 +962,7 @@ int main(int argc, char** argv){
 
 					// List of copied nodes to create if pasting.
 					std::unordered_map<NodeClass, uint> nodesToCreate;
-					if(ImGui::IsKeyReleased(ImGuiKey_V) && (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightSuper))){
+					if(ImGui::IsKeyReleased(ImGuiKey_V) && ctrlModifierHeld){
 						// Save position for placing the new node on screen.
 						mouseRightClick = ImGui::GetMousePos();
 						for(const auto& nodeTypeCount : nodesPasteboard){
