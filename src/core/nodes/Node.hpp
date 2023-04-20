@@ -58,28 +58,39 @@ public:
 
 	virtual uint type() const = 0;
 	virtual uint version() const = 0;
+	virtual bool channelled() const = 0;
 	virtual bool global() const { return false; }
 
+	void setChannelCount(uint c);
+	uint channelCount() const { return _channelCount; }
+
 	const std::string& name() const { return _name; }
-	const std::vector<std::string>& inputs() const { return _inputNames; }
-	const std::vector<std::string>& outputs() const { return _outputNames; }
+	const std::vector<std::string>& inputs() const { return _currentInputs; }
+	const std::vector<std::string>& outputs() const { return _currentOutputs; }
 	const std::vector<Attribute>& attributes( ) const { return _attributes; }
 	std::vector<Attribute>& attributes( )  { return _attributes; }
 
 protected:
 
+	void finalize();
+	
 	std::string _name;
 	std::vector<std::string> _inputNames;
 	std::vector<std::string> _outputNames;
+	std::vector<std::string> _currentInputs;
+	std::vector<std::string> _currentOutputs;
 	std::vector<Attribute> _attributes;
+	uint _channelCount = 1;
 
 };
 
 #define NODE_DECLARE_EVAL_TYPE_AND_VERSION() \
 void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override; \
 uint type() const override; \
-uint version() const override;
+uint version() const override; \
+bool channelled() const override;
 
-#define NODE_DEFINE_TYPE_AND_VERSION(C, T, V) \
+#define NODE_DEFINE_TYPE_AND_VERSION(C, T, B, V) \
 uint C::type() const { return T; } \
-uint C::version() const { return V; }
+uint C::version() const { return V; }\
+bool C::channelled() const { return B; }

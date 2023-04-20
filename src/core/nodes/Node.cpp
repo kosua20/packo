@@ -26,9 +26,35 @@ Node::Attribute::Attribute( const std::string& aname, const std::vector<std::str
 
 Node::Attribute::~Attribute() {}
 
+void Node::setChannelCount(uint c){
+	const int channelCount = glm::clamp(c, 1u, 4u);
+	if(!channelled() || channelCount == 1u){
+		_currentInputs = _inputNames;
+		_currentOutputs = _outputNames;
+		return;
+	}
+	_currentInputs.clear();
+	_currentOutputs.clear();
+	_channelCount = channelCount;
+
+	const std::string prefixes[4] = {"R", "G", "B", "A"};
+
+	for(const std::string& input : _inputNames){
+		for(uint i = 0; i < _channelCount; ++i){
+			_currentInputs.push_back(prefixes[i] + input);
+		}
+	}
+	for(const std::string& output : _outputNames){
+		for(uint i = 0; i < _channelCount; ++i){
+			_currentOutputs.push_back(prefixes[i] + output);
+		}
+	}
+}
+
 void Node::serialize(json& data) const {
 	data["type"] = type();
 	data["version"] = version();
+	data["channels"] = channelCount();
 	data["attributes"] = {};
 
 	for(const Node::Attribute& att : _attributes ){
@@ -72,6 +98,12 @@ bool Node::deserialize(const json& data){
 	if(data["version"] > version()){
 		// Attempting to open a new node in an old app.
 		return false;
+	}
+
+	if(data.contains("channels")){
+		setChannelCount(data["channels"]);
+	} else {
+		setChannelCount(1);
 	}
 
 	for(auto& attrData : data["attributes"]){
@@ -130,4 +162,10 @@ bool Node::deserialize(const json& data){
 		}
 	}
 	return true;
+}
+
+void Node::finalize(){
+	_currentInputs = _inputNames;
+	_currentOutputs = _outputNames;
+	_channelCount = 1;
 }
