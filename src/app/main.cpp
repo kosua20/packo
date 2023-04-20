@@ -688,7 +688,7 @@ int main(int argc, char** argv){
 			}
 
 			ImGui::SameLine();
-
+			int nodeToPurgeLinks = -1;
 			{
 				ImGui::BeginChild("Editor", ImVec2(editorWindowWidth, 0));
 				// Graph viewer.
@@ -714,8 +714,7 @@ int main(int argc, char** argv){
 						 Node* node = graph->node(nodeId);
 
 						const bool nodeHasIssue = errorContext.contains( node );
-						const std::vector<std::string>& inputs = node->inputs();
-						const std::vector<std::string>& outputs = node->outputs();
+
 						std::vector<Node::Attribute>& attributes = node->attributes();
 						const uint attributeCount = attributes.size();
 
@@ -735,12 +734,22 @@ int main(int argc, char** argv){
 						ImNodes::BeginNode(nodeId);
 
 						ImNodes::BeginNodeTitleBar();
-						static bool test = false;
-						if( ImGui::SmallButton( test ? "  4  " : "  1  ") )
-						{
-							test = !test;
+						if(node->channelled()){
+							const char* labels[] = {"0", "1", "2", "3", "4"};
+							uint channelCount = node->channelCount();
+							if(ImGui::SmallButton( labels[channelCount])){
+								if(channelCount == 1u){
+									channelCount = 4u;
+								} else {
+									channelCount = 1u;
+								}
+								node->setChannelCount(channelCount);
+								editedGraph = true;
+								// We'll have to remove extraneous links.
+								nodeToPurgeLinks = int(nodeId);
+							}
+							ImGui::SameLine();
 						}
-						ImGui::SameLine();
 						ImGui::TextUnformatted( node->name().c_str() );
 						ImNodes::EndNodeTitleBar();
 
@@ -773,7 +782,9 @@ int main(int argc, char** argv){
 							}
 							ImGui::PopItemWidth();
 						}
-
+						
+						const std::vector<std::string>& inputs = node->inputs();
+						const std::vector<std::string>& outputs = node->outputs();
 						const uint inputCount = inputs.size();
 						const uint outputCount = outputs.size();
 						const uint maxCount = std::max(inputCount, outputCount);
@@ -844,6 +855,20 @@ int main(int argc, char** argv){
 				// Graph edition.
 				{
 					GraphEditor editor(*graph);
+					if(nodeToPurgeLinks >= 0){
+						const Node* node = graph->node(nodeToPurgeLinks);
+						const uint newInputCount = node->inputs().size();
+						const uint newOutputCount = node->outputs().size();
+						for(uint i = 0; i < graph->getLinkCount(); ++i){
+							const Graph::Link& link = graph->link(i);
+							if(int(link.from.node) == nodeToPurgeLinks && link.from.slot >= newOutputCount){
+								editor.removeLink(i);
+							}
+							if(int(link.to.node) == nodeToPurgeLinks && link.to.slot >= newInputCount){
+								editor.removeLink(i);
+							}
+						}
+					}
 
 					int startLink, endLink;
 					if(ImNodes::IsLinkCreated(&startLink, &endLink)){
