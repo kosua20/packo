@@ -357,6 +357,8 @@ int main(int argc, char** argv){
 	ImVec2 mouseRightClick( 0.f, 0.f );
 	ErrorContext errorContext;
 
+	bool showPreview = true;
+	bool needsPreviewRefresh = true;
 	bool needAutoLayout = true;
 	float inputsWindowWidth = (std::min)(300.0f, 0.25f * float(winW));
 	const float kSplitBarWidth = 8.0f;
@@ -393,7 +395,6 @@ int main(int argc, char** argv){
 		if(ImGui::IsKeyReleased(ImGuiKey_Escape)){
 			wantsExit = true;
 		}
-
 
 		bool editedGraph = false;
 		bool editedInputList = false;
@@ -457,9 +458,18 @@ int main(int argc, char** argv){
 						free(rawOutPath);
 					}
 
-					if(ImGui::MenuItem("Execute graph...")){
-
-						
+					ImGui::Separator();
+					if( ImGui::MenuItem( "Show preview", "", &showPreview) ) {
+						if( !showPreview ){
+							// Purge textures
+							for( const auto& texture : textures ){
+								GLuint tex = texture.second;
+								glDeleteTextures( 1, &tex );
+							}
+							textures.clear();
+						} else {
+							needsPreviewRefresh = true;
+						}
 					}
 
 					ImGui::Separator();
@@ -1007,7 +1017,8 @@ int main(int argc, char** argv){
 			ImGui::End();
 		}
 
-		if( (editedGraph || editedInputList) && !inputFiles.empty() ){
+		needsPreviewRefresh |= editedGraph || editedInputList;
+		if( needsPreviewRefresh && !inputFiles.empty() && showPreview){
 			CompiledGraph compiledGraph;
 			ErrorContext dummyContext;
 			compile(*graph, dummyContext, compiledGraph);
@@ -1089,6 +1100,7 @@ int main(int argc, char** argv){
 				}
 			}
 		}
+		needsPreviewRefresh = false;
 
 		// We *might* want to exit, ask the user for confirmation.
 		if(wantsExit){
