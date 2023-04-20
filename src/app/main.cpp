@@ -712,7 +712,16 @@ int main(int argc, char** argv){
 					GraphNodes nodes(*graph);
 					for(const uint nodeId : nodes){
 						 Node* node = graph->node(nodeId);
+
 						const bool nodeHasIssue = errorContext.contains( node );
+						const std::vector<std::string>& inputs = node->inputs();
+						const std::vector<std::string>& outputs = node->outputs();
+						std::vector<Node::Attribute>& attributes = node->attributes();
+						const uint attributeCount = attributes.size();
+
+						const uint attribWidth = 130u;
+						const uint minNodeSize = attributeCount != 0u ? attribWidth : previewSize;
+
 						if( nodeHasIssue )
 						{
 							ImNodes::PushColorStyle( ImNodesCol_TitleBar, errorTitleBar );
@@ -726,17 +735,16 @@ int main(int argc, char** argv){
 						ImNodes::BeginNode(nodeId);
 
 						ImNodes::BeginNodeTitleBar();
-						ImGui::TextUnformatted(node->name().c_str());
+						static bool test = false;
+						if( ImGui::SmallButton( test ? "  4  " : "  1  ") )
+						{
+							test = !test;
+						}
+						ImGui::SameLine();
+						ImGui::TextUnformatted( node->name().c_str() );
 						ImNodes::EndNodeTitleBar();
 
-						const std::vector<std::string>& inputs = node->inputs();
-						const std::vector<std::string>& outputs = node->outputs();
-						std::vector<Node::Attribute>& attributes = node->attributes();
-						const uint attributeCount = attributes.size();
-
-						const uint attribWidth = 130u;
-
-						const uint minNodeSize = attributeCount != 0u ? attribWidth : previewSize;
+						
 
 						for(uint attId = 0; attId < attributeCount; ++attId ){
 
