@@ -697,22 +697,19 @@ int main(int argc, char** argv){
 					// Allowing unplugging of links conflicts with multiple outputs
 					ImNodes::PushAttributeFlag( 0 /*ImNodesAttributeFlags_EnableLinkDetachWithDragClick*/ );
 
-					// First, immediately register the position for a newly created node if there is one.
-
+					// First, immediately register the position for newly created nodes if there are some.
 					for(uint nodeId = 0; nodeId < createdNodes.size(); ++nodeId){
 
 						int createdNodeIndex = graph->findNode( createdNodes[nodeId] );
 						if( createdNodeIndex >= 0 ){
-							ImNodes::SetNodeScreenSpacePos( createdNodeIndex, mouseRightClick );
-							mouseRightClick.x += 20.f;
-							mouseRightClick.y += 20.f;
+							const float delta = float( nodeId ) * 20.f;
+							const ImVec2 position( mouseRightClick.x + delta, mouseRightClick.y + delta );
+							ImNodes::SetNodeScreenSpacePos( createdNodeIndex, position );
 						}
 					}
 					createdNodes.clear();
 
-
 					GraphNodes nodes(*graph);
-
 					for(const uint nodeId : nodes){
 						 Node* node = graph->node(nodeId);
 						const bool nodeHasIssue = errorContext.contains( node );
@@ -902,23 +899,26 @@ int main(int argc, char** argv){
 						}
 					}
 
+					// Add nodes to the pasteboard when copying.
 					if(ImGui::IsKeyReleased(ImGuiKey_C) && (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightSuper))){
 						const uint nodesCount = ImNodes::NumSelectedNodes();
 						if(nodesCount > 0u){
+							nodesPasteboard.clear();
+
 							std::vector<int> nodeIds(nodesCount);
 							ImNodes::GetSelectedNodes(nodeIds.data());
 							for(const int nodeId : nodeIds){
 								const Node* const node = graph->node(nodeId);
 								if(node){
-									NodeClass type = NodeClass(node->type());
+									const NodeClass type = NodeClass(node->type());
 									nodesPasteboard[type] += 1u;
 								}
 							}
 						}
 					}
 
+					// List of copied nodes to create if pasting.
 					std::unordered_map<NodeClass, uint> nodesToCreate;
-
 					if(ImGui::IsKeyReleased(ImGuiKey_V) && (ImGui::IsKeyDown(ImGuiKey_LeftSuper) || ImGui::IsKeyDown(ImGuiKey_RightSuper))){
 						// Save position for placing the new node on screen.
 						mouseRightClick = ImGui::GetMousePos();
@@ -943,7 +943,8 @@ int main(int argc, char** argv){
 						}
 						ImGui::EndPopup();
 					}
-					// Create pasted and new nodes.
+
+					// Create queued nodes.
 					for(const auto& nodeTypeToCreate : nodesToCreate){
 						if(nodeTypeToCreate.first >= NodeClass::COUNT_EXPOSED){
 							continue;
