@@ -6,9 +6,10 @@ ConstantFloatNode::ConstantFloatNode(){
 	_name = "Constant";
 	_outputNames = {"Value"};
 	_attributes = { {"##X", Attribute::Type::FLOAT} };
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ConstantFloatNode, NodeClass::CONST_FLOAT, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ConstantFloatNode, NodeClass::CONST_FLOAT, false, 1)
 
 void ConstantFloatNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -20,9 +21,10 @@ ConstantRGBANode::ConstantRGBANode(){
 	_name = "Constant";
 	_outputNames = { "R", "G", "B", "A" };
 	_attributes = { {"##Val", Attribute::Type::COLOR} };
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ConstantRGBANode, NodeClass::CONST_COLOR, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ConstantRGBANode, NodeClass::CONST_COLOR, false, 1)
 
 void ConstantRGBANode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -36,9 +38,10 @@ UniformRandomNode::UniformRandomNode(){
 	_name = "Random";
 	_outputNames = { "X" };
 	_attributes = { {"Min", Attribute::Type::FLOAT}, {"Max", Attribute::Type::FLOAT} };
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(UniformRandomNode, NodeClass::RANDOM_FLOAT, 1)
+NODE_DEFINE_TYPE_AND_VERSION(UniformRandomNode, NodeClass::RANDOM_FLOAT, false, 1)
 
 void UniformRandomNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -51,9 +54,10 @@ void UniformRandomNode::evaluate(LocalContext& context, const std::vector<int>& 
 RandomColorNode::RandomColorNode(){
 	_name = "Random color";
 	_outputNames = { "R", "G", "B", "A" };
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(RandomColorNode, NodeClass::RANDOM_COLOR, 1)
+NODE_DEFINE_TYPE_AND_VERSION(RandomColorNode, NodeClass::RANDOM_COLOR, false, 1)
 
 void RandomColorNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);

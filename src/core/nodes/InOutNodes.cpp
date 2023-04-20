@@ -7,13 +7,14 @@ InputNode::InputNode() {
 	_index = _freeList.getIndex();
 	_name = "Input " + std::to_string(_index);
 	_outputNames = {"R", "G", "B", "A"};
+	finalize();
 }
 
 InputNode::~InputNode(){
 	_freeList.returnIndex( _index );
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(InputNode, NodeClass::INPUT_IMG, 1)
+NODE_DEFINE_TYPE_AND_VERSION(InputNode, NodeClass::INPUT_IMG, false, 1)
 
 void InputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -32,13 +33,14 @@ OutputNode::OutputNode() {
 	_name = "Output " + std::to_string(_index);
 	_inputNames = { "R", "G", "B", "A" };
 	_attributes = { {"Format", {"PNG", "BMP", "JPEG", "TGA"}}, {"Prefix", Attribute::Type::STRING}, {"Suffix", Attribute::Type::STRING} };
+	finalize();
 }
 
 OutputNode::~OutputNode(){
 	_freeList.returnIndex( _index );
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(OutputNode, NodeClass::OUTPUT_IMG, 1)
+NODE_DEFINE_TYPE_AND_VERSION(OutputNode, NodeClass::OUTPUT_IMG, false, 1)
 
 void OutputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 4u);
@@ -74,9 +76,10 @@ std::string OutputNode::generateFileName(uint batch, Image::Format& format) cons
 
 BackupNode::BackupNode(){
 	_name = "Backup";
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(BackupNode, NodeClass::INTERNAL_BACKUP, 1)
+NODE_DEFINE_TYPE_AND_VERSION(BackupNode, NodeClass::INTERNAL_BACKUP, false, 1)
 
 void BackupNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == inputs.size());
@@ -96,9 +99,10 @@ void BackupNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 
 RestoreNode::RestoreNode(){
 	_name = "Restore";
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(RestoreNode, NodeClass::INTERNAL_RESTORE, 1)
+NODE_DEFINE_TYPE_AND_VERSION(RestoreNode, NodeClass::INTERNAL_RESTORE, false, 1)
 
 void RestoreNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == outputs.size());
