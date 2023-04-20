@@ -29,7 +29,7 @@ public:
 	int findNode( const Node* node );
 	int findLink( const Link& link );
 
-	const Node* node( uint node ) const { return _nodes[ node ]; }
+	const Node* node( uint node ) const { return node < _nodes.size() ? _nodes[ node ] : nullptr; }
 
 	Node* node(uint node) { return _nodes[node]; }
 

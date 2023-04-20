@@ -605,7 +605,7 @@ glm::ivec2 computeOutputResolution(const std::vector<Image>& images, const glm::
 		return fallbackRes;
 	}
 
-	glm::ivec2 tgtRes{FLT_MAX, FLT_MAX};
+	glm::ivec2 tgtRes{INT_MAX, INT_MAX };
 	for(const Image& img : images){
 		tgtRes = glm::min(tgtRes, {img.w(), img.h() });
 	}
