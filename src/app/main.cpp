@@ -494,19 +494,25 @@ int main(int argc, char** argv){
 										errorContext.addError("Unable to parse graph from file at path \"" + path + "\"");
 									} else {
 										// Issue: numbered inputs/outputs are created before the freelist indices are reset...
-										// Remove the current graph.
+										// So we have to destroy the current graph first.
+										// In case of rollback, use a serialized copy of the old graph and hope for the best.
+										json oldGraph;
+										graph->serialize( oldGraph );
+
 										graph.reset(new Graph());
 										errorContext.clear();
 										if(graph->deserialize(data)){
-											editedGraph = true;
 											if(data.contains("layout")){
 												std::string state = data["layout"];
 												ImNodes::LoadCurrentEditorStateFromIniString(state.c_str(), state.size());
 											}
 										} else {
 											errorContext.addError("Unable to deserialize graph from file at path \"" + path + "\"");
+											// Restore the previous graph.
+											graph.reset( new Graph() );
+											graph->deserialize( oldGraph );
 										}
-
+										editedGraph = true;
 									}
 									file.close();
 								} else {
