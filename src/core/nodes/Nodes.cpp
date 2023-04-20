@@ -76,5 +76,27 @@ const std::string& getNodeName(NodeClass type){
 		"Unknown"
 	};
 	assert(names.size() == NodeClass::COUNT+1);
+	assert(uint(type) < names.size());
 	return names[uint(type)];
+}
+
+NodeClass getOrderedType(uint i){
+	static const std::vector<NodeClass> classes = {
+		// Inputs outputs
+		INPUT_IMG, OUTPUT_IMG,
+		// Constants
+		CONST_FLOAT, CONST_COLOR,
+		// Random
+		RANDOM_FLOAT, RANDOM_COLOR,
+		// Math
+		ADD, SUBTRACT, PRODUCT, DIVIDE, POWER, SQRT, EXPONENTIAL, LOGARITHM,
+		MINI, MAXI, CLAMP, MIX,
+		// Comparisons
+		SELECT, EQUAL, DIFFERENT, NOT, GREATER, LESSER,
+		// Global
+		FLIP, TILE, ROTATE, GAUSSIAN_BLUR,
+	};
+	assert(classes.size() == NodeClass::COUNT_EXPOSED);
+	assert(i < classes.size());
+	return classes[i];
 }

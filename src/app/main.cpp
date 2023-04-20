@@ -968,7 +968,7 @@ int main(int argc, char** argv){
 
 					if( ImGui::BeginPopup("Create node")){
 						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
-							NodeClass type = NodeClass(i);
+							const NodeClass type = getOrderedType(i);
 							const std::string& label = getNodeName(type);
 							if( ImGui::Selectable(label.c_str())){
 								nodesToCreate[type] += 1;

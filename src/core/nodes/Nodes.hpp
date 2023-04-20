@@ -45,3 +45,5 @@ enum NodeClass : uint {
 Node* createNode(NodeClass type);
 
 const std::string& getNodeName(NodeClass type);
+
+NodeClass getOrderedType(uint i);
