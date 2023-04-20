@@ -1,20 +1,19 @@
 #include "core/nodes/GlobalNodes.hpp"
 #include "core/nodes/Nodes.hpp"
 
-// TODO: costly nodes should ignore outputs that go to the dummy register. Could be ignored if 1/4 switch supported.
-
 FlipNode::FlipNode(){
 	_name = "Flip";
 	_inputNames = {"R", "G", "B", "A"};
 	_outputNames = {"R", "G", "B", "A"};
 	_attributes = { {"Axis", {"Horizontal", "Vertical"}}};
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FlipNode, NodeClass::FLIP, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FlipNode, NodeClass::FLIP, true, 1)
 
 void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
-	assert(outputs.size() == 4);
-	assert(inputs.size() == 4);
+	assert(outputs.size() == _channelCount);
+	assert(inputs.size() == _channelCount);
 
 	const bool horizontal = _attributes[0].cmb == 0;
 	const int x = context.coords.x;
@@ -22,7 +21,7 @@ void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 	const int xOld =  horizontal ? (context.shared->dims.x - x - 1) : x;
 	const int yOld = !horizontal ? (context.shared->dims.y - y - 1) : y;
 
-	for(uint i = 0u; i < 4u; ++i){
+	for(uint i = 0u; i < _channelCount; ++i){
 		const uint srcId = inputs[i];
 		const uint dstId = outputs[i];
 
@@ -41,13 +40,14 @@ TileNode::TileNode(){
 	_outputNames = { "R", "G", "B", "A" };
 	_attributes = { {"Scale", Attribute::Type::FLOAT} , {"Offset X", Attribute::Type::FLOAT} , {"Offset Y", Attribute::Type::FLOAT} };
 	_attributes[ 0 ].flt = 1.0f;
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( TileNode, NodeClass::TILE, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( TileNode, NodeClass::TILE, true, 1 )
 
 void TileNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
-	assert( outputs.size() == 4 );
-	assert( inputs.size() == 4 );
+	assert( outputs.size() == _channelCount );
+	assert( inputs.size() == _channelCount );
 
 	const float scale = _attributes[ 0 ].flt;
 	glm::vec2 offset = glm::vec2(_attributes[ 1 ].flt, _attributes[ 2 ].flt);
@@ -65,7 +65,7 @@ void TileNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 	const glm::ivec2 c00 = glm::ivec2(corner.x % context.shared->dims.x, corner.y % context.shared->dims.y);
 	const glm::ivec2 c11 = glm::ivec2((corner.x+1) % context.shared->dims.x, (corner.y+1) % context.shared->dims.y);
 
-	for(uint i = 0u; i < 4u; ++i){
+	for(uint i = 0u; i < _channelCount; ++i){
 		const uint srcId = inputs[ i ];
 		const uint dstId = outputs[ i ];
 
@@ -89,15 +89,16 @@ RotateNode::RotateNode(){
 	_name = "Rotate";
 	_inputNames = { "R", "G", "B", "A" };
 	_outputNames = { "R", "G", "B", "A" };
-	_attributes = { {"Anglee", Attribute::Type::FLOAT}};
+	_attributes = { {"Angle", Attribute::Type::FLOAT}};
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( RotateNode, NodeClass::ROTATE, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( RotateNode, NodeClass::ROTATE, true, 1 )
 
 void RotateNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
 {
-	assert( outputs.size() == 4 );
-	assert( inputs.size() == 4 );
+	assert( outputs.size() == _channelCount );
+	assert( inputs.size() == _channelCount );
 
 	const float angle = _attributes[ 0 ].flt * glm::pi<float>() / 180.0f;
 	const float c = std::cos(angle);
@@ -118,7 +119,7 @@ void RotateNode::evaluate( LocalContext& context, const std::vector<int>& inputs
 	const glm::ivec2 c11 = glm::ivec2((corner.x+1) % context.shared->dims.x, (corner.y+1) % context.shared->dims.y);
 
 
-	for( uint i = 0u; i < 4u; ++i )
+	for( uint i = 0u; i < _channelCount; ++i )
 	{
 		const uint srcId = inputs[ i ];
 		const uint dstId = outputs[ i ];
@@ -144,14 +145,15 @@ GaussianBlurNode::GaussianBlurNode(){
 	_outputNames = {"R", "G", "B", "A"};
 	_attributes = { {"Radius", Attribute::Type::FLOAT}};
 	_attributes[0].flt = 2.f;
+	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(GaussianBlurNode, NodeClass::GAUSSIAN_BLUR, 1)
+NODE_DEFINE_TYPE_AND_VERSION(GaussianBlurNode, NodeClass::GAUSSIAN_BLUR, true, 1)
 
 void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
-	assert(outputs.size() == 4);
-	assert(inputs.size() == 4);
-
+	assert(outputs.size() == _channelCount);
+	assert(inputs.size() == _channelCount);
+	assert(_channelCount <= 4u);
 	const float radiusFrac = _attributes[0].flt;
 	const float sigma = radiusFrac / 3.f;
 	const float sigma2 = sigma * sigma;
@@ -160,7 +162,7 @@ void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& i
 
 	glm::uvec4 channelIds;
 	const Image* images[4];
-	for(uint i = 0u; i < 4u; ++i){
+	for(uint i = 0u; i < _channelCount; ++i){
 		const uint srcId = inputs[i];
 		const uint imageId = srcId / 4u;
 		images[i] = &context.shared->tmpImagesRead[imageId];
@@ -176,14 +178,14 @@ void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& i
 			dcoords = glm::clamp(dcoords, {0.0f, 0.0f}, context.shared->dims - 1);
 			const float weight = normalization * exp(-0.5f/sigma2 * (dx*dx+dy*dy));
 			denom += weight;
-			for(uint i = 0; i < 4u; ++i){
+			for(uint i = 0; i < _channelCount; ++i){
 				accum[i] += weight * images[i]->pixel(dcoords)[channelIds[i]];
 			}
 		}
 	}
 	accum /= std::max(denom, 1e-4f);
 
-	for(uint i = 0u; i < 4u; ++i){
+	for(uint i = 0u; i < _channelCount; ++i){
 		context.stack[outputs[i]] = accum[i];
 	}
 }
