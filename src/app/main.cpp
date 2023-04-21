@@ -145,7 +145,11 @@ GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont)
 	ImGui_ImplOpenGL3_Init("#version 330");
 
 	ImNodes::GetIO().EmulateThreeButtonMouse.Modifier = &ImGui::GetIO().KeyAlt;
+#ifdef _MACOS
+	ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeySuper;
+#else
 	ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
+#endif
 	
 	ImGui::StyleColorsDark();
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -411,8 +415,10 @@ int main(int argc, char** argv){
 	inputDirectory  = "C:/Users/s-rodriguez/Documents/Personnel/packo/ext/in";
 	outputDirectory = "C:/Users/s-rodriguez/Documents/Personnel/packo/ext/out";
 	//
+	bool anyPopupOpen = false;
 	char searchStr[ 256 ];
 	memset( searchStr, 0, sizeof( searchStr ) );
+	int seed = Random::getSeed();
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -428,14 +434,15 @@ int main(int argc, char** argv){
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		bool wantsExit = false;
-
-		if(ImGui::IsKeyReleased(ImGuiKey_Escape)){
-			wantsExit = true;
-		}
-
 		bool editedGraph = false;
 		bool editedInputList = false;
+		bool wantsExit = false;
+		if(!anyPopupOpen && ImGui::IsKeyReleased(ImGuiKey_Escape)){
+			wantsExit = true;
+		}
+		anyPopupOpen = false;
+
+
 
 		++timeSinceLastInputUpdate;
 		if((timeSinceLastInputUpdate > kMaxRefreshDelayInFrames) && !inputDirectory.empty()){
@@ -445,7 +452,6 @@ int main(int argc, char** argv){
 
 		// Menus and settings
 		{
-
 			if(ImGui::BeginMainMenuBar()){
 
 				if(ImGui::BeginMenu("File")){
@@ -504,6 +510,11 @@ int main(int argc, char** argv){
 							needsPreviewRefresh = true;
 						}
 					}
+					ImGui::PushItemWidth(130);
+					if(ImGui::InputInt("Random seed", &seed)){
+						Random::seed(seed);
+					}
+					ImGui::PopItemWidth();
 
 					ImGui::Separator();
 					if(ImGui::MenuItem("Quit")){
@@ -1027,7 +1038,9 @@ int main(int argc, char** argv){
 						focusTextField = true;
 					}
 
+
 					if( ImGui::BeginPopup("Create node")){
+						anyPopupOpen = true;
 						if( focusTextField )
 							ImGui::SetKeyboardFocusHere();
 						ImGui::InputText( "##SearchField", searchStr, sizeof( searchStr ), ImGuiInputTextFlags_AutoSelectAll );
@@ -1044,6 +1057,9 @@ int main(int argc, char** argv){
 							if( ImGui::Selectable(label.c_str())){
 								nodesToCreate[type] += 1;
 							}
+						}
+						if(ImGui::IsKeyReleased(ImGuiKey_Escape)){
+							ImGui::CloseCurrentPopup();
 						}
 						ImGui::EndPopup();
 					}
@@ -1171,22 +1187,33 @@ int main(int argc, char** argv){
 						const bool useInputs = node.outputs.empty();
 						const std::vector<int>& registers = useInputs ? node.inputs : node.outputs;
 						const std::vector<Image>& images = useInputs ? sharedContext.tmpImagesRead : sharedContext.tmpImagesWrite;
-						const bool useAlpha = registers.size() >= 4;
-						for(int c = 0; c < 4; ++c){
-							// Skip alpha if not needed (initialized to 1).
-							if(c == 3 && !useAlpha){
+						const uint channelCount = registers.size();
+						// Populate image with available channels from registers.
+						for(uint c = 0; c < channelCount; ++c){
+							// TODO: issue when reg == dummy, because we read a unique overwritten channel.
+							const uint reg = registers[c];
+							if(reg == compiledGraph.stackSize-1){
 								continue;
 							}
-							// Clamp if fewer registers.
-							const uint inputIndex = glm::clamp(c, 0, int(registers.size())-1);
-							const uint reg = registers[inputIndex];
-
+							const Image& img = images[reg/4];
+							const uint srcChannel = reg % 4u;
 							for(uint y = 0; y < previewSize; ++y){
 								for(uint x = 0; x < previewSize; ++x){
-									outputImg.pixel(x,y)[c] = images[reg/4].pixel(x,y)[reg%4];
+									outputImg.pixel(x,y)[c] = img.pixel(x,y)[srcChannel];
 								}
 							}
 						}
+						// If we have only one channel, broadcast to RGB, otherwise leave initialized to 0 (or 1 for alpha).
+						if(channelCount == 1){
+							for(uint y = 0; y < previewSize; ++y){
+								for(uint x = 0; x < previewSize; ++x){
+									for(uint c = 1; c < 3; ++c){
+										outputImg.pixel(x,y)[c] = outputImg.pixel(x,y)[0];
+									}
+								}
+							}
+						}
+
 					}
 					// Upload GL texture and associate to node.
 					GLuint tex = 0;
@@ -1215,10 +1242,10 @@ int main(int argc, char** argv){
 
 		// Exit confirmation popup
 		if(ImGui::BeginPopupModal("Exit", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)){
+			anyPopupOpen = true;
 			ImGui::Text("Are you sure you want to quit?");
 			const ImVec2 buttonSize(150.0f, 0.0f);
 			if(ImGui::Button("No", buttonSize)){
-				wantsExit = false;
 				// This will close the popup.
 				ImGui::CloseCurrentPopup();
 			}
@@ -1229,6 +1256,9 @@ int main(int argc, char** argv){
 				glfwSetWindowShouldClose(window, GLFW_TRUE);
 			}
 			ImGui::PopStyleColor();
+			if(ImGui::IsKeyReleased(ImGuiKey_Backspace)){
+				ImGui::CloseCurrentPopup();
+			}
 			ImGui::EndPopup();
 		}
 
