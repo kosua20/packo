@@ -64,7 +64,9 @@ public:
 	 */
 	static std::vector<std::string> split(const std::string & str, const std::string & delimiter, bool skipEmpty);
 	
-	static std::string lowercase(const std::string & src);
+	static std::string lowercase( const std::string& src );
+
+	static std::string uppercase( const std::string& src );
 
 	static std::string padLeft(const std::string & s, size_t length, char c);
 	
