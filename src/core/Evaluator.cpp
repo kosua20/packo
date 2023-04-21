@@ -636,7 +636,7 @@ bool validate(const Graph& editGraph, ErrorContext& errors ){
 	return validate(graph);
 }
 
-bool compile( const Graph& editGraph, ErrorContext& errors, CompiledGraph& compiledGraph ){
+bool compile( const Graph& editGraph, bool optimize, ErrorContext& errors, CompiledGraph& compiledGraph ){
 
 	errors.clear();
 
@@ -648,10 +648,17 @@ bool compile( const Graph& editGraph, ErrorContext& errors, CompiledGraph& compi
 	}
 	// We dont have incomplete nodes anymore.
 	// We could have unconnected regions.
-	graph.cleanUnconnectedComponents();
+	if(optimize){
+		graph.cleanUnconnectedComponents();
+	}
+
 	// Compile the graph for real.
 	graph.compile( compiledGraph );
 	// Don't alter global nodes. (or boolean?)
+
+	if(optimize){
+		compiledGraph.ensureGlobalNodesConsistency();
+	}
 	return true;
 }
 
@@ -779,20 +786,10 @@ void saveContextForBatch(const Batch& batch, const SharedContext& context){
 
 bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& fallbackRes){
 
-	// Validate the graph.
-	WorkGraph graph(editGraph, errors);
-
-	if(!validate(graph)){
+	CompiledGraph compiledGraph;
+	if(!compile(editGraph, true, errors, compiledGraph)){
 		return false;
 	}
-	// We dont have incomplete nodes anymore.
-	// We could have unconnected regions.
-	graph.cleanUnconnectedComponents();
-
-	CompiledGraph compiledGraph;
-	graph.compile(compiledGraph);
-
-	compiledGraph.ensureGlobalNodesConsistency();
 
 	// Populate batches with file info.
 	std::vector<Batch> batches;

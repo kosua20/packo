@@ -73,7 +73,7 @@ struct Batch {
 
 bool validate(const Graph& editGraph, ErrorContext& context );
 
-bool compile( const Graph& editGraph, ErrorContext& context, CompiledGraph& compiledGraph );
+bool compile( const Graph& editGraph, bool optimize, ErrorContext& context, CompiledGraph& compiledGraph );
 
 void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, bool forceRes, SharedContext& sharedContext);
 
