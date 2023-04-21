@@ -419,6 +419,8 @@ int main(int argc, char** argv){
 	char searchStr[ 256 ];
 	memset( searchStr, 0, sizeof( searchStr ) );
 	int seed = Random::getSeed();
+	std::vector<NodeClass> visibleNodeTypes;
+	int selectedNodeType = 0;
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -1034,30 +1036,68 @@ int main(int argc, char** argv){
 						ImGui::OpenPopup( "Create node" );
 						// Save position for placing the new node on screen.
 						mouseRightClick = ImGui::GetMousePos();
-						searchStr[ 0 ] = '\0';
 						focusTextField = true;
+						// All types visible by default
+						searchStr[ 0 ] = '\0';
+						visibleNodeTypes.resize(NodeClass::COUNT_EXPOSED);
+						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
+							visibleNodeTypes[i] = getOrderedType(i);
+						}
+						selectedNodeType = 0;
 					}
 
 
 					if( ImGui::BeginPopup("Create node")){
 						anyPopupOpen = true;
-						if( focusTextField )
-							ImGui::SetKeyboardFocusHere();
-						ImGui::InputText( "##SearchField", searchStr, sizeof( searchStr ), ImGuiInputTextFlags_AutoSelectAll );
-						
-						const std::string searchStrLow = TextUtilities::lowercase( std::string( searchStr ) );
 
-						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
-							const NodeClass type = getOrderedType(i);
-							const std::string& label = getNodeName(type);
-							const std::string labelLow = TextUtilities::lowercase( label );
-							if( labelLow.find( searchStrLow ) == std::string::npos )
-								continue;
-
-							if( ImGui::Selectable(label.c_str())){
-								nodesToCreate[type] += 1;
+						const int visibleTypesCount = int(visibleNodeTypes.size());
+						if(ImGui::IsKeyReleased(ImGuiKey_UpArrow)){
+							--selectedNodeType;
+							if(selectedNodeType < 0){
+								selectedNodeType = visibleTypesCount-1;
 							}
 						}
+						if(ImGui::IsKeyReleased(ImGuiKey_DownArrow)){
+							++selectedNodeType;
+							// No modulo in case visibleTypesCount is 0.
+							if(selectedNodeType >= visibleTypesCount){
+								selectedNodeType = 0;
+							}
+						}
+
+						if( focusTextField )
+							ImGui::SetKeyboardFocusHere();
+						if(ImGui::InputText( "##SearchField", searchStr, sizeof( searchStr ), ImGuiInputTextFlags_AutoSelectAll )){
+							// Refresh selection.
+							const std::string searchStrLow = TextUtilities::lowercase( std::string( searchStr ) );
+							visibleNodeTypes.clear();
+							visibleNodeTypes.reserve(NodeClass::COUNT_EXPOSED);
+							// Filter visible types.
+							for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
+								const NodeClass type = getOrderedType(i);
+								const std::string labelLow = TextUtilities::lowercase( getNodeName(type) );
+								if( labelLow.find( searchStrLow ) == std::string::npos )
+									continue;
+								visibleNodeTypes.push_back(type);
+							}
+							selectedNodeType = 0;
+						}
+
+						int i = 0;
+						for(NodeClass type : visibleNodeTypes){
+							const std::string& label = getNodeName(type);
+							if( ImGui::Selectable(label.c_str(), i == selectedNodeType)){
+								nodesToCreate[type] += 1;
+							}
+							++i;
+						}
+						if(ImGui::IsKeyReleased(ImGuiKey_Enter)){
+							if(selectedNodeType < int(visibleNodeTypes.size())){
+								nodesToCreate[visibleNodeTypes[selectedNodeType]] += 1;
+								ImGui::CloseCurrentPopup();
+							}
+						}
+
 						if(ImGui::IsKeyReleased(ImGuiKey_Escape)){
 							ImGui::CloseCurrentPopup();
 						}
@@ -1190,11 +1230,7 @@ int main(int argc, char** argv){
 						const uint channelCount = registers.size();
 						// Populate image with available channels from registers.
 						for(uint c = 0; c < channelCount; ++c){
-							// TODO: issue when reg == dummy, because we read a unique overwritten channel.
 							const uint reg = registers[c];
-							if(reg == compiledGraph.stackSize-1){
-								continue;
-							}
 							const Image& img = images[reg/4];
 							const uint srcChannel = reg % 4u;
 							for(uint y = 0; y < previewSize; ++y){
