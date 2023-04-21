@@ -736,14 +736,9 @@ int main(int argc, char** argv){
 						ImNodes::BeginNodeTitleBar();
 						if(node->channelled()){
 							const char* labels[] = {"0", "1", "2", "3", "4"};
-							uint channelCount = node->channelCount();
+							const uint channelCount = node->channelCount();
 							if(ImGui::SmallButton( labels[channelCount])){
-								if(channelCount == 1u){
-									channelCount = 4u;
-								} else {
-									channelCount = 1u;
-								}
-								node->setChannelCount(channelCount);
+								node->setChannelCount(channelCount % 4 + 1);
 								editedGraph = true;
 								// We'll have to remove extraneous links.
 								nodeToPurgeLinks = int(nodeId);
@@ -881,15 +876,19 @@ int main(int argc, char** argv){
 
 					int startLink, endLink;
 					if(ImNodes::IsLinkCreated(&startLink, &endLink)){
-						Graph::Slot from = fromLinkToSlot(startLink);
-						Graph::Slot to = fromLinkToSlot(endLink);
+						const Graph::Slot from = fromLinkToSlot( startLink );
+						const Graph::Slot to = fromLinkToSlot( endLink );
 						editor.addLink(from.node, from.slot, to.node, to.slot);
-						if(shftModifierHeld && (from.slot == to.slot)){
+
+						// Multi-link creation
+						if(shftModifierHeld){
 							const Node* const fromNode = graph->node(from.node);
-							const Node* const toNode = graph->node(to.node);
-							const uint sharedSlotCount = (std::min)(fromNode->outputs().size(), toNode->inputs().size());
-							for(uint i = 0; i < sharedSlotCount; ++i){
-								editor.addLink(from.node, i, to.node, i);
+							const Node* const toNode = graph->node( to.node );
+							const uint fromCount = fromNode->outputs().size();
+							const uint toCount = toNode->inputs().size();
+							const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
+							for(uint i = 1; i < maxCommonSlots; ++i){
+								editor.addLink(from.node, from.slot + i, to.node, to.slot + i);
 							}
 						}
 						editedGraph = true;
@@ -900,18 +899,22 @@ int main(int argc, char** argv){
 
 						if(shftModifierHeld){
 							const Graph::Link& link = graph->link(linkId);
-							if(link.to.slot == link.from.slot){
-								// Find other links between the two nodes, matching channels.
-								const Node* const fromNode = graph->node(link.from.node);
-								const Node* const toNode = graph->node(link.to.node);
-								const uint sharedSlotCount = (std::min)(fromNode->outputs().size(), toNode->inputs().size());
-								for(uint i = 0; i < sharedSlotCount; ++i){
-									Graph::Link oLink = link;
-									oLink.from.slot = oLink.to.slot = i;
-									const int oLinkId = graph->findLink(oLink);
-									if(oLinkId >= 0){
-										editor.removeLink(oLinkId);
-									}
+							const Graph::Slot& from = link.from;
+							const Graph::Slot& to = link.to;
+							// Find other links between the two nodes, matching channels.
+							const Node* const fromNode = graph->node( from.node );
+							const Node* const toNode = graph->node( to.node );
+							const uint fromCount = fromNode->outputs().size();
+							const uint toCount = toNode->inputs().size();
+							const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
+							for( uint i = 1; i < maxCommonSlots; ++i )
+							{
+								Graph::Link oLink = link;
+								oLink.from.slot += i;
+								oLink.to.slot += i;
+								const int oLinkId = graph->findLink( oLink );
+								if( oLinkId >= 0 ){
+									editor.removeLink(oLinkId);
 								}
 							}
 						}
