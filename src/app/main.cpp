@@ -255,6 +255,16 @@ bool getAttributeComboItem(void* data, int index, const char** str){
 	return true;
 }
 
+void purgeTextures( std::unordered_map<const Node*, GLuint>& textures )
+{
+	for( const auto& texture : textures )
+	{
+		GLuint tex = texture.second;
+		glDeleteTextures( 1, &tex );
+	}
+	textures.clear();
+}
+
 struct InputFile {
 	fs::path path;
 	bool active;
@@ -375,6 +385,8 @@ int main(int argc, char** argv){
 	inputDirectory  = "C:/Users/s-rodriguez/Documents/Personnel/packo/ext/in";
 	outputDirectory = "C:/Users/s-rodriguez/Documents/Personnel/packo/ext/out";
 	//
+	char searchStr[ 256 ];
+	memset( searchStr, 0, sizeof( searchStr ) );
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -461,12 +473,7 @@ int main(int argc, char** argv){
 					ImGui::Separator();
 					if( ImGui::MenuItem( "Show preview", "", &showPreview) ) {
 						if( !showPreview ){
-							// Purge textures
-							for( const auto& texture : textures ){
-								GLuint tex = texture.second;
-								glDeleteTextures( 1, &tex );
-							}
-							textures.clear();
+							purgeTextures( textures );
 						} else {
 							needsPreviewRefresh = true;
 						}
@@ -551,8 +558,18 @@ int main(int argc, char** argv){
 
 					ImGui::Separator();
 
-					if(ImGui::MenuItem("Validate graph...")){
+					if(ImGui::MenuItem("Validate graph")){
 						validate(*graph, errorContext);
+					}
+					
+					if(ImGui::MenuItem( "Run graph" )){
+						std::vector<fs::path> inputPaths;
+						for( InputFile& file : inputFiles ){
+							if( file.active ){
+								inputPaths.push_back( file.path );
+							}
+						}
+						evaluate( *graph, errorContext, inputPaths, outputDirectory, { 64,64 } );
 					}
 
 					ImGui::Separator();
@@ -584,12 +601,11 @@ int main(int argc, char** argv){
 		}
 		const float menuBarHeight = ImGui::GetItemRectSize().y;
 
-		// TODO: RGBA/float toggle?
 		// TODO: improve node layout (especially with preview)
 		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
 
 		float editorWindowHeight = float(winH) - menuBarHeight;
-		float editorWindowWidth  = float(winW) - inputsWindowWidth - kSplitBarWidth - 2.f * ImGui::GetStyle().FramePadding.x;
+		float editorWindowWidth = float( winW ) - inputsWindowWidth - kSplitBarWidth - 2.f * ImGui::GetStyle().FramePadding.x;
 
 		ImGui::SetNextWindowPos(ImVec2(0.0f, menuBarHeight));
 		ImGui::SetNextWindowSize(ImVec2(float(winW), editorWindowHeight));
@@ -688,9 +704,10 @@ int main(int argc, char** argv){
 			}
 
 			ImGui::SameLine();
-			int nodeToPurgeLinks = -1;
 			{
-				ImGui::BeginChild("Editor", ImVec2(editorWindowWidth, 0));
+				ImGui::BeginChild( "Editor", ImVec2( editorWindowWidth, 0 ) );
+				int nodeToPurgeLinks = -1;
+
 				// Graph viewer.
 				{
 					ImNodes::BeginNodeEditor();
@@ -973,16 +990,31 @@ int main(int argc, char** argv){
 						}
 					}
 
-					if(ImGui::IsMouseClicked(ImGuiMouseButton_Right)){
+					// TODO: improve keyboard navigation.
+					bool focusTextField = false;
+					if(ImGui::IsMouseClicked(ImGuiMouseButton_Right) || ImGui::IsKeyReleased(ImGuiKey_Space)){
 						ImGui::OpenPopup( "Create node" );
 						// Save position for placing the new node on screen.
 						mouseRightClick = ImGui::GetMousePos();
+						searchStr[ 0 ] = '\0';
+					
+						focusTextField = true;
 					}
 
 					if( ImGui::BeginPopup("Create node")){
+						if( focusTextField )
+							ImGui::SetKeyboardFocusHere();
+						ImGui::InputText( "##SearchField", searchStr, sizeof( searchStr ), ImGuiInputTextFlags_AutoSelectAll );
+						
+						const std::string searchStrLow = TextUtilities::lowercase( std::string( searchStr ) );
+
 						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
 							const NodeClass type = getOrderedType(i);
 							const std::string& label = getNodeName(type);
+							const std::string labelLow = TextUtilities::lowercase( label );
+							if( labelLow.find( searchStrLow ) == std::string::npos )
+								continue;
+
 							if( ImGui::Selectable(label.c_str())){
 								nodesToCreate[type] += 1;
 							}
@@ -1077,12 +1109,7 @@ int main(int argc, char** argv){
 			compile(*graph, dummyContext, compiledGraph);
 			// TODO: when errors or unused nodes, do something to give feedback to the user.
 			if(!dummyContext.hasErrors()){
-				// Purge GL texture pool.
-				for( const auto& texture : textures ){
-					GLuint tex = texture.second;
-					glDeleteTextures( 1, &tex );
-				}
-				textures.clear();
+				purgeTextures( textures );
 				// We can evaluate the graph to generate textures.
 				// Prepare a batch by hand
 				Batch batch;
@@ -1188,11 +1215,9 @@ int main(int argc, char** argv){
 	}
 
 	// Purge GL texture pool.
-	for( const auto& texture : textures )
-	{
-		GLuint tex = texture.second;
-		glDeleteTextures( 1, &tex );
-	}
+	purgeTextures( textures );
+	
+	
 
 	// Cleanup.
 	ImGui_ImplOpenGL3_Shutdown();
