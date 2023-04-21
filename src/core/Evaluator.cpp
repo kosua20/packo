@@ -296,7 +296,7 @@ public:
 		nodes.erase( itn, nodes.end() );
 	}
 
-	void compile(CompiledGraph& compiledGraph ){
+	void compile(CompiledGraph& compiledGraph, bool optimize){
 		std::vector<Vertex*> orderedNodes;
 		orderedNodes.reserve(nodes.size());
 		purgeTmpData();
@@ -405,8 +405,10 @@ public:
 
 		}
 		uint stackSize = (uint)(maxRegister + 1);
-		const uint dummyRegister = stackSize;
-		compiledGraph.stackSize = stackSize + 1;
+		const uint firstDummyRegister = stackSize;
+		const uint countDummyRegister = optimize ? 1u : 4u;
+		compiledGraph.stackSize = stackSize + countDummyRegister;
+		compiledGraph.firstDummyRegister = stackSize;
 
 		for (CompiledNode& node : compiledGraph.nodes) {
 			// Safety check.
@@ -417,9 +419,11 @@ public:
 				}
 				++slotId;
 			}
+			uint currentDummyRegister = firstDummyRegister;
 			for (int& reg : node.outputs) {
-				if (reg == -1) {
-					reg = dummyRegister;
+				if(reg == -1){
+					reg = currentDummyRegister;
+					currentDummyRegister = (std::min)(currentDummyRegister + 1u, compiledGraph.stackSize - 1);
 				}
 			}
 		}
@@ -447,7 +451,6 @@ void CompiledGraph::ensureGlobalNodesConsistency(){
 		uint index;
 		std::unordered_set<uint> redirections;
 	};
-	const int dummyRegister = std::max(int(stackSize) - 1, 0);
 	std::vector<Split> splits;
 	std::unordered_set<uint> registersInFlight;
 
@@ -464,7 +467,7 @@ void CompiledGraph::ensureGlobalNodesConsistency(){
 		}
 		// Inputs need to be provided if there is a flush node before.
 		for(int index : compiledNode.inputs){
-			if(index != dummyRegister){
+			if(index < firstDummyRegister){
 				registersInFlight.insert(index);
 			}
 		}
@@ -522,7 +525,7 @@ void CompiledGraph::ensureGlobalNodesConsistency(){
 			// Ignore the ones that are output by the global node, by directing them to the dummy register.
 			for(int& restored : restore.outputs){
 				if(std::find(global.outputs.begin(), global.outputs.end(), restored) != global.outputs.end()){
-						restored = dummyRegister;
+					restored = firstDummyRegister;
 				}
 			}
 		}
@@ -653,7 +656,7 @@ bool compile( const Graph& editGraph, bool optimize, ErrorContext& errors, Compi
 	}
 
 	// Compile the graph for real.
-	graph.compile( compiledGraph );
+	graph.compile( compiledGraph, optimize );
 	// Don't alter global nodes. (or boolean?)
 
 	if(optimize){
