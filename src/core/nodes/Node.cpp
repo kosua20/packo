@@ -27,15 +27,21 @@ Node::Attribute::Attribute( const std::string& aname, const std::vector<std::str
 Node::Attribute::~Attribute() {}
 
 void Node::setChannelCount(uint c){
-	const int channelCount = glm::clamp(c, 1u, 4u);
-	if(!channelled() || channelCount == 1u){
+	if( !channelled() ){
+		_currentInputs = _inputNames;
+		_currentOutputs = _outputNames;
+		return;
+	}
+
+	_channelCount = glm::clamp(c, 1u, 4u);
+	// Fast case when one channel.
+	if( _channelCount == 1u){
 		_currentInputs = _inputNames;
 		_currentOutputs = _outputNames;
 		return;
 	}
 	_currentInputs.clear();
 	_currentOutputs.clear();
-	_channelCount = channelCount;
 
 	const std::string prefixes[4] = {"R", "G", "B", "A"};
 
