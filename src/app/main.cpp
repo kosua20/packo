@@ -84,7 +84,7 @@ void autoLayout( const Graph& graph )
 	}
 }
 
-GLFWwindow* createWindow(int w, int h) {
+GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont) {
 
 	// Initialize glfw, which will create and setup an OpenGL context.
 	if(!glfwInit()) {
@@ -127,12 +127,19 @@ GLFWwindow* createWindow(int w, int h) {
 	fontLato.FontData = (void*)(fontDataLato);
 	fontLato.FontDataSize = size_fontDataLato;
 	fontLato.SizePixels = 18.0f;
-	// Font data is static
-	fontLato.FontDataOwnedByAtlas = false;
+	fontLato.FontDataOwnedByAtlas = false; // Font data is static
+
+	ImFontConfig fontLatoSmall = ImFontConfig();
+	fontLatoSmall.FontData = (void*)(fontDataLato);
+	fontLatoSmall.FontDataSize = size_fontDataLato;
+	fontLatoSmall.SizePixels = 12.0f;
+	fontLatoSmall.GlyphOffset = ImVec2(0, 12);
+	fontLatoSmall.FontDataOwnedByAtlas = false;
 
 	ImGuiIO & io = ImGui::GetIO();
 	io.IniFilename = nullptr;
-	io.Fonts->AddFont(&fontLato);
+	defaultFont = io.Fonts->AddFont(&fontLato);
+	smallFont = io.Fonts->AddFont(&fontLatoSmall);
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
@@ -314,6 +321,23 @@ bool refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	return (reusedCount != newCount) || (newCount != oldCount);
 }
 
+void TextIndex(const std::string& str, bool multiChannel, ImFont* font){
+	const int size = str.size();
+	if(size == 0){
+		return;
+	}
+	if(!multiChannel){
+		ImGui::TextUnformatted(str.c_str());
+		return;
+	}
+	const int lastCharIndex = size - 1;
+	ImGui::TextUnformatted(str.c_str(), str.c_str() + lastCharIndex);
+	ImGui::SameLine(0,0);
+	ImGui::PushFont(font);
+	ImGui::TextUnformatted(str.c_str() + lastCharIndex);
+	ImGui::PopFont();
+}
+
 
 int main(int argc, char** argv){
 
@@ -333,7 +357,9 @@ int main(int argc, char** argv){
 
 	Random::seed(743936);
 
-	GLFWwindow* window = createWindow(830, 620);
+	ImFont* defaultFont = nullptr;
+	ImFont* smallFont = nullptr;
+	GLFWwindow* window = createWindow(1000, 700, defaultFont, smallFont);
 	const uint errorTitleBar			= IM_COL32( 190, 15, 15, 255 ); 
 	const uint errorTitleBarActive		= IM_COL32( 220, 15, 15, 255 ); 
 	const uint errorBackground			= IM_COL32( 50, 5, 5, 255 );
@@ -800,6 +826,7 @@ int main(int argc, char** argv){
 						const uint inputCount = inputs.size();
 						const uint outputCount = outputs.size();
 						const uint maxCount = std::max(inputCount, outputCount);
+						const bool multiChannel = node->channelCount() > 1;
 
 						for(uint attId = 0; attId < maxCount; ++attId ){
 							const bool hasInput = attId < inputCount;
@@ -808,7 +835,7 @@ int main(int argc, char** argv){
 							if( hasInput ){
 								const std::string& name = inputs[attId];
 								ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
-								ImGui::TextUnformatted(name.c_str());
+								TextIndex(name, multiChannel, smallFont);
 								ImNodes::EndInputAttribute();
 								inputWidth = ImGui::CalcTextSize( name.c_str()).x + ImGui::GetStyle().IndentSpacing;
 							}
@@ -825,7 +852,7 @@ int main(int argc, char** argv){
 									indented = true;
 								}
 								ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
-								ImGui::TextUnformatted(name.c_str());
+								TextIndex(name, multiChannel, smallFont);
 								ImNodes::EndOutputAttribute();
 								if(indented){
 									ImGui::Unindent(offset);
@@ -997,7 +1024,6 @@ int main(int argc, char** argv){
 						// Save position for placing the new node on screen.
 						mouseRightClick = ImGui::GetMousePos();
 						searchStr[ 0 ] = '\0';
-					
 						focusTextField = true;
 					}
 
@@ -1106,7 +1132,7 @@ int main(int argc, char** argv){
 		if( needsPreviewRefresh && !inputFiles.empty() && showPreview){
 			CompiledGraph compiledGraph;
 			ErrorContext dummyContext;
-			compile(*graph, dummyContext, compiledGraph);
+			compile(*graph, false, dummyContext, compiledGraph);
 			// TODO: when errors or unused nodes, do something to give feedback to the user.
 			if(!dummyContext.hasErrors()){
 				purgeTextures( textures );

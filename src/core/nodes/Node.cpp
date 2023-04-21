@@ -43,16 +43,16 @@ void Node::setChannelCount(uint c){
 	_currentInputs.clear();
 	_currentOutputs.clear();
 
-	const std::string prefixes[4] = {"R", "G", "B", "A"};
+	const std::string suffixes[4] = {"R", "G", "B", "A"};
 
 	for(const std::string& input : _inputNames){
 		for(uint i = 0; i < _channelCount; ++i){
-			_currentInputs.push_back(prefixes[i] + input);
+			_currentInputs.push_back(input + suffixes[i]);
 		}
 	}
 	for(const std::string& output : _outputNames){
 		for(uint i = 0; i < _channelCount; ++i){
-			_currentOutputs.push_back(prefixes[i] + output);
+			_currentOutputs.push_back(output + suffixes[i]);
 		}
 	}
 }
