@@ -815,3 +815,42 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs
 
 	return true;
 }
+
+bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& fallbackRes, std::atomic<int>& progress){
+
+	CompiledGraph compiledGraph;
+	if(!compile(editGraph, true, errors, compiledGraph)){
+		return false;
+	}
+
+	// Populate batches with file info.
+	std::vector<Batch> batches;
+
+	// Collect file nodes.
+	if(!generateBatches( compiledGraph.inputs, compiledGraph.outputs, inputPaths, outputDir, batches)){
+		errors.addError("Not enough input files.");
+		return false;
+	}
+
+	// Pass local objects by copy.
+	std::thread thread([&progress, compiledGraph, batches, fallbackRes ](){
+		progress = 0.f;
+		const int batchCost = std::floor(1.f / float(batches.size()) * kProgressCostGranularity);
+		for(const Batch& batch : batches){
+			if(progress >= kProgressImmediateStop){
+				break;
+			}
+			SharedContext sharedContext;
+			allocateContextForBatch(batch, compiledGraph, fallbackRes, false, sharedContext);
+
+			evaluateGraphForBatchOptimized(compiledGraph, sharedContext);
+
+			saveContextForBatch(batch, sharedContext);
+			progress += batchCost;
+		}
+		progress = -1.f;
+	});
+	thread.detach();
+
+	return true;
+}

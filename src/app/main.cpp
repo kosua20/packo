@@ -421,6 +421,7 @@ int main(int argc, char** argv){
 	int seed = Random::getSeed();
 	std::vector<NodeClass> visibleNodeTypes;
 	int selectedNodeType = 0;
+	std::atomic<int> showProgress = -1;
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -608,7 +609,7 @@ int main(int argc, char** argv){
 								inputPaths.push_back( file.path );
 							}
 						}
-						evaluate( *graph, errorContext, inputPaths, outputDirectory, { 64,64 } );
+						evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, {64, 64}, showProgress);
 					}
 
 					ImGui::Separator();
@@ -662,7 +663,10 @@ int main(int argc, char** argv){
 							inputPaths.push_back(file.path);
 						}
 					}
-					evaluate(*graph, errorContext, inputPaths, outputDirectory, {64,64});
+					evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, {64, 64}, showProgress);
+				}
+				if(showProgress >= 0){
+					ImGui::ProgressBar(float(showProgress) / float(kProgressCostGranularity));
 				}
 
 				const std::string inputDirStr = inputDirectory.string();
@@ -1030,7 +1034,6 @@ int main(int argc, char** argv){
 						}
 					}
 
-					// TODO: improve keyboard navigation.
 					bool focusTextField = false;
 					if(ImGui::IsMouseClicked(ImGuiMouseButton_Right) || ImGui::IsKeyReleased(ImGuiKey_Space)){
 						ImGui::OpenPopup( "Create node" );
@@ -1304,6 +1307,13 @@ int main(int argc, char** argv){
 
 
 		glfwSwapBuffers(window);
+	}
+	// Signal threads that we want to exit.
+	showProgress = kProgressImmediateStop;
+
+	// Wait for any progressing background task to complete.
+	while(showProgress >= 0){
+		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	}
 
 	// Purge GL texture pool.

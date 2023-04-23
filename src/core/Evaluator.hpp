@@ -2,7 +2,10 @@
 #include "core/Common.hpp"
 #include "core/Graph.hpp"
 #include "core/system/System.hpp"
+#include <atomic>
 
+const int kProgressCostGranularity = 1000;
+const int kProgressImmediateStop   = kProgressCostGranularity + 1;
 
 class ErrorContext {
 public:
@@ -82,3 +85,4 @@ void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize,
 
 bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes);
 
+bool evaluateInBackground(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, std::atomic<int>& progress);
