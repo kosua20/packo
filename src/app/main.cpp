@@ -1312,7 +1312,7 @@ int main(int argc, char** argv){
 	showProgress = kProgressImmediateStop;
 
 	// Wait for any progressing background task to complete.
-	while(showProgress >= 0){
+	while(showProgress >= 0 && showProgress < kProgressImmediateStop){
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	}
 
