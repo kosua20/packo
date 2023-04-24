@@ -194,6 +194,8 @@ GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont)
 	colors[ ImGuiCol_TabUnfocusedActive ] = ImVec4( 0.04f, 0.26f, 0.31f, 1.00f );
 	colors[ ImGuiCol_TextSelectedBg ] = ImVec4( 0.04f, 0.26f, 0.31f, 1.00f );
 	colors[ ImGuiCol_NavHighlight ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
+	colors[ ImGuiCol_PlotHistogram ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
+	colors[ ImGuiCol_PlotHistogramHovered ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
 
 	ImNodesStyle& nodesStyle = ImNodes::GetStyle();
 	nodesStyle.NodeCornerRounding = 12;
@@ -444,8 +446,6 @@ int main(int argc, char** argv){
 			wantsExit = true;
 		}
 		anyPopupOpen = false;
-
-
 
 		++timeSinceLastInputUpdate;
 		if((timeSinceLastInputUpdate > kMaxRefreshDelayInFrames) && !inputDirectory.empty()){
@@ -1053,24 +1053,34 @@ int main(int argc, char** argv){
 					if( ImGui::BeginPopup("Create node")){
 						anyPopupOpen = true;
 
-						const int visibleTypesCount = int(visibleNodeTypes.size());
-						if(ImGui::IsKeyReleased(ImGuiKey_UpArrow)){
+						int visibleTypesCount = int(visibleNodeTypes.size());
+						const int columnWidth = 200;
+						const int columnItemsHeight = 12;
+						const int columnCount = ( visibleTypesCount + columnItemsHeight - 1 ) / columnItemsHeight;
+
+						if(ImGui::IsKeyDown(ImGuiKey_UpArrow)){
 							--selectedNodeType;
-							if(selectedNodeType < 0){
-								selectedNodeType = visibleTypesCount-1;
-							}
 						}
-						if(ImGui::IsKeyReleased(ImGuiKey_DownArrow)){
+						if(ImGui::IsKeyDown(ImGuiKey_DownArrow)){
 							++selectedNodeType;
-							// No modulo in case visibleTypesCount is 0.
-							if(selectedNodeType >= visibleTypesCount){
-								selectedNodeType = 0;
-							}
 						}
+						if( ImGui::IsKeyDown( ImGuiKey_RightArrow ) ) {
+							selectedNodeType += columnItemsHeight;
+						}
+						if( ImGui::IsKeyDown( ImGuiKey_LeftArrow ) ) {
+							selectedNodeType -= columnItemsHeight;
+						}
+						if( selectedNodeType < 0 ) {
+							selectedNodeType = visibleTypesCount - 1;
+						} else if( selectedNodeType >= visibleTypesCount ){
+							selectedNodeType = 0;
+						}
+
+						ImGui::PushItemWidth( columnWidth* columnCount );
 
 						if( focusTextField )
 							ImGui::SetKeyboardFocusHere();
-						if(ImGui::InputText( "##SearchField", searchStr, sizeof( searchStr ), ImGuiInputTextFlags_AutoSelectAll )){
+						if(ImGui::InputText( "##SearchField", searchStr, sizeof( searchStr ), ImGuiInputTextFlags_AutoSelectAll , nullptr, nullptr)){
 							// Refresh selection.
 							const std::string searchStrLow = TextUtilities::lowercase( std::string( searchStr ) );
 							visibleNodeTypes.clear();
@@ -1084,18 +1094,32 @@ int main(int argc, char** argv){
 								visibleNodeTypes.push_back(type);
 							}
 							selectedNodeType = 0;
+							visibleTypesCount = visibleNodeTypes.size();
+
+						}
+						ImGui::PopItemWidth();
+
+						for( uint i = 0; i < columnItemsHeight; ++i){
+							// Split in multiple columns.
+							for( uint c = 0; c < columnCount; ++c ){
+								const uint index = c * columnItemsHeight + i;
+								if( index >= visibleTypesCount ){
+									break;
+								}
+								const NodeClass type = visibleNodeTypes[ index ];
+								const std::string& label = getNodeName( type );
+								if( ImGui::Selectable( label.c_str(), index == selectedNodeType, 0, ImVec2(columnWidth - 2*ImGui::GetStyle().FramePadding.x, 0) ) ){
+									nodesToCreate[ type ] += 1;
+								}
+								if( (c < columnCount - 1) && (index + columnItemsHeight ) < visibleTypesCount )
+								{
+									ImGui::SameLine((c+1) * columnWidth);
+								}
+							}
 						}
 
-						int i = 0;
-						for(NodeClass type : visibleNodeTypes){
-							const std::string& label = getNodeName(type);
-							if( ImGui::Selectable(label.c_str(), i == selectedNodeType)){
-								nodesToCreate[type] += 1;
-							}
-							++i;
-						}
 						if(ImGui::IsKeyReleased(ImGuiKey_Enter)){
-							if(selectedNodeType < int(visibleNodeTypes.size())){
+							if( selectedNodeType >= 0 && selectedNodeType < int(visibleNodeTypes.size())){
 								nodesToCreate[visibleNodeTypes[selectedNodeType]] += 1;
 								ImGui::CloseCurrentPopup();
 							}
