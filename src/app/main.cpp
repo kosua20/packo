@@ -327,6 +327,20 @@ bool refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	return (reusedCount != newCount) || (newCount != oldCount);
 }
 
+float TextIndexSize(const std::string& str, bool multiChannel, float fontRatio){
+	const int size = str.size();
+	if(size == 0){
+		return 0.f;
+	}
+	if(!multiChannel){
+		return ImGui::CalcTextSize(str.c_str()).x;
+	}
+	const int lastCharIndex = size - 1;
+	float baseSize = ImGui::CalcTextSize(str.c_str(), str.c_str() + lastCharIndex).x;
+	float indexSize = ImGui::CalcTextSize(str.c_str() + lastCharIndex).x;
+	return baseSize + fontRatio * indexSize;
+}
+
 void TextIndex(const std::string& str, bool multiChannel, ImFont* font){
 	const int size = str.size();
 	if(size == 0){
@@ -641,7 +655,6 @@ int main(int argc, char** argv){
 		}
 		const float menuBarHeight = ImGui::GetItemRectSize().y;
 
-		// TODO: improve node layout (especially with preview)
 		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
 
 		float editorWindowHeight = float(winH) - menuBarHeight;
@@ -769,17 +782,15 @@ int main(int argc, char** argv){
 					}
 					createdNodes.clear();
 
+					const float nodeWidth = 160.f;
+					const float internalNodeWidth = nodeWidth - 2.f * ImNodes::GetStyle().NodePadding.x;
+
 					GraphNodes nodes(*graph);
 					for(const uint nodeId : nodes){
 						 Node* node = graph->node(nodeId);
 
 						const bool nodeHasIssue = errorContext.contains( node );
 
-						std::vector<Node::Attribute>& attributes = node->attributes();
-						const uint attributeCount = attributes.size();
-
-						const uint attribWidth = 130u;
-						const uint minNodeSize = attributeCount != 0u ? attribWidth : previewSize;
 
 						if( nodeHasIssue )
 						{
@@ -790,6 +801,9 @@ int main(int argc, char** argv){
 							ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundHovered, errorBackgroundActive );
 							ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundSelected, errorBackgroundActive );
 						}
+
+						std::vector<Node::Attribute>& attributes = node->attributes();
+						const uint attributeCount = attributes.size();
 
 						ImNodes::BeginNode(nodeId);
 
@@ -803,86 +817,120 @@ int main(int argc, char** argv){
 								// We'll have to remove extraneous links.
 								nodeToPurgeLinks = int(nodeId);
 							}
-							ImGui::SameLine();
+							ImGui::SameLine(20);
+							ImGui::TextUnformatted( node->name().c_str() );
+						} else {
+							ImGui::Indent(20);
+							ImGui::TextUnformatted( node->name().c_str() );
+							ImGui::Unindent();
 						}
-						ImGui::TextUnformatted( node->name().c_str() );
+
 						ImNodes::EndNodeTitleBar();
 
-						
 
-						for(uint attId = 0; attId < attributeCount; ++attId ){
-
-							ImGui::PushItemWidth(attribWidth);
-							Node::Attribute& attribute = attributes[attId];
-							switch( attribute.type )
-							{
-								case Node::Attribute::Type::FLOAT:
-									editedGraph |= ImGui::InputFloat( attribute.name.c_str(), &attribute.flt, 0.0f, 0.0f, "%.6f" );
-									break;
-								case Node::Attribute::Type::COLOR:
-									editedGraph |= ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR );
-									break;
-								case Node::Attribute::Type::STRING:
-									editedGraph |= ImGui::InputText( attribute.name.c_str(), &attribute.str[0], MAX_STR_LENGTH );
-									break;
-								case Node::Attribute::Type::COMBO:
-									editedGraph |= ImGui::Combo(attribute.name.c_str(), &attribute.cmb, &getAttributeComboItem, &attribute, attribute.values.size());
-									break;
-								case Node::Attribute::Type::BOOL:
-									editedGraph |= ImGui::Checkbox( attribute.name.c_str(), &attribute.bln );
-									break;
-								default:
-									assert( false );
-									break;
-							}
-							ImGui::PopItemWidth();
-						}
-						
-						const std::vector<std::string>& inputs = node->inputs();
-						const std::vector<std::string>& outputs = node->outputs();
-						const uint inputCount = inputs.size();
-						const uint outputCount = outputs.size();
-						const uint maxCount = std::max(inputCount, outputCount);
-						const bool multiChannel = node->channelCount() > 1;
-
-						for(uint attId = 0; attId < maxCount; ++attId ){
-							const bool hasInput = attId < inputCount;
-							const bool hasOutput = attId < outputCount;
-							uint inputWidth = 0;
-							if( hasInput ){
-								const std::string& name = inputs[attId];
-								ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
-								TextIndex(name, multiChannel, smallFont);
-								ImNodes::EndInputAttribute();
-								inputWidth = ImGui::CalcTextSize( name.c_str()).x + ImGui::GetStyle().IndentSpacing;
-							}
-							if(hasOutput){
-								bool indented = false;
-								const std::string& name = outputs[ attId ];
-
-								const uint labelSize = ImGui::CalcTextSize( name.c_str()).x;
-								const uint offset = inputWidth + (labelSize <= minNodeSize ? (minNodeSize - labelSize) : 0u) ;
-								if(hasInput){
-									ImGui::SameLine(offset);
-								} else {
-									ImGui::Indent(offset);
-									indented = true;
-								}
-								ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
-								TextIndex(name, multiChannel, smallFont);
-								ImNodes::EndOutputAttribute();
-								if(indented){
-									ImGui::Unindent(offset);
-								}
-							}
-						}
-
-						auto texKey = textures.find( node );
-						if( texKey != textures.end() )
+						// Draw inputs and outputs
 						{
-							GLuint tex = texKey->second;
-							ImGui::Image( (ImTextureID)tex, ImVec2( previewSize, previewSize ) );
+							const std::vector<std::string>& inputs = node->inputs();
+							const std::vector<std::string>& outputs = node->outputs();
+							const uint inputCount = inputs.size();
+							const uint outputCount = outputs.size();
+							const uint maxCount = std::max(inputCount, outputCount);
+							const bool multiChannel = node->channelCount() > 1;
+
+							for(uint attId = 0; attId < maxCount; ++attId ){
+								const bool hasInput = attId < inputCount;
+								const bool hasOutput = attId < outputCount;
+
+								if( hasInput ){
+									const std::string& name = inputs[attId];
+									ImNodes::BeginInputAttribute(fromInputSlotToLink({nodeId, attId}));
+									TextIndex(name, multiChannel, smallFont);
+									ImNodes::EndInputAttribute();
+								}
+
+								if(hasOutput){
+									const std::string& name = outputs[ attId ];
+									const float labelSize = TextIndexSize(name, multiChannel, smallFont->FontSize / defaultFont->FontSize) + ImGui::GetStyle().IndentSpacing;
+									const float offset = std::max(0.f, nodeWidth - labelSize);
+
+									if(hasInput){
+										ImGui::SameLine(offset);
+									} else {
+										ImGui::Indent(offset);
+									}
+
+									ImNodes::BeginOutputAttribute(fromOutputSlotToLink({nodeId, attId}));
+									TextIndex(name, multiChannel, smallFont);
+									ImNodes::EndOutputAttribute();
+
+									if(!hasInput){
+										ImGui::Unindent(offset);
+									}
+								}
+							}
 						}
+
+						// Draw attributes
+						{
+							// Compute size of all attributes (for nice alignment)
+							float minAttributeSize = internalNodeWidth;
+							for(uint attId = 0; attId < attributeCount; ++attId ){
+								Node::Attribute& attribute = attributes[attId];
+								// Subtract label size if not hidden.
+								float attLabelSize = ImGui::CalcTextSize(attribute.name.c_str(), nullptr, true).x;
+								if(attLabelSize != 0.f){
+									attLabelSize += ImGui::GetStyle().ItemInnerSpacing.x;
+								}
+								minAttributeSize = std::min(minAttributeSize, internalNodeWidth - attLabelSize);
+							}
+							minAttributeSize = std::max(0.F, minAttributeSize);
+
+							for(uint attId = 0; attId < attributeCount; ++attId ){
+								Node::Attribute& attribute = attributes[attId];
+
+								ImGui::PushItemWidth(minAttributeSize);
+								switch( attribute.type )
+								{
+									case Node::Attribute::Type::FLOAT:
+										editedGraph |= ImGui::DragFloat( attribute.name.c_str(), &attribute.flt, 1.f, 0.0f, 0.0f, "%.6f" );
+										break;
+									case Node::Attribute::Type::COLOR:
+									{
+										// TODO: improve layout (two lines + preview ?)
+										editedGraph |= ImGui::ColorEdit4( attribute.name.c_str(), &attribute.clr[0], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoSmallPreview );
+									}
+									break;
+									case Node::Attribute::Type::STRING:
+										editedGraph |= ImGui::InputText( attribute.name.c_str(), &attribute.str[0], MAX_STR_LENGTH );
+										break;
+									case Node::Attribute::Type::COMBO:
+										editedGraph |= ImGui::Combo(attribute.name.c_str(), &attribute.cmb, &getAttributeComboItem, &attribute, attribute.values.size());
+										break;
+									case Node::Attribute::Type::BOOL:
+										editedGraph |= ImGui::Checkbox( attribute.name.c_str(), &attribute.bln );
+										break;
+									default:
+										assert( false );
+										break;
+								}
+								ImGui::PopItemWidth();
+							}
+						}
+
+						// Draw preview
+						{
+							auto texKey = textures.find( node );
+							if( texKey != textures.end() )
+							{
+								GLuint tex = texKey->second;
+
+								ImGui::Image( (ImTextureID)tex, ImVec2( internalNodeWidth, internalNodeWidth ) );
+							} else {
+								// Ensure node width is always the same.
+								ImGui::Dummy(ImVec2(internalNodeWidth, 0.f));
+							}
+						}
+
 
 						ImNodes::EndNode();
 						if( nodeHasIssue ) {
@@ -901,8 +949,7 @@ int main(int argc, char** argv){
 					ImNodes::PopAttributeFlag();
 					ImNodes::EndNodeEditor();
 
-					if( needAutoLayout )
-					{
+					if( needAutoLayout ){
 						autoLayout( *graph );
 						needAutoLayout = false;
 					}
