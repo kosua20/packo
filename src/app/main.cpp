@@ -1058,22 +1058,34 @@ int main(int argc, char** argv){
 						const int columnItemsHeight = 12;
 						const int columnCount = ( visibleTypesCount + columnItemsHeight - 1 ) / columnItemsHeight;
 
-						if(ImGui::IsKeyDown(ImGuiKey_UpArrow)){
+						if(ImGui::IsKeyPressed(ImGuiKey_UpArrow, true)){
 							--selectedNodeType;
+							if( selectedNodeType < 0 ) {
+								selectedNodeType = visibleTypesCount - 1;
+							}
 						}
-						if(ImGui::IsKeyDown(ImGuiKey_DownArrow)){
+						if(ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)){
 							++selectedNodeType;
+							if( selectedNodeType >= visibleTypesCount ){
+								selectedNodeType = 0;
+							}
 						}
-						if( ImGui::IsKeyDown( ImGuiKey_RightArrow ) ) {
+						if( ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) {
 							selectedNodeType += columnItemsHeight;
+							if( selectedNodeType >= visibleTypesCount ){
+								selectedNodeType = selectedNodeType % columnItemsHeight;
+							}
 						}
-						if( ImGui::IsKeyDown( ImGuiKey_LeftArrow ) ) {
+						if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)) {
 							selectedNodeType -= columnItemsHeight;
-						}
-						if( selectedNodeType < 0 ) {
-							selectedNodeType = visibleTypesCount - 1;
-						} else if( selectedNodeType >= visibleTypesCount ){
-							selectedNodeType = 0;
+							if( selectedNodeType < 0 ) {
+								// Is there a simpler expression?
+								selectedNodeType = (selectedNodeType + columnItemsHeight) % columnItemsHeight + (columnCount - 1) * columnItemsHeight;
+								// Only the last column can be not full.
+								if( selectedNodeType >= visibleTypesCount ){
+									selectedNodeType -= columnItemsHeight;
+								}
+							}
 						}
 
 						ImGui::PushItemWidth( columnWidth* columnCount );
