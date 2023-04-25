@@ -4,7 +4,8 @@
 
 ConstantFloatNode::ConstantFloatNode(){
 	_name = "Constant";
-	_outputNames = {"Value"};
+	_description = "Constant scalar value.";
+	_outputNames = {"X"};
 	_attributes = { {"##X", Attribute::Type::FLOAT} };
 	finalize();
 }
@@ -19,6 +20,7 @@ void ConstantFloatNode::evaluate(LocalContext& context, const std::vector<int>& 
 
 ConstantRGBANode::ConstantRGBANode(){
 	_name = "Constant";
+	_description = "Constant RGBA value.";
 	_outputNames = { "R", "G", "B", "A" };
 	_attributes = { {"##Val", Attribute::Type::COLOR} };
 	finalize();
@@ -36,6 +38,7 @@ void ConstantRGBANode::evaluate(LocalContext& context, const std::vector<int>& i
 
 UniformRandomNode::UniformRandomNode(){
 	_name = "Random";
+	_description = "Random value in [min, max[";
 	_outputNames = { "X" };
 	_attributes = { {"Min", Attribute::Type::FLOAT}, {"Max", Attribute::Type::FLOAT} };
 	finalize();
@@ -53,6 +56,7 @@ void UniformRandomNode::evaluate(LocalContext& context, const std::vector<int>& 
 
 RandomColorNode::RandomColorNode(){
 	_name = "Random color";
+	_description = "Random color in [0,1]^4";
 	_outputNames = { "R", "G", "B", "A" };
 	finalize();
 }

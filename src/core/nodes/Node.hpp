@@ -65,6 +65,7 @@ public:
 	uint channelCount() const { return _channelCount; }
 
 	const std::string& name() const { return _name; }
+	const std::string& description() const { return _description; }
 	const std::vector<std::string>& inputs() const { return _currentInputs; }
 	const std::vector<std::string>& outputs() const { return _currentOutputs; }
 	const std::vector<Attribute>& attributes( ) const { return _attributes; }
@@ -75,6 +76,7 @@ protected:
 	void finalize();
 	
 	std::string _name;
+	std::string _description;
 	std::vector<std::string> _inputNames;
 	std::vector<std::string> _outputNames;
 	std::vector<std::string> _currentInputs;

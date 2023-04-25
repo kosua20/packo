@@ -3,8 +3,9 @@
 
 AddNode::AddNode(){
 	_name = "Add";
+	_description = "M=X+Y";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X+Y"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -21,8 +22,9 @@ void AddNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 
 SubtractNode::SubtractNode(){
 	_name = "Minus";
+	_description = "M=X-Y";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X-Y"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -38,8 +40,9 @@ void SubtractNode::evaluate(LocalContext& context, const std::vector<int>& input
 
 ProductNode::ProductNode(){
 	_name = "Product";
+	_description = "M=X*Y";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X*Y"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -55,8 +58,9 @@ void ProductNode::evaluate(LocalContext& context, const std::vector<int>& inputs
 
 DivideNode::DivideNode(){
 	_name = "Divide";
+	_description = "M=X/Y";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X/Y"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -72,8 +76,9 @@ void DivideNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 
 MinNode::MinNode(){
 	_name = "Minimum";
+	_description = "M=min(X,Y)";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"min(X,Y)"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -89,8 +94,9 @@ void MinNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 
 MaxNode::MaxNode(){
 	_name = "Maximum";
+	_description = "M=max(X,Y)";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"max(X,Y)"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -106,8 +112,9 @@ void MaxNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 
 ClampNode::ClampNode(){
 	_name = "Clamp";
+	_description = "M=min(max(X,A),B)";
 	_inputNames = {"X"};
-	_outputNames = {"max(min(X,A),B)"};
+	_outputNames = { "M" };
 	_attributes = { {"A", Attribute::Type::FLOAT}, {"B", Attribute::Type::FLOAT} };
 	finalize();
 }
@@ -124,8 +131,9 @@ void ClampNode::evaluate(LocalContext& context, const std::vector<int>& inputs, 
 
 PowerNode::PowerNode(){
 	_name = "Power";
+	_description = "M=X^Y";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X^Y"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -141,8 +149,9 @@ void PowerNode::evaluate(LocalContext& context, const std::vector<int>& inputs, 
 
 SqrtNode::SqrtNode(){
 	_name = "Square root";
+	_description = "M=sqrt(X)";
 	_inputNames = {"X"};
-	_outputNames = {"sqrt(X)"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -158,8 +167,9 @@ void SqrtNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 
 ExponentialNode::ExponentialNode(){
 	_name = "Exponential";
+	_description = "M=exp(X)";
 	_inputNames = {"X"};
-	_outputNames = {"exp(X)"};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -175,8 +185,9 @@ void ExponentialNode::evaluate(LocalContext& context, const std::vector<int>& in
 
 LogarithmNode::LogarithmNode(){
 	_name = "Logarithm";
+	_description = "M=log_basis(X)=ln(X)/ln(basis)";
 	_inputNames = {"X"};
-	_outputNames = {"log(X)"};
+	_outputNames = {"M"};
 	_attributes = {{"Basis", Attribute::Type::FLOAT}};
 	_attributes[0].flt = glm::e<float>();
 	finalize();
@@ -194,8 +205,9 @@ void LogarithmNode::evaluate(LocalContext& context, const std::vector<int>& inpu
 
 MixNode::MixNode(){
 	_name = "Interpolate";
+	_description = "M=mix(X,Y,T)=(1-T)*X+T*Y";
 	_inputNames = {"X", "Y", "T"};
-	_outputNames = {"mix(X,Y,T)"};
+	_outputNames = {"M"};
 	finalize();
 }
 

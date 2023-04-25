@@ -3,8 +3,9 @@
 
 FlipNode::FlipNode(){
 	_name = "Flip";
-	_inputNames = {"R", "G", "B", "A"};
-	_outputNames = {"R", "G", "B", "A"};
+	_description = "Flip an image content along the horizontal/vertical axis";
+	_inputNames = {"X"};
+	_outputNames = {"Y"};
 	_attributes = { {"Axis", {"Horizontal", "Vertical"}}};
 	finalize();
 }
@@ -36,8 +37,9 @@ void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 
 TileNode::TileNode(){
 	_name = "Tile";
-	_inputNames = { "R", "G", "B", "A" };
-	_outputNames = { "R", "G", "B", "A" };
+	_description = "Tile an image content at a given scale and offset.";
+	_inputNames = {"X"};
+	_outputNames = {"Y"};
 	_attributes = { {"Scale", Attribute::Type::FLOAT} , {"Offset X", Attribute::Type::FLOAT} , {"Offset Y", Attribute::Type::FLOAT} };
 	_attributes[ 0 ].flt = 1.0f;
 	finalize();
@@ -87,8 +89,9 @@ void TileNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 
 RotateNode::RotateNode(){
 	_name = "Rotate";
-	_inputNames = { "R", "G", "B", "A" };
-	_outputNames = { "R", "G", "B", "A" };
+	_description = "Rotate an image content at a certain angle around its center.";
+	_inputNames = {"X"};
+	_outputNames = {"Y"};
 	_attributes = { {"Angle", Attribute::Type::FLOAT}};
 	finalize();
 }
@@ -141,8 +144,9 @@ void RotateNode::evaluate( LocalContext& context, const std::vector<int>& inputs
 
 GaussianBlurNode::GaussianBlurNode(){
 	_name = "Gaussian Blur";
-	_inputNames = {"R", "G", "B", "A"};
-	_outputNames = {"R", "G", "B", "A"};
+	_description = "Apply a gaussian of a given radius to an image content.";
+	_inputNames = {"X"};
+	_outputNames = {"Y"};
 	_attributes = { {"Radius", Attribute::Type::FLOAT}};
 	_attributes[0].flt = 2.f;
 	finalize();

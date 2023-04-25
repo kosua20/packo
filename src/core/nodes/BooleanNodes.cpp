@@ -3,8 +3,9 @@
 
 SelectNode::SelectNode(){
 	_name = "Select";
+	_description = "M = if B then X else Y";
 	_inputNames = {"X", "Y", "B"};
-	_outputNames = {"B ? X else Y "};
+	_outputNames = {"M"};
 	finalize();
 }
 
@@ -22,8 +23,9 @@ static constexpr float kEpsilon = 1e-5f;
 
 EqualNode::EqualNode(){
 	_name = "Equal";
+	_description = "B = (X==Y) ?";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X==Y"};
+	_outputNames = {"B"};
 	finalize();
 }
 
@@ -40,8 +42,9 @@ void EqualNode::evaluate(LocalContext& context, const std::vector<int>& inputs, 
 
 DifferentNode::DifferentNode(){
 	_name = "Different";
+	_description = "B = (X!=Y) ?";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X!=Y"};
+	_outputNames = {"B"};
 	finalize();
 }
 
@@ -58,8 +61,9 @@ void DifferentNode::evaluate(LocalContext& context, const std::vector<int>& inpu
 
 GreaterNode::GreaterNode(){
 	_name = "Greater";
+	_description = "B = X>Y (strict)\nB = X≥Y (otherwise)";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X>Y"};
+	_outputNames = {"B"};
 	_attributes = {{"Strict", Attribute::Type::BOOL}};
 	finalize();
 }
@@ -84,8 +88,9 @@ void GreaterNode::evaluate(LocalContext& context, const std::vector<int>& inputs
 
 LessNode::LessNode(){
 	_name = "Less";
+	_description = "B = X<Y (strict)\nB = X≤Y (otherwise)";
 	_inputNames = {"X", "Y"};
-	_outputNames = {"X<Y"};
+	_outputNames = {"B"};
 	_attributes = {{"Strict", Attribute::Type::BOOL}};
 	finalize();
 }
@@ -108,8 +113,9 @@ void LessNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 
 NegateNode::NegateNode(){
 	_name = "Not";
+	_description = "B= not X";
 	_inputNames = {"X"};
-	_outputNames = {"!X"};
+	_outputNames = {"B"};
 	finalize();
 }
 
