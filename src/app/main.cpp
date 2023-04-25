@@ -535,6 +535,15 @@ int main(int argc, char** argv){
 							needsPreviewRefresh = true;
 						}
 					}
+					if(ImGui::MenuItem("Preview alpha grid", "", &showAlphaPreview)){
+						needsPreviewRefresh = true;
+					}
+					ImGui::PushItemWidth(130);
+					if(ImGui::Combo("Preview quality", &previewQuality, "High\0Medium\0Low\0")){
+						needsPreviewRefresh = true;
+					}
+					ImGui::PopItemWidth();
+
 					ImGui::PushItemWidth(130);
 					if(ImGui::InputInt("Random seed", &seed)){
 						Random::seed(seed);
@@ -1284,7 +1293,7 @@ int main(int argc, char** argv){
 				// Defer purge by one frame because ImGui is keeping a reference to it for the current frame (partial evaluation?).
 				texturesToPurge = textures;
 				textures.clear();
-
+				const uint previewSize = 128u / (1u << previewQuality);
 				// We can evaluate the graph to generate textures.
 				// Prepare a batch by hand
 				Batch batch;
@@ -1342,6 +1351,17 @@ int main(int argc, char** argv){
 								}
 							}
 						}
+						if(showAlphaPreview){
+							for(uint y = 0; y < previewSize; ++y){
+								for(uint x = 0; x < previewSize; ++x){
+									const float gridLevel = float(((x / 8) % 2) ^ ((y / 8) % 2));
+									const glm::vec4 gridColor(gridLevel * 0.5 + 0.25f);
+									const float alpha = (outputImg.pixel(x,y)[3]);
+									outputImg.pixel(x, y) = glm::mix(gridColor, outputImg.pixel(x, y), alpha);
+									outputImg.pixel(x, y)[3] = 1.0f;
+								}
+							}
+						}
 
 					}
 					// Upload GL texture and associate to node.
@@ -1350,8 +1370,8 @@ int main(int argc, char** argv){
 					glBindTexture( GL_TEXTURE_2D, tex );
 					glTexImage2D( GL_TEXTURE_2D, 0,  GL_RGBA32F, previewSize, previewSize, 0, GL_RGBA, GL_FLOAT,  outputImg.rawPixels() );
 					glGenerateMipmap( GL_TEXTURE_2D );
-					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
-					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
 					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 					glBindTexture( GL_TEXTURE_2D, 0 );
