@@ -166,7 +166,6 @@ GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont)
 	style.PopupBorderSize = 0;
 	style.PopupRounding = 4;
 	style.WindowRounding = 12;
-	
 
 	ImVec4* colors = style.Colors;
 	colors[ ImGuiCol_FrameBg ] = ImVec4( 0.58f, 0.58f, 0.58f, 0.54f );
@@ -198,14 +197,14 @@ GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont)
 	colors[ ImGuiCol_PlotHistogramHovered ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
 
 	ImNodesStyle& nodesStyle = ImNodes::GetStyle();
-	nodesStyle.NodeCornerRounding = 12;
+	nodesStyle.NodeCornerRounding = 8;
 	nodesStyle.PinCircleRadius = 7.f;
 	nodesStyle.PinOffset = 0.0f;
 	nodesStyle.Flags = ImNodesStyleFlags_GridLines | ImNodesStyleFlags_NodeOutline;
 	unsigned int* nodesColors = nodesStyle.Colors;
 	nodesColors[ ImNodesCol_NodeBackground ] = IM_COL32( 50, 50, 50, 255 );
-	nodesColors[ ImNodesCol_NodeBackgroundHovered ] = IM_COL32( 75, 75, 75, 255 );
-	nodesColors[ ImNodesCol_NodeBackgroundSelected ] = IM_COL32( 75, 75, 75, 255 );
+	nodesColors[ ImNodesCol_NodeBackgroundHovered ] = IM_COL32( 50, 50, 50, 255);
+	nodesColors[ ImNodesCol_NodeBackgroundSelected ] = IM_COL32( 65, 65, 65, 255 );
 	nodesColors[ ImNodesCol_NodeOutline ] = IM_COL32( 100, 100, 100, 255 );
 	// title bar colors match ImGui's titlebg colors
 	nodesColors[ ImNodesCol_TitleBar ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrab ] );
@@ -424,7 +423,12 @@ int main(int argc, char** argv){
 	std::vector<InputFile> inputFiles;
 	uint timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 
-	const uint previewSize = 64;
+	const float kPreviewDisplayWidth = 128.f;
+	const float kSlotLabelWidth = 24.f;
+	const float kNodeInternalWidth = kPreviewDisplayWidth + 2.f * kSlotLabelWidth;
+
+	int previewQuality = 1;
+	bool showAlphaPreview = true;
 	std::unordered_map<const Node*, GLuint> textures;
 	std::unordered_map<const Node*, GLuint> texturesToPurge;
 
@@ -785,109 +789,97 @@ int main(int argc, char** argv){
 						}
 					}
 					createdNodes.clear();
-
-					const float nodeWidth = 160.f;
-					const float internalNodeWidth = nodeWidth - 2.f * ImNodes::GetStyle().NodePadding.x;
-
+					
 					GraphNodes nodes(*graph);
 					for(const uint nodeId : nodes){
 						 Node* node = graph->node(nodeId);
 
-						const bool nodeHasIssue = errorContext.contains( node );
-
-
-						if( nodeHasIssue )
-						{
-							ImNodes::PushColorStyle( ImNodesCol_TitleBar, errorTitleBar );
-							ImNodes::PushColorStyle( ImNodesCol_TitleBarHovered, errorTitleBarActive );
-							ImNodes::PushColorStyle( ImNodesCol_TitleBarSelected, errorTitleBarActive );
-							ImNodes::PushColorStyle( ImNodesCol_NodeBackground, errorBackground );
-							ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundHovered, errorBackgroundActive );
-							ImNodes::PushColorStyle( ImNodesCol_NodeBackgroundSelected, errorBackgroundActive );
+						const bool nodeHasIssue = errorContext.contains(node);
+						if(nodeHasIssue){
+							ImNodes::PushColorStyle(ImNodesCol_TitleBar, errorTitleBar);
+							ImNodes::PushColorStyle(ImNodesCol_TitleBarHovered, errorTitleBarActive);
+							ImNodes::PushColorStyle(ImNodesCol_TitleBarSelected, errorTitleBarActive);
+							ImNodes::PushColorStyle(ImNodesCol_NodeBackground, errorBackground);
+							ImNodes::PushColorStyle(ImNodesCol_NodeBackgroundHovered, errorBackgroundActive);
+							ImNodes::PushColorStyle(ImNodesCol_NodeBackgroundSelected, errorBackgroundActive);
 						}
-
-						std::vector<Node::Attribute>& attributes = node->attributes();
-						const uint attributeCount = attributes.size();
 
 						ImNodes::BeginNode(nodeId);
 
 						ImNodes::BeginNodeTitleBar();
-						if(node->channelled()){
-							const char* labels[] = {"0", "1", "2", "3", "4"};
-							const uint channelCount = node->channelCount();
-							if(ImGui::SmallButton( labels[channelCount])){
-								node->setChannelCount(channelCount % 4 + 1);
-								editedGraph = true;
-								// We'll have to remove extraneous links.
-								nodeToPurgeLinks = int(nodeId);
+						{
+							if(node->channelled()){
+								const char* labels[] = {"0", "1", "2", "3", "4"};
+								const uint channelCount = node->channelCount();
+								if(ImGui::SmallButton( labels[channelCount])){
+									node->setChannelCount(channelCount % 4 + 1);
+									editedGraph = true;
+									// We'll have to remove extraneous links.
+									nodeToPurgeLinks = int(nodeId);
+								}
+								ImGui::SameLine(kSlotLabelWidth);
+								ImGui::TextUnformatted( node->name().c_str() );
+							} else {
+								ImGui::Indent(kSlotLabelWidth);
+								ImGui::TextUnformatted( node->name().c_str() );
+								ImGui::Unindent();
 							}
-							ImGui::SameLine(20);
-							ImGui::TextUnformatted( node->name().c_str() );
-						} else {
-							ImGui::Indent(20);
-							ImGui::TextUnformatted( node->name().c_str() );
-							ImGui::Unindent();
+							ImGui::SameLine(kPreviewDisplayWidth + kSlotLabelWidth * 1.1f);
+							ImGui::Bullet();
+							if( ImGui::IsItemHovered(  )){
+								ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10,10));
+								ImGui::SetTooltip( "%s", node->description().c_str());
+								ImGui::PopStyleVar();
+							}
 						}
-						ImGui::SameLine(nodeWidth);
-						ImGui::TextUnformatted("?");
-						if( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort )){
-							ImGui::SetTooltip( "%s", node->name().c_str());
-						}
-
 						ImNodes::EndNodeTitleBar();
+
+						const bool multiChannel = node->channelCount() > 1;
 
 						// Draw all inputs.
 						ImGui::BeginGroup();
 						{
-							const std::vector<std::string>& inputs = node->inputs();
-							const uint inputCount = inputs.size();
-							const bool multiChannel = node->channelCount() > 1;
-							for( uint attId = 0; attId < inputCount; ++attId )
-							{
-								const std::string& name = inputs[ attId ];
-								ImNodes::BeginInputAttribute( fromInputSlotToLink( { nodeId, attId } ) );
+							uint slotId = 0u;
+							for( const std::string& name : node->inputs() ){
+								ImNodes::BeginInputAttribute( fromInputSlotToLink( { nodeId, slotId } ) );
 								TextIndex( name, multiChannel, smallFont );
 								ImNodes::EndInputAttribute();
+								++slotId;
 							}
+							// Force group size.
+							ImGui::Dummy(ImVec2(kSlotLabelWidth, 0));
 						}
 						ImGui::EndGroup();
-						ImGui::SameLine();
+
+						ImGui::SameLine(0,0);
 						ImGui::BeginGroup();
 						// Draw texture preview.
 						{
 							auto texKey = textures.find( node );
-							if( texKey != textures.end() )
-							{
+							if(texKey != textures.end()){
 								GLuint tex = texKey->second;
-
-								ImGui::Image( ( ImTextureID )tex, ImVec2( internalNodeWidth, internalNodeWidth ) );
-							}
-							else
-							{
-													 // Ensure node width is always the same.
-								ImGui::Dummy( ImVec2( internalNodeWidth, 0.f ) );
+								ImGui::Image( ( ImTextureID )(uintptr_t)tex, ImVec2( kPreviewDisplayWidth, kPreviewDisplayWidth ) );
+							} else{
+								// Ensure node width is always the same.
+								ImGui::Dummy( ImVec2( kPreviewDisplayWidth, 0.f ) );
 							}
 						}
 						// Draw attributes
 						{
 							// Compute size of all attributes (for nice alignment)
-							float minAttributeSize = internalNodeWidth;
-							for( uint attId = 0; attId < attributeCount; ++attId )
+							float minAttributeSize = kPreviewDisplayWidth;
+							for( const Node::Attribute& attribute : node->attributes() )
 							{
-								Node::Attribute& attribute = attributes[ attId ];
 								// Subtract label size if not hidden.
 								float attLabelSize = ImGui::CalcTextSize( attribute.name.c_str(), nullptr, true ).x;
-								if( attLabelSize != 0.f )
-								{
+								if( attLabelSize != 0.f ){
 									attLabelSize += ImGui::GetStyle().ItemInnerSpacing.x;
 								}
-								minAttributeSize = std::min( minAttributeSize, internalNodeWidth - attLabelSize );
+								minAttributeSize = std::min( minAttributeSize, kPreviewDisplayWidth - attLabelSize );
 							}
-							minAttributeSize = std::max( 0.F, minAttributeSize );
+							minAttributeSize = std::max( 0.f, minAttributeSize );
 
-							for( uint attId = 0; attId < attributeCount; ++attId )
-							{
-								Node::Attribute& attribute = attributes[ attId ];
+							for( Node::Attribute& attribute : node->attributes() ){
 
 								ImGui::PushItemWidth( minAttributeSize );
 								switch( attribute.type )
@@ -914,25 +906,28 @@ int main(int argc, char** argv){
 								ImGui::PopItemWidth();
 							}
 						}
-
 						ImGui::EndGroup();
+
 						// Draw all outputs
-						ImGui::SameLine();
+						ImGui::SameLine(0,0);
 						ImGui::BeginGroup();
 						{
-							const std::vector<std::string>& outputs = node->outputs();
-							const uint outputCount = outputs.size();
 							const bool multiChannel = node->channelCount() > 1;
-							for( uint attId = 0; attId < outputCount; ++attId )
-							{
-								const std::string& name = outputs[ attId ];
-								const float labelSize = TextIndexSize( name, multiChannel, smallFont->FontSize / defaultFont->FontSize ) + ImGui::GetStyle().IndentSpacing;
-								const float offset = std::max( 0.f, nodeWidth - labelSize );
+							uint slotId = 0u;
+							for( const std::string& name : node->outputs() ){
 
-								ImNodes::BeginOutputAttribute( fromOutputSlotToLink( { nodeId, attId } ) );
+								const float labelSize = TextIndexSize( name, multiChannel, smallFont->FontSize / defaultFont->FontSize );
+								const float offset = std::max( 0.f, kSlotLabelWidth - labelSize );
+
+								ImNodes::BeginOutputAttribute( fromOutputSlotToLink( { nodeId, slotId } ) );
+								ImGui::Indent(offset);
 								TextIndex( name, multiChannel, smallFont );
+								ImGui::Unindent();
 								ImNodes::EndOutputAttribute();
+								++slotId;
 							}
+							// Force group size.
+							ImGui::Dummy(ImVec2(kSlotLabelWidth, 0));
 						}
 						ImGui::EndGroup();
 
@@ -1248,8 +1243,7 @@ int main(int argc, char** argv){
 
 						ImGui::TableNextColumn();
 						if(node){
-							if( ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap ) )
-							{
+							if(ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap ) ){
 								uint nodeId = graph->findNode( node );
 								ImNodes::EditorContextMoveToNode( nodeId );
 								ImVec2 pan = ImNodes::EditorContextGetPanning();
