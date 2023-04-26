@@ -193,3 +193,35 @@ void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& i
 		context.stack[outputs[i]] = accum[i];
 	}
 }
+
+PickerNode::PickerNode(){
+	_name = "Color picker";
+	_description = "Read the color at a given pixel and broadcast it to all.";
+	_inputNames = {"M"};
+	_outputNames = {"N"};
+	_attributes = { {"x", Attribute::Type::FLOAT},  {"y", Attribute::Type::FLOAT}};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(PickerNode, NodeClass::PICKER, true, 1)
+
+void PickerNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(outputs.size() == _channelCount);
+	assert(inputs.size() == _channelCount);
+
+	// Everyone will read from the same coords.
+	const int x = int(_attributes[0].flt);
+	const int y = int(_attributes[1].flt);
+	const glm::ivec2 coords = glm::clamp( glm::ivec2(x,y), {0, 0}, context.shared->dims - 1);
+
+	for(uint i = 0u; i < _channelCount; ++i){
+		const uint srcId = inputs[i];
+		const uint dstId = outputs[i];
+
+		const uint imageId = srcId / 4u;
+		const uint channelId = srcId % 4u;
+
+		const Image& src = context.shared->tmpImagesRead[imageId];
+		context.stack[dstId] = src.pixel(coords)[channelId];
+	}
+}
