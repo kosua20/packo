@@ -803,6 +803,18 @@ int main(int argc, char** argv){
 					for(const uint nodeId : nodes){
 						 Node* node = graph->node(nodeId);
 
+						 // Very specific case
+						if( node->type() == NodeClass::COMMENT ){
+							ImNodes::BeginNode( nodeId );
+							Node::Attribute& att = node->attributes()[ 0 ];
+							// TODO: count number of carriage returns and adjust size magically
+							// TODO: support larger strings
+							// TODO: handle spac eproperly with palette
+							ImGui::InputTextMultiline( "##Comment", att.str, MAX_STR_LENGTH, ImVec2( kNodeInternalWidth, 3.f * ImGui::GetTextLineHeightWithSpacing() ), ImGuiInputTextFlags_NoHorizontalScroll );
+							ImNodes::EndNode();
+							continue;
+						}
+
 						const bool nodeHasIssue = errorContext.contains(node);
 						if(nodeHasIssue){
 							ImNodes::PushColorStyle(ImNodesCol_TitleBar, errorTitleBar);
