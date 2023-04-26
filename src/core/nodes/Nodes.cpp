@@ -59,6 +59,8 @@ Node* createNode(NodeClass type){
 			return new LessNode();
 		case MIX:
 			return new MixNode();
+		case COMMENT:
+			return new CommentNode();
 		default:
 			assert(false);
 			break;
@@ -71,7 +73,7 @@ const std::string& getNodeName(NodeClass type){
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
-		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate",
+		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -85,7 +87,7 @@ NodeClass getOrderedType(uint i){
 		// Inputs outputs
 		INPUT_IMG, OUTPUT_IMG,
 		// Constants
-		CONST_FLOAT, CONST_COLOR,
+		CONST_FLOAT, CONST_COLOR, COMMENT,
 		// Random
 		RANDOM_FLOAT, RANDOM_COLOR,
 		// Math

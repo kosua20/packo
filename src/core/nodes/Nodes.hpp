@@ -5,6 +5,7 @@
 #include "core/nodes/GenerativeNodes.hpp"
 #include "core/nodes/GlobalNodes.hpp"
 #include "core/nodes/BooleanNodes.hpp"
+#include "core/nodes/HelperNodes.hpp"
 
 enum NodeClass : uint {
 	INPUT_IMG = 0,
@@ -35,6 +36,7 @@ enum NodeClass : uint {
 	GREATER,
 	LESSER,
 	MIX,
+	COMMENT,
 	COUNT_EXPOSED,
 	INTERNAL_BACKUP,
 	INTERNAL_RESTORE,
