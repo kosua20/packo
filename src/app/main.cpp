@@ -18,6 +18,7 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 #include <imnodes/imnodes.h>
+#include "app/ImGuiHelpers.hpp"
 
 #include <json/json.hpp>
 
@@ -914,7 +915,7 @@ int main(int argc, char** argv){
 										editedGraph |= ImGui::ColorPicker4( attribute.name.c_str(), &attribute.clr[ 0 ], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_DisplayHex | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_NoSmallPreview );
 										break;
 									case Node::Attribute::Type::STRING:
-										editedGraph |= ImGui::InputText( attribute.name.c_str(), &attribute.str[ 0 ], MAX_STR_LENGTH );
+										editedGraph |= ImGui::InputText( attribute.name.c_str(), &(attribute.str) );
 										break;
 									case Node::Attribute::Type::COMBO:
 										editedGraph |= ImGui::Combo( attribute.name.c_str(), &attribute.cmb, &getAttributeComboItem, &attribute, attribute.values.size() );

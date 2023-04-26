@@ -12,7 +12,7 @@ Node::Attribute::Attribute( const std::string& aname, Type atype ) : name(aname)
 	flt = 0.f;
 	cmb = 0;
 	bln = false;
-	memset( str, 0, sizeof( str ) );
+	str = "";
 }
 
 Node::Attribute::Attribute( const std::string& aname, const std::vector<std::string>& avalues ) : name(aname), values(avalues), type( Type::COMBO )
@@ -21,7 +21,7 @@ Node::Attribute::Attribute( const std::string& aname, const std::vector<std::str
 	flt = 0.f;
 	cmb = 0;
 	bln = false;
-	memset( str, 0, sizeof( str ) );
+	str = "";
 }
 
 Node::Attribute::~Attribute() {}
@@ -77,7 +77,7 @@ void Node::serialize(json& data) const {
 				}
 				break;
 			case Node::Attribute::Type::STRING:
-				attrData["str"] = std::string(att.str);
+				attrData["str"] = att.str;
 				break;
 			case Node::Attribute::Type::COMBO:
 				attrData["cmb"] = att.cmb;
@@ -141,14 +141,9 @@ bool Node::deserialize(const json& data){
 				}
 				break;
 			case Node::Attribute::Type::STRING:
-			{
 				if(attrData.contains("str")){
-					std::string rawStr = attrData["str"];
-					const uint copySize = (std::min)((uint)rawStr.size(), MAX_STR_LENGTH-1);
-					memcpy(att.str, rawStr.data(), copySize);
-					att.str[copySize] = '\0';
+					att.str = attrData["str"];
 				}
-			}
 				break;
 			case Node::Attribute::Type::COMBO:
 				if(attrData.contains("cmb")){

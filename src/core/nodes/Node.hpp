@@ -4,8 +4,6 @@
 
 #include <vector>
 
-constexpr unsigned int MAX_STR_LENGTH = 256;
-
 struct SharedContext {
 	std::vector<Image> inputImages;
 	std::vector<Image> outputImages;
@@ -36,8 +34,8 @@ public:
 		std::string name;
 		std::vector<std::string> values;
 		Type type;
-
-		char str[ MAX_STR_LENGTH ];
+		
+		std::string str;
 		glm::vec4 clr;
 		float flt;
 		int cmb;
