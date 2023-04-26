@@ -775,7 +775,7 @@ int main(int argc, char** argv){
 				}
 				ImGui::EndChild();
 			}
-
+			bool editingTextField = false;
 			ImGui::SameLine();
 			{
 				ImGui::BeginChild( "Editor", ImVec2( editorWindowWidth, 0 ) );
@@ -811,6 +811,8 @@ int main(int argc, char** argv){
 							// TODO: support larger strings
 							// TODO: handle spac eproperly with palette
 							ImGui::InputTextMultiline( "##Comment", att.str, MAX_STR_LENGTH, ImVec2( kNodeInternalWidth, 3.f * ImGui::GetTextLineHeightWithSpacing() ), ImGuiInputTextFlags_NoHorizontalScroll );
+							editingTextField |= ImGui::IsItemActive();
+
 							ImNodes::EndNode();
 							continue;
 						}
@@ -1104,7 +1106,10 @@ int main(int argc, char** argv){
 					}
 
 					bool focusTextField = false;
-					if(ImGui::IsMouseClicked(ImGuiMouseButton_Right) || ImGui::IsKeyReleased(ImGuiKey_Space)){
+					const bool canOpenPopup = !ImGui::IsPopupOpen("Create node");
+					const bool clickedForPopup = ImGui::IsMouseClicked(ImGuiMouseButton_Right);
+					const bool typedForPopup = !editingTextField && ImGui::IsKeyReleased(ImGuiKey_Space);
+					if(canOpenPopup && (clickedForPopup || typedForPopup)){
 						ImGui::OpenPopup( "Create node" );
 						// Save position for placing the new node on screen.
 						mouseRightClick = ImGui::GetMousePos();
