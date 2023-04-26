@@ -462,8 +462,7 @@ int main(int argc, char** argv){
 	std::unordered_map<const Node*, GLuint> texturesToPurge;
 
 	bool anyPopupOpen = false;
-	char searchStr[ 256 ];
-	memset( searchStr, 0, sizeof( searchStr ) );
+	std::string searchStr;
 	int seed = Random::getSeed();
 	std::vector<NodeClass> visibleNodeTypes;
 	int selectedNodeType = 0;
@@ -1147,7 +1146,7 @@ int main(int argc, char** argv){
 						mouseRightClick = ImGui::GetMousePos();
 						focusTextField = true;
 						// All types visible by default
-						searchStr[ 0 ] = '\0';
+						searchStr = "";
 						visibleNodeTypes.resize(NodeClass::COUNT_EXPOSED);
 						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
 							visibleNodeTypes[i] = getOrderedType(i);
@@ -1198,16 +1197,16 @@ int main(int argc, char** argv){
 
 						if( focusTextField )
 							ImGui::SetKeyboardFocusHere();
-						if(ImGui::InputText( "##SearchField", searchStr, sizeof( searchStr ), ImGuiInputTextFlags_AutoSelectAll , nullptr, nullptr)){
+						if(ImGui::InputText( "##SearchField", &searchStr, ImGuiInputTextFlags_AutoSelectAll)){
 							// Refresh selection.
-							const std::string searchStrLow = TextUtilities::lowercase( std::string( searchStr ) );
+							const std::string searchStrLow = TextUtilities::lowercase(searchStr);
 							visibleNodeTypes.clear();
 							visibleNodeTypes.reserve(NodeClass::COUNT_EXPOSED);
 							// Filter visible types.
 							for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
 								const NodeClass type = getOrderedType(i);
-								const std::string labelLow = TextUtilities::lowercase( getNodeName(type) );
-								if( labelLow.find( searchStrLow ) == std::string::npos )
+								const std::string labelLow = TextUtilities::lowercase(getNodeName(type));
+								if(labelLow.find(searchStrLow) == std::string::npos)
 									continue;
 								visibleNodeTypes.push_back(type);
 							}
@@ -1217,10 +1216,10 @@ int main(int argc, char** argv){
 						}
 						ImGui::PopItemWidth();
 
-						for( uint i = 0; i < columnItemsHeight; ++i){
+						for( int i = 0; i < columnItemsHeight; ++i){
 							// Split in multiple columns.
-							for( uint c = 0; c < columnCount; ++c ){
-								const uint index = c * columnItemsHeight + i;
+							for( int c = 0; c < columnCount; ++c ){
+								const int index = c * columnItemsHeight + i;
 								if( index >= visibleTypesCount ){
 									break;
 								}

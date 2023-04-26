@@ -13,4 +13,7 @@ NODE_DEFINE_TYPE_AND_VERSION( CommentNode, NodeClass::COMMENT, false, 1)
 void CommentNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
 	assert(outputs.size() == 0u);
+	(void)context;
+	(void)inputs;
+	(void)outputs;
 }
