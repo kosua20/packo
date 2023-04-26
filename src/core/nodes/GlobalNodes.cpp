@@ -19,8 +19,8 @@ void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 	const bool horizontal = _attributes[0].cmb == 0;
 	const int x = context.coords.x;
 	const int y = context.coords.y;
-	const int xOld =  horizontal ? (context.shared->dims.x - x - 1) : x;
-	const int yOld = !horizontal ? (context.shared->dims.y - y - 1) : y;
+	const int xOld = !horizontal ? (context.shared->dims.x - x - 1) : x;
+	const int yOld =  horizontal ? (context.shared->dims.y - y - 1) : y;
 
 	for(uint i = 0u; i < _channelCount; ++i){
 		const uint srcId = inputs[i];
