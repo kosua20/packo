@@ -461,10 +461,6 @@ int main(int argc, char** argv){
 	std::unordered_map<const Node*, GLuint> textures;
 	std::unordered_map<const Node*, GLuint> texturesToPurge;
 
-	// tmp
-	inputDirectory  = "C:/Users/s-rodriguez/Documents/Personnel/packo/ext/in";
-	outputDirectory = "C:/Users/s-rodriguez/Documents/Personnel/packo/ext/out";
-	//
 	bool anyPopupOpen = false;
 	char searchStr[ 256 ];
 	memset( searchStr, 0, sizeof( searchStr ) );
