@@ -358,6 +358,34 @@ void TextIndex(const std::string& str, bool multiChannel, ImFont* font){
 	ImGui::PopFont();
 }
 
+struct TextInfo {
+	const std::string& str;
+	float width = 0.f;
+};
+
+int commentTextCallback(ImGuiInputTextCallbackData* data){
+	if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
+		TextInfo& info = *(TextInfo*)(data->UserData);
+		// Find the previous line begin
+		std::string::size_type pos = info.str.find_last_of('\n', data->CursorPos);
+		if(pos == std::string::npos){
+			pos = 0;
+		} else {
+			++pos;
+		}
+
+		if(int(pos) <= data->CursorPos){
+			const char* strStart = info.str.data();
+			float width = ImGui::CalcTextSize(strStart + pos, strStart + data->CursorPos ).x;
+			if(width >= info.width ){
+				data->InsertChars(data->CursorPos - 1, "\n");
+			}
+		}
+		return 0;
+	}
+	return 0;
+}
+
 
 int main(int argc, char** argv){
 
@@ -799,7 +827,9 @@ int main(int argc, char** argv){
 						}
 					}
 					createdNodes.clear();
-					
+
+					const float safetyMargin = ImGui::CalcTextSize("M").x;
+
 					GraphNodes nodes(*graph);
 					for(const uint nodeId : nodes){
 						 Node* node = graph->node(nodeId);
@@ -808,10 +838,15 @@ int main(int argc, char** argv){
 						if( node->type() == NodeClass::COMMENT ){
 							ImNodes::BeginNode( nodeId );
 							Node::Attribute& att = node->attributes()[ 0 ];
-							// TODO: count number of carriage returns and adjust size magically
-							// TODO: support larger strings
-							// TODO: handle spac eproperly with palette
-							ImGui::InputTextMultiline( "##Comment", att.str, MAX_STR_LENGTH, ImVec2( kNodeInternalWidth, 3.f * ImGui::GetTextLineHeightWithSpacing() ), ImGuiInputTextFlags_NoHorizontalScroll );
+							// Count line returns.
+							uint lineCount = 1;
+							for(char c : att.str){
+								if(c == '\n')
+									++lineCount;
+							}
+							const ImVec2 fieldSize(kNodeInternalWidth, (float(lineCount) + 1.5f) * ImGui::GetTextLineHeight() );
+							TextInfo commentInfo{att.str.c_str(), fieldSize.x - safetyMargin };
+							ImGui::InputTextMultiline( "##Comment", &(att.str), fieldSize, ImGuiInputTextFlags_CallbackEdit, &commentTextCallback, (void*)&commentInfo);
 							editingTextField |= ImGui::IsItemActive();
 
 							ImNodes::EndNode();
