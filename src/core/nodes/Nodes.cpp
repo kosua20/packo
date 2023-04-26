@@ -61,6 +61,10 @@ Node* createNode(NodeClass type){
 			return new MixNode();
 		case COMMENT:
 			return new CommentNode();
+		case LOG:
+			return new LogNode();
+		case PICKER:
+			return new PickerNode();
 		default:
 			assert(false);
 			break;
@@ -73,7 +77,7 @@ const std::string& getNodeName(NodeClass type){
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
-		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment",
+		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -86,10 +90,10 @@ NodeClass getOrderedType(uint i){
 	static const std::vector<NodeClass> classes = {
 		// Inputs outputs
 		INPUT_IMG, OUTPUT_IMG,
-		// Constants
-		CONST_FLOAT, CONST_COLOR, COMMENT,
-		// Random
-		RANDOM_FLOAT, RANDOM_COLOR,
+		// Scalars
+		CONST_FLOAT, RANDOM_FLOAT,
+		// Colors
+		CONST_COLOR, RANDOM_COLOR, PICKER,
 		// Math
 		ADD, SUBTRACT, PRODUCT, DIVIDE, POWER, SQRT, EXPONENTIAL, LOGARITHM,
 		MINI, MAXI, CLAMP, MIX,
@@ -97,6 +101,8 @@ NodeClass getOrderedType(uint i){
 		SELECT, EQUAL, DIFFERENT, NOT, GREATER, LESSER,
 		// Global
 		FLIP, TILE, ROTATE, GAUSSIAN_BLUR,
+		// Helpers
+		COMMENT, LOG
 	};
 	assert(classes.size() == NodeClass::COUNT_EXPOSED);
 	assert(i < classes.size());
