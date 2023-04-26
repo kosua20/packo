@@ -10,3 +10,11 @@ public:
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
+class LogNode : public Node {
+public:
+
+	LogNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
