@@ -220,3 +220,136 @@ void MixNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 		context.stack[outputs[i]] = glm::mix(context.stack[inputs[i]], context.stack[inputs[i+_channelCount]], context.stack[inputs[i+2*_channelCount]]);
 	}
 }
+
+SinNode::SinNode(){
+	_name = "Sine";
+	_description = "M=sin(X)";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(SinNode, NodeClass::SINE, true, 1)
+
+void SinNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::sin(context.stack[inputs[i]]);
+	}
+}
+
+CosNode::CosNode(){
+	_name = "Cosine";
+	_description = "M=cos(X)";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(CosNode, NodeClass::COSINE, true, 1)
+
+void CosNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::cos(context.stack[inputs[i]]);
+	}
+}
+
+TanNode::TanNode(){
+	_name = "Tangent";
+	_description = "M=tan(X)";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(TanNode, NodeClass::TANGENT, true, 1)
+
+void TanNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::tan(context.stack[inputs[i]]);
+	}
+}
+
+ArcSinNode::ArcSinNode(){
+	_name = "Arc Sine";
+	_description = "M=asin(X)";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(ArcSinNode, NodeClass::ARCSINE, true, 1)
+
+void ArcSinNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::asin(context.stack[inputs[i]]);
+	}
+}
+
+ArcCosNode::ArcCosNode(){
+	_name = "Arc Cosine";
+	_description = "M=acos(X)";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(ArcCosNode, NodeClass::ARCCOSINE, true, 1)
+
+void ArcCosNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::acos(context.stack[inputs[i]]);
+	}
+}
+
+ArcTanNode::ArcTanNode(){
+	_name = "Tangent";
+	_description = "M=atan(X)";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(ArcTanNode, NodeClass::ARCTANGENT, true, 1)
+
+void ArcTanNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::atan(context.stack[inputs[i]]);
+	}
+}
+
+DotProductNode::DotProductNode(){
+	_name = "Dot product";
+	_description = "M=dot(X,Y)";
+	_inputNames = {"X", "Y"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(DotProductNode, NodeClass::DOT, true, 1)
+
+void DotProductNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 2 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+
+	float dot = 0.f;
+	for(uint i = 0; i < _channelCount; ++i){
+		const float y = context.stack[inputs[i + _channelCount]];
+		const float x = context.stack[inputs[i]];
+		dot += x * y;
+	}
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = dot;
+	}
+}

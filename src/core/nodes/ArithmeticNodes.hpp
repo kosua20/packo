@@ -102,3 +102,58 @@ public:
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
+class SinNode : public Node {
+public:
+
+	SinNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class CosNode : public Node {
+public:
+
+	CosNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class TanNode : public Node {
+public:
+
+	TanNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class ArcSinNode : public Node {
+public:
+
+	ArcSinNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class ArcCosNode : public Node {
+public:
+
+	ArcCosNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class ArcTanNode : public Node {
+public:
+
+	ArcTanNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class DotProductNode : public Node {
+public:
+
+	DotProductNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};

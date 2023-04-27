@@ -67,6 +67,20 @@ Node* createNode(NodeClass type){
 			return new PickerNode();
 		case GRADIENT:
 			return new GradientNode();
+		case SINE:
+			return new SinNode();
+		case COSINE:
+			return new CosNode();
+		case TANGENT:
+			return new TanNode();
+		case ARCSINE:
+			return new ArcSinNode();
+		case ARCCOSINE:
+			return new ArcCosNode();
+		case ARCTANGENT:
+			return new ArcTanNode();
+		case DOT:
+			return new DotProductNode();
 		default:
 			assert(false);
 			break;
@@ -80,6 +94,7 @@ const std::string& getNodeName(NodeClass type){
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
+		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -98,7 +113,9 @@ NodeClass getOrderedType(uint i){
 		CONST_COLOR, RANDOM_COLOR, PICKER,
 		// Math
 		ADD, SUBTRACT, PRODUCT, DIVIDE, POWER, SQRT, EXPONENTIAL, LOGARITHM,
-		MINI, MAXI, CLAMP, MIX,
+		MINI, MAXI, CLAMP, MIX, DOT,
+		// Trigo
+		COSINE, SINE, TANGENT, ARCCOSINE, ARCSINE, ARCTANGENT,
 		// Comparisons
 		SELECT, EQUAL, DIFFERENT, NOT, GREATER, LESSER,
 		// Global
