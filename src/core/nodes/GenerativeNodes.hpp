@@ -33,3 +33,11 @@ public:
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
+
+class GradientNode : public Node {
+public:
+
+	GradientNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};

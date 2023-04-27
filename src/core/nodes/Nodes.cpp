@@ -65,6 +65,8 @@ Node* createNode(NodeClass type){
 			return new LogNode();
 		case PICKER:
 			return new PickerNode();
+		case GRADIENT:
+			return new GradientNode();
 		default:
 			assert(false);
 			break;
@@ -77,7 +79,7 @@ const std::string& getNodeName(NodeClass type){
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
-		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color",
+		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -91,7 +93,7 @@ NodeClass getOrderedType(uint i){
 		// Inputs outputs
 		INPUT_IMG, OUTPUT_IMG,
 		// Scalars
-		CONST_FLOAT, RANDOM_FLOAT,
+		CONST_FLOAT, RANDOM_FLOAT, GRADIENT,
 		// Colors
 		CONST_COLOR, RANDOM_COLOR, PICKER,
 		// Math

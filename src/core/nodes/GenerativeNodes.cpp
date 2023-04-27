@@ -71,3 +71,29 @@ void RandomColorNode::evaluate(LocalContext& context, const std::vector<int>& in
 		context.stack[outputs[i]] = rgba[i];
 	}
 }
+
+GradientNode::GradientNode(){
+	_name = "Gradient";
+	_description = "Gradient in X, Y directions, radial and angular";
+	_outputNames = { "X", "Y", "R", "T" };
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(GradientNode, NodeClass::GRADIENT, false, 1)
+
+void GradientNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 0u);
+	assert(outputs.size() == 4u);
+
+	const glm::vec2 uv = (glm::vec2(context.coords) + 0.5f) / glm::vec2(context.shared->dims);
+	const glm::vec2 ndc = 2.f * uv - 1.0f;
+	const float radius = glm::min(glm::length(ndc), 1.f);
+	float angle = ndc.x == 0.f ? glm::sign(ndc.y) * glm::half_pi<float>() : glm::atan(ndc.y, ndc.x);
+	angle = angle / glm::pi<float>() * 0.5f + 0.5f;
+
+	const glm::vec4 result(uv.x, uv.y, radius, angle);
+
+	for (uint i = 0u; i < 4u; ++i) {
+		context.stack[outputs[i]] = result[i];
+	}
+}
