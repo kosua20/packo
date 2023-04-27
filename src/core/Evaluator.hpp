@@ -51,8 +51,8 @@ public:
 	std::vector<const Node*> inputs;
 	std::vector<const Node*> outputs;
 	uint stackSize{0u};
-	uint firstDummyRegister{0u};
 	uint tmpImageCount{0u};
+	int firstDummyRegister{0u};
 
 	void collectInputsAndOutputs();
 

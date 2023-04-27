@@ -405,7 +405,7 @@ public:
 
 		}
 		uint stackSize = (uint)(maxRegister + 1);
-		const uint firstDummyRegister = stackSize;
+		const int firstDummyRegister = stackSize;
 		const uint countDummyRegister = optimize ? 1u : 4u;
 		compiledGraph.stackSize = stackSize + countDummyRegister;
 		compiledGraph.firstDummyRegister = stackSize;
