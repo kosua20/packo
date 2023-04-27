@@ -210,9 +210,9 @@ void PickerNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 	assert(inputs.size() == _channelCount);
 
 	// Everyone will read from the same coords.
-	const int x = int(_attributes[0].flt);
-	const int y = int(_attributes[1].flt);
-	const glm::ivec2 coords = glm::clamp( glm::ivec2(x,y), {0, 0}, context.shared->dims - 1);
+	glm::vec2 xy( _attributes[ 0 ].flt, _attributes[ 1 ].flt );
+	xy *= context.shared->scale;
+	const glm::ivec2 coords = glm::clamp( glm::ivec2(xy), {0, 0}, context.shared->dims - 1);
 
 	for(uint i = 0u; i < _channelCount; ++i){
 		const uint srcId = inputs[i];

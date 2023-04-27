@@ -675,8 +675,14 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 		sharedContext.inputImages[i].load(batch.inputs[i]);
 	}
 	// Check that all images have the same size.
-	sharedContext.dims = forceRes ? fallbackRes : computeOutputResolution(sharedContext.inputImages, fallbackRes);
+	const glm::ivec2 minRes = computeOutputResolution( sharedContext.inputImages, fallbackRes );
+	sharedContext.dims = minRes;
+	sharedContext.scale = { 1.f, 1.f };
+
 	if(forceRes){
+		sharedContext.dims = fallbackRes;
+		sharedContext.scale = glm::vec2( fallbackRes ) / glm::max( glm::vec2( minRes ), { 1.f, 1.f } );
+
 		for(uint i = 0u; i < inputCountInBatch; ++i){
 			sharedContext.inputImages[i].resize(sharedContext.dims);
 		}

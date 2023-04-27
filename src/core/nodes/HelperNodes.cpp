@@ -35,11 +35,13 @@ void LogNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 	assert(outputs.size() == _channelCount);
 	assert(_channelCount <= 4);
 
-	const int x = int(_attributes[0].flt); // TODO: preview resolution independent.
-	const int y = int(_attributes[1].flt);
+
+	glm::vec2 xy( _attributes[ 0 ].flt, _attributes[ 1 ].flt );
+	xy *= context.shared->scale;
+	const glm::ivec2 coords = glm::clamp( glm::ivec2( xy ), { 0, 0 }, context.shared->dims - 1 );
 
 	// The pixel will copy its content to the read-only attribute.
-	if((x == context.coords.x) && (y == context.coords.y)){
+	if( coords == context.coords){
 		glm::vec4 color(0.0f);
 		for(uint i = 0; i < _channelCount; ++i){
 			color[i] = context.stack[inputs[i]];
@@ -53,7 +55,6 @@ void LogNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 		context.stack[outputs[i]] = context.stack[inputs[i]];
 	}
 
-	const glm::ivec2 coords(x,y);
 	const glm::vec2 delta = context.coords - coords;
 	const float dist2 = glm::dot(delta, delta);
 	const float kRadiusMax = 10.0f;

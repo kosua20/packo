@@ -10,6 +10,7 @@ struct SharedContext {
 	std::vector<Image> tmpImagesRead;
 	std::vector<Image> tmpImagesWrite;
 	glm::ivec2 dims;
+	glm::vec2 scale;
 };
 
 struct LocalContext {
