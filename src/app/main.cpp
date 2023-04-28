@@ -1040,22 +1040,29 @@ int main(int argc, char** argv){
 					}
 
 					int dropId;
-					if( ImNodes::IsLinkDropped( &dropId, false ) && altModifierHeld ){
+					if(ImNodes::IsLinkDropped(&dropId, false) && altModifierHeld){
 						bool isInput = false;
-						Graph::Slot slot = fromLinkToSlot( dropId, isInput );
-						if( isInput ){
+						const Graph::Slot pin = fromLinkToSlot(dropId, isInput);
+						if(isInput){
 							// Create a constant node and link it.
-							Node* createdNode = createNode( shftModifier ? NodeClass::CONST_COLOR : NodeClass::CONST_FLOAT );
+							Node* createdNode = createNode( shftModifierHeld ? NodeClass::CONST_COLOR : NodeClass::CONST_FLOAT );
 							const uint newNodeId = editor.addNode( createdNode );
 							// Register for placement at next frame.
 							createdNodes.push_back( createdNode );
-							// Save position for placing the new node on screen.
 							mouseRightClick = ImGui::GetMousePos();
-							if( shftModifier ){
-								/: TODO: autolink four channels if possible.
-								editor.addLink( newNodeId, 0, slot.node, slot.slot );
-							} else {
-								editor.addLink( newNodeId, 0, slot.node, slot.slot );
+							// Shift position to have the end link placed approximately at the mouse.
+							mouseRightClick.x -= kNodeTotalWidth;
+							mouseRightClick.y -= 2.f * ImGui::GetTextLineHeightWithSpacing();
+
+							editor.addLink( newNodeId, 0, pin.node, pin.slot );
+							if(shftModifierHeld){
+								// Autolink four channels if possible.
+								const Node* const toNode = graph->node( pin.node );
+								const uint toCount = toNode->inputs().size();
+								const uint maxCommonSlots = (std::min)( 4u, toCount - pin.slot );
+								for(uint i = 1; i < maxCommonSlots; ++i){
+									editor.addLink(newNodeId, i, pin.node, pin.slot + i);
+								}
 							}
 							
 						}
