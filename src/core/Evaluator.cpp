@@ -567,6 +567,33 @@ void CompiledGraph::clearInternalNodes(){
 	}
 }
 
+CompiledGraph::CompiledGraph(const CompiledGraph& other){
+	nodes = other.nodes;
+	inputs = other.inputs;
+	outputs = other.outputs;
+	stackSize = other.stackSize;
+	tmpImageCount = other.tmpImageCount;
+	firstDummyRegister = other.firstDummyRegister;
+	// We need to clone internal nodes.
+	std::unordered_map<const Node*, const Node*> newNodes;
+	for(CompiledNode& node : nodes){
+		if(node.node && node.node->type() >= NodeClass::COUNT_EXPOSED){
+			switch(node.node->type()){
+				case INTERNAL_BACKUP:
+					node.node = new BackupNode();
+					break;
+				case INTERNAL_RESTORE:
+					node.node = new RestoreNode();
+					break;
+				default:
+					assert(false);
+					break;
+			}
+			// Internal nodes have no attributes or channels to copy.
+		}
+	}
+}
+
 CompiledGraph::~CompiledGraph(){
 	clearInternalNodes();
 }
@@ -577,8 +604,10 @@ bool generateBatches(const std::vector<const Node*>& inputs, const std::vector<c
 	const uint inputCount = inputs.size();
 	const uint outputCount = outputs.size();
 	const uint pathCount = inputPaths.size();
-	const uint batchCount = std::max(pathCount, 1u) / std::max(inputCount, 1u);
-
+	const uint batchCount = (inputCount == 0u && pathCount == 0u) ? 1u : (pathCount / std::max(inputCount, 1u));
+	if(batchCount == 0u){
+		return false;
+	}
 	// Check that we have the correct number of input paths
 	if(batchCount * std::max(inputCount, 1u) != std::max(pathCount, 1u)){
 		return false;
@@ -829,6 +858,10 @@ bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const st
 		return false;
 	}
 
+	if(outputDir.empty()){
+		errors.addError("Not output directory specified.");
+		return false;
+	}
 	// Populate batches with file info.
 	std::vector<Batch> batches;
 

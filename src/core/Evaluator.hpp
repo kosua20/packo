@@ -47,6 +47,13 @@ struct CompiledNode {
 
 class CompiledGraph {
 public:
+	CompiledGraph() = default;
+	
+	CompiledGraph(const CompiledGraph& other);
+	CompiledGraph(CompiledGraph&& other) = delete;
+	CompiledGraph& operator=(const CompiledGraph& other) = delete;
+	CompiledGraph& operator=(CompiledGraph&& other) = delete;
+
 	std::vector<CompiledNode> nodes;
 	std::vector<const Node*> inputs;
 	std::vector<const Node*> outputs;
