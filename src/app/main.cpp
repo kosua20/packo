@@ -162,7 +162,7 @@ GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont)
 	style.GrabMinSize = 18;
 	style.FrameBorderSize = 0;
 	style.WindowBorderSize = 0;
-	style.FrameRounding = 4;
+	style.FrameRounding = 12;
 	style.GrabRounding = 12;
 	style.PopupBorderSize = 0;
 	style.PopupRounding = 4;
@@ -721,6 +721,12 @@ int main(int argc, char** argv){
 					}
 					evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, {64, 64}, showProgress);
 				}
+				ImGui::SameLine(inputsWindowWidth - 30.f);
+				ImGui::TextDisabled("(?)");
+				if(ImGui::IsItemHovered()){
+					ImGui::SetTooltip( "Space or Right click: open node palette\nAlt+click: pan around\nWhen dragging from a pin:\n Ctrl: delete link\n Shift: create multiple consecutive links if possible\n Alt: automatically create a constant input node");
+				}
+
 				if(showProgress >= 0){
 					ImGui::ProgressBar(float(showProgress) / float(kProgressCostGranularity));
 				}
@@ -729,44 +735,38 @@ int main(int argc, char** argv){
 				const std::string outputDirStr = outputDirectory.string();
 				
 				ImGui::Text( "Output:" ); ImGui::SameLine();
-				if( ImGui::SmallButton( "...##output" ) )
-				{
+				if(ImGui::SmallButton("Select...##output")){
 					char* rawPath = nullptr;
-					if( sr_gui_ask_directory( "Output directory", "", &rawPath ) == SR_GUI_VALIDATED )
-					{
-						if( rawPath )
-						{
+					if(sr_gui_ask_directory("Output directory", "", &rawPath) == SR_GUI_VALIDATED){
+						if(rawPath){
 							outputDirectory = rawPath;
-							free( rawPath );
+							free(rawPath);
 						}
 					}
 				}
 				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
 
 				ImGui::Text( "Input:" ); ImGui::SameLine(); 
-				if( ImGui::SmallButton( "...##input" ) )
-				{
+				if(ImGui::SmallButton("Select...##input")){
 					char* rawPath = nullptr;
-					if( sr_gui_ask_directory( "Input directory", "", &rawPath ) == SR_GUI_VALIDATED )
-					{
-						if( rawPath )
-						{
+					if(sr_gui_ask_directory("Input directory", "", &rawPath) == SR_GUI_VALIDATED){
+						if(rawPath){
 							inputDirectory = rawPath;
 							// Force refresh
 							timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
-							free( rawPath );
+							free(rawPath);
 						}
 					}
 				}
 				ImGui::TextWrapped( "%s", inputDirStr.c_str());
 
-				if(ImGui::SmallButton("Select all")){
+				if(ImGui::Button("Select all")){
 					for(InputFile& file : inputFiles ){
 						file.active = true;
 					}
 				}
 				ImGui::SameLine();
-				if(ImGui::SmallButton("Select none")){
+				if(ImGui::Button("Select none")){
 					for(InputFile& file : inputFiles ){
 						file.active = false;
 					}
@@ -809,7 +809,10 @@ int main(int argc, char** argv){
 
 				// Graph viewer.
 				{
+					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
+
 					ImNodes::BeginNodeEditor();
+
 					// Allowing unplugging of links conflicts with multiple outputs
 					ImNodes::PushAttributeFlag( 0 /*ImNodesAttributeFlags_EnableLinkDetachWithDragClick*/ );
 
@@ -882,7 +885,7 @@ int main(int argc, char** argv){
 							}
 							ImGui::SameLine(kPreviewDisplayWidth + kSlotLabelWidth * 1.1f);
 							ImGui::Bullet();
-							if( ImGui::IsItemHovered(  )){
+							if( ImGui::IsItemHovered()){
 								ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10,10));
 								ImGui::SetTooltip( "%s", node->description().c_str());
 								ImGui::PopStyleVar();
@@ -1005,6 +1008,8 @@ int main(int argc, char** argv){
 					ImNodes::MiniMap(0.2f, ImNodesMiniMapLocation_TopRight);
 					ImNodes::PopAttributeFlag();
 					ImNodes::EndNodeEditor();
+
+					ImGui::PopStyleVar();
 
 					if( needAutoLayout ){
 						autoLayout( *graph );
