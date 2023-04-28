@@ -1392,12 +1392,15 @@ int main(int argc, char** argv){
 		}
 
 		needsPreviewRefresh |= editedGraph || editedInputList;
-		if( needsPreviewRefresh && !inputFiles.empty() && showPreview){
+
+		if( needsPreviewRefresh && showPreview){
 			CompiledGraph compiledGraph;
 			ErrorContext dummyContext;
 			bool res = compile(*graph, false, dummyContext, compiledGraph);
 			// TODO: when errors or unused nodes, do something to give feedback to the user.
-			if(res){
+			const uint inputCount = compiledGraph.inputs.size();
+			const bool hasEnoughInputsForPreview = inputCount == 0u || !inputFiles.empty();
+			if(res && hasEnoughInputsForPreview){
 				// Defer purge by one frame because ImGui is keeping a reference to it for the current frame (partial evaluation?).
 				texturesToPurge = textures;
 				textures.clear();
@@ -1406,7 +1409,6 @@ int main(int argc, char** argv){
 				// Prepare a batch by hand
 				Batch batch;
 				// Find the N first selected inputs
-				const uint inputCount = compiledGraph.inputs.size();
 				for(const InputFile& input : inputFiles){
 					if(!input.active){
 						continue;
@@ -1416,10 +1418,13 @@ int main(int argc, char** argv){
 						break;
 					}
 				}
-				while(batch.inputs.size() < inputCount){
-					// Not enough input images, repeat the last one?
-					batch.inputs.push_back(batch.inputs.back());
+				if(!batch.inputs.empty()){
+					while(batch.inputs.size() < inputCount){
+						// Not enough input images, repeat the last one?
+						batch.inputs.push_back(batch.inputs.back());
+					}
 				}
+
 				// Dummy output names.
 				for(uint i = 0; i < compiledGraph.outputs.size(); ++i ){
 					Batch::Output& output = batch.outputs.emplace_back();
