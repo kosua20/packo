@@ -202,6 +202,8 @@ GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont)
 	nodesStyle.PinCircleRadius = 7.f;
 	nodesStyle.PinOffset = 0.0f;
 	nodesStyle.Flags = ImNodesStyleFlags_GridLines | ImNodesStyleFlags_NodeOutline;
+	nodesStyle.GridSpacing = 64.0f;
+
 	unsigned int* nodesColors = nodesStyle.Colors;
 	nodesColors[ ImNodesCol_NodeBackground ] = IM_COL32( 50, 50, 50, 255 );
 	nodesColors[ ImNodesCol_NodeBackgroundHovered ] = IM_COL32( 50, 50, 50, 255);
@@ -442,6 +444,7 @@ int main(int argc, char** argv){
 	bool needAutoLayout = true;
 	float inputsWindowWidth = (std::min)(300.0f, 0.25f * float(winW));
 	const float kSplitBarWidth = 8.0f;
+	const ImNodesPinShape kPinsShape = ImNodesPinShape_CircleFilled;
 
 	fs::path inputDirectory;
 	fs::path outputDirectory;
@@ -451,6 +454,7 @@ int main(int argc, char** argv){
 	const float kPreviewDisplayWidth = 128.f;
 	const float kSlotLabelWidth = 24.f;
 	const float kNodeInternalWidth = kPreviewDisplayWidth + 2.f * kSlotLabelWidth;
+	const float kNodeTotalWidth = kNodeInternalWidth + 2.f * ImNodes::GetStyle().NodePadding.x;
 
 	int previewQuality = 1;
 	bool showAlphaPreview = true;
@@ -547,28 +551,30 @@ int main(int argc, char** argv){
 					}
 
 					ImGui::Separator();
-					if( ImGui::MenuItem( "Show preview", "", &showPreview) ) {
-						if( !showPreview ){
-							texturesToPurge = textures;
-							textures.clear();
-						} else {
+
+					if(ImGui::BeginMenu("Settings")){
+
+						if( ImGui::MenuItem( "Show preview", "", &showPreview) ) {
+							if( !showPreview ){
+								texturesToPurge = textures;
+								textures.clear();
+							} else {
+								needsPreviewRefresh = true;
+							}
+						}
+						if(ImGui::MenuItem("Preview alpha grid", "", &showAlphaPreview)){
 							needsPreviewRefresh = true;
 						}
+						ImGui::PushItemWidth(130);
+						if(ImGui::Combo("Preview quality", &previewQuality, "High\0Medium\0Low\0")){
+							needsPreviewRefresh = true;
+						}
+						if(ImGui::InputInt("Random seed", &seed)){
+							Random::seed(seed);
+						}
+						ImGui::PopItemWidth();
+						ImGui::EndMenu();
 					}
-					if(ImGui::MenuItem("Preview alpha grid", "", &showAlphaPreview)){
-						needsPreviewRefresh = true;
-					}
-					ImGui::PushItemWidth(130);
-					if(ImGui::Combo("Preview quality", &previewQuality, "High\0Medium\0Low\0")){
-						needsPreviewRefresh = true;
-					}
-					ImGui::PopItemWidth();
-
-					ImGui::PushItemWidth(130);
-					if(ImGui::InputInt("Random seed", &seed)){
-						Random::seed(seed);
-					}
-					ImGui::PopItemWidth();
 
 					ImGui::Separator();
 					if(ImGui::MenuItem("Quit")){
@@ -891,7 +897,7 @@ int main(int argc, char** argv){
 						{
 							uint slotId = 0u;
 							for( const std::string& name : node->inputs() ){
-								ImNodes::BeginInputAttribute( fromInputSlotToLink( { nodeId, slotId } ) );
+								ImNodes::BeginInputAttribute( fromInputSlotToLink( { nodeId, slotId } ), kPinsShape);
 								TextIndex( name, multiChannel, smallFont );
 								ImNodes::EndInputAttribute();
 								++slotId;
@@ -969,7 +975,7 @@ int main(int argc, char** argv){
 								const float labelSize = TextIndexSize( name, multiChannel, smallFont->FontSize / defaultFont->FontSize );
 								const float offset = std::max( 0.f, kSlotLabelWidth - labelSize );
 
-								ImNodes::BeginOutputAttribute( fromOutputSlotToLink( { nodeId, slotId } ) );
+								ImNodes::BeginOutputAttribute( fromOutputSlotToLink( { nodeId, slotId } ), kPinsShape);
 								ImGui::Indent(offset);
 								TextIndex( name, multiChannel, smallFont );
 								ImGui::Unindent();
