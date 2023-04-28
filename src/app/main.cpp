@@ -1009,11 +1009,11 @@ int main(int argc, char** argv){
 
 #ifdef _MACOS
 				const bool ctrlModifierHeld = ImGui::GetIO().KeySuper;
-				const bool shftModifierHeld = ImGui::GetIO().KeyShift;
 #else
 				const bool ctrlModifierHeld = ImGui::GetIO().KeyCtrl;
-				const bool shftModifierHeld = ImGui::GetIO().KeyShift;
 #endif
+				const bool shftModifierHeld = ImGui::GetIO().KeyShift;
+				const bool altModifierHeld  = ImGui::GetIO().KeyAlt;
 
 				// Graph edition.
 				{
@@ -1034,17 +1034,24 @@ int main(int argc, char** argv){
 					}
 
 					int dropId;
-					if( ImNodes::IsLinkDropped( &dropId, false ) ){
+					if( ImNodes::IsLinkDropped( &dropId, false ) && altModifierHeld ){
 						bool isInput = false;
 						Graph::Slot slot = fromLinkToSlot( dropId, isInput );
-						// TODO: put behind ALT, and support shift with color node
 						if( isInput ){
 							// Create a constant node and link it.
-							Node* createdNode = createNode( NodeClass::CONST_FLOAT );
+							Node* createdNode = createNode( shftModifier ? NodeClass::CONST_COLOR : NodeClass::CONST_FLOAT );
 							const uint newNodeId = editor.addNode( createdNode );
 							// Register for placement at next frame.
 							createdNodes.push_back( createdNode );
-							editor.addLink( newNodeId, 0, slot.node, slot.slot );
+							// Save position for placing the new node on screen.
+							mouseRightClick = ImGui::GetMousePos();
+							if( shftModifier ){
+								/: TODO: autolink four channels if possible.
+								editor.addLink( newNodeId, 0, slot.node, slot.slot );
+							} else {
+								editor.addLink( newNodeId, 0, slot.node, slot.slot );
+							}
+							
 						}
 					}
 

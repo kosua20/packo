@@ -235,16 +235,23 @@ void GraphEditor::commit(){
 	_graph._links.erase(itg, _graph._links.end());
 
 	// Add all new nodes
-	std::unordered_map<uint, uint> futureToRealIndices;
+	std::unordered_map<uint, uint> futureIndices;
 	for(auto& nodeToAdd : _addedNodes){
-		// Update with the real index.
-		uint realId = _graph.addNode(nodeToAdd.node);
-		futureToRealIndices[ nodeToAdd.id ] = realId;
+		// Add and store real index.
+		futureIndices[ nodeToAdd.id ] = _graph.addNode( nodeToAdd.node );
 	}
 
 	// and new links that are still valid
-	for(const Graph::Link& link : _addedLinks){
-		// TODO: check in table above if an index is a "future", in which case replace it by the real one.
+	for( Graph::Link& link : _addedLinks ){
+		// Check in table above if an index is a "future", in which case replace it by the real one.
+		auto fromNodeIndex = futureIndices.find( link.from.node );
+		if( fromNodeIndex != futureIndices.end() ){
+			link.from.node = fromNodeIndex->second;
+		}
+		auto toNodeIndex = futureIndices.find( link.to.node );
+		if( toNodeIndex != futureIndices.end() ){
+			link.to.node = toNodeIndex->second;
+		}
 		_graph.addLink(link);
 	}
 
