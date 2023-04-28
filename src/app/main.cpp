@@ -239,23 +239,19 @@ GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont)
 	return window;
 }
 
-const uint kMaxSlotCount = 8;
+const uint kMaxSlotCount = 12;
 
 uint fromInputSlotToLink(Graph::Slot slot){
-	return 3 * (slot.node * kMaxSlotCount + slot.slot);
+	return 2 * (slot.node * kMaxSlotCount + slot.slot);
 }
 
 uint fromOutputSlotToLink(Graph::Slot slot){
-	return 3 * (slot.node * kMaxSlotCount + slot.slot) + 1;
+	return 2 * (slot.node * kMaxSlotCount + slot.slot) + 1;
 }
 
-uint fromAttributeToLink( Graph::Slot slot )
-{
-	return 3 * ( slot.node * kMaxSlotCount + slot.slot ) + 2;
-}
-
-Graph::Slot fromLinkToSlot(uint link){
-	uint baseLink = link / 3;
+Graph::Slot fromLinkToSlot(uint link, bool& input){
+	input = link % 2u == 0u;
+	uint baseLink = link / 2u;
 	return {baseLink / kMaxSlotCount, (baseLink % kMaxSlotCount)};
 }
 
@@ -1037,10 +1033,28 @@ int main(int argc, char** argv){
 						}
 					}
 
+					int dropId;
+					if( ImNodes::IsLinkDropped( &dropId, false ) ){
+						bool isInput = false;
+						Graph::Slot slot = fromLinkToSlot( dropId, isInput );
+						// TODO: put behind ALT, and support shift with color node
+						if( isInput ){
+							// Create a constant node and link it.
+							Node* createdNode = createNode( NodeClass::CONST_FLOAT );
+							const uint newNodeId = editor.addNode( createdNode );
+							// Register for placement at next frame.
+							createdNodes.push_back( createdNode );
+							editor.addLink( newNodeId, 0, slot.node, slot.slot );
+						}
+					}
+
 					int startLink, endLink;
 					if(ImNodes::IsLinkCreated(&startLink, &endLink)){
-						const Graph::Slot from = fromLinkToSlot( startLink );
-						const Graph::Slot to = fromLinkToSlot( endLink );
+						bool fromIsInput, toIsInput;
+						const Graph::Slot from = fromLinkToSlot( startLink, fromIsInput );
+						const Graph::Slot to = fromLinkToSlot( endLink, toIsInput );
+						assert( toIsInput && !fromIsInput );
+
 						editor.addLink(from.node, from.slot, to.node, to.slot);
 
 						// Multi-link creation
@@ -1084,7 +1098,6 @@ int main(int argc, char** argv){
 						editor.removeLink(linkId);
 						editedGraph = true;
 					}
-
 
 					if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
 					   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && ctrlModifierHeld)){
@@ -1136,116 +1149,138 @@ int main(int argc, char** argv){
 						}
 					}
 
-					bool focusTextField = false;
-					const bool canOpenPopup = !ImGui::IsPopupOpen("Create node");
-					const bool clickedForPopup = ImGui::IsMouseClicked(ImGuiMouseButton_Right);
-					const bool typedForPopup = !editingTextField && ImGui::IsKeyReleased(ImGuiKey_Space);
-					if(canOpenPopup && (clickedForPopup || typedForPopup)){
-						ImGui::OpenPopup( "Create node" );
-						// Save position for placing the new node on screen.
-						mouseRightClick = ImGui::GetMousePos();
-						focusTextField = true;
-						// All types visible by default
-						searchStr = "";
-						visibleNodeTypes.resize(NodeClass::COUNT_EXPOSED);
-						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
-							visibleNodeTypes[i] = getOrderedType(i);
-						}
-						selectedNodeType = 0;
-					}
-
-
-					if( ImGui::BeginPopup("Create node")){
-						anyPopupOpen = true;
-
-						int visibleTypesCount = int(visibleNodeTypes.size());
-						const int columnWidth = 200;
-						const int columnItemsHeight = 12;
-						const int columnCount = ( visibleTypesCount + columnItemsHeight - 1 ) / columnItemsHeight;
-
-						if(ImGui::IsKeyPressed(ImGuiKey_UpArrow, true)){
-							--selectedNodeType;
-							if( selectedNodeType < 0 ) {
-								selectedNodeType = visibleTypesCount - 1;
-							}
-						}
-						if(ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)){
-							++selectedNodeType;
-							if( selectedNodeType >= visibleTypesCount ){
-								selectedNodeType = 0;
-							}
-						}
-						if( ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)) {
-							selectedNodeType += columnItemsHeight;
-							if( selectedNodeType >= visibleTypesCount ){
-								selectedNodeType = selectedNodeType % columnItemsHeight;
-							}
-						}
-						if( ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)) {
-							selectedNodeType -= columnItemsHeight;
-							if( selectedNodeType < 0 ) {
-								// Is there a simpler expression?
-								selectedNodeType = (selectedNodeType + columnItemsHeight) % columnItemsHeight + (columnCount - 1) * columnItemsHeight;
-								// Only the last column can be not full.
-								if( selectedNodeType >= visibleTypesCount ){
-									selectedNodeType -= columnItemsHeight;
-								}
-							}
-						}
-
-						ImGui::PushItemWidth( columnWidth* columnCount );
-
-						if( focusTextField )
-							ImGui::SetKeyboardFocusHere();
-						if(ImGui::InputText( "##SearchField", &searchStr, ImGuiInputTextFlags_AutoSelectAll)){
-							// Refresh selection.
-							const std::string searchStrLow = TextUtilities::lowercase(searchStr);
-							visibleNodeTypes.clear();
-							visibleNodeTypes.reserve(NodeClass::COUNT_EXPOSED);
-							// Filter visible types.
-							for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
-								const NodeClass type = getOrderedType(i);
-								const std::string labelLow = TextUtilities::lowercase(getNodeName(type));
-								if(labelLow.find(searchStrLow) == std::string::npos)
-									continue;
-								visibleNodeTypes.push_back(type);
+					{
+						bool focusTextField = false;
+						const bool canOpenPopup = !ImGui::IsPopupOpen( "Create node" );
+						const bool clickedForPopup = ImGui::IsMouseClicked( ImGuiMouseButton_Right );
+						const bool typedForPopup = !editingTextField && ImGui::IsKeyReleased( ImGuiKey_Space );
+						if( canOpenPopup && ( clickedForPopup || typedForPopup ) )
+						{
+							ImGui::OpenPopup( "Create node" );
+							// Save position for placing the new node on screen.
+							mouseRightClick = ImGui::GetMousePos();
+							focusTextField = true;
+							// All types visible by default
+							searchStr = "";
+							visibleNodeTypes.resize( NodeClass::COUNT_EXPOSED );
+							for( uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i )
+							{
+								visibleNodeTypes[ i ] = getOrderedType( i );
 							}
 							selectedNodeType = 0;
-							visibleTypesCount = visibleNodeTypes.size();
-
 						}
-						ImGui::PopItemWidth();
 
-						for( int i = 0; i < columnItemsHeight; ++i){
-							// Split in multiple columns.
-							for( int c = 0; c < columnCount; ++c ){
-								const int index = c * columnItemsHeight + i;
-								if( index >= visibleTypesCount ){
-									break;
-								}
-								const NodeClass type = visibleNodeTypes[ index ];
-								const std::string& label = getNodeName( type );
-								if( ImGui::Selectable( label.c_str(), index == selectedNodeType, 0, ImVec2(columnWidth - 2*ImGui::GetStyle().FramePadding.x, 0) ) ){
-									nodesToCreate[ type ] += 1;
-								}
-								if( (c < columnCount - 1) && (index + columnItemsHeight ) < visibleTypesCount )
+						if( ImGui::BeginPopup( "Create node" ) )
+						{
+							anyPopupOpen = true;
+
+							int visibleTypesCount = int( visibleNodeTypes.size() );
+							const int columnWidth = 200;
+							const int columnItemsHeight = 12;
+							const int columnCount = ( visibleTypesCount + columnItemsHeight - 1 ) / columnItemsHeight;
+
+							if( ImGui::IsKeyPressed( ImGuiKey_UpArrow, true ) )
+							{
+								--selectedNodeType;
+								if( selectedNodeType < 0 )
 								{
-									ImGui::SameLine((c+1) * columnWidth);
+									selectedNodeType = visibleTypesCount - 1;
 								}
 							}
-						}
+							if( ImGui::IsKeyPressed( ImGuiKey_DownArrow, true ) )
+							{
+								++selectedNodeType;
+								if( selectedNodeType >= visibleTypesCount )
+								{
+									selectedNodeType = 0;
+								}
+							}
+							if( ImGui::IsKeyPressed( ImGuiKey_RightArrow, true ) )
+							{
+								selectedNodeType += columnItemsHeight;
+								if( selectedNodeType >= visibleTypesCount )
+								{
+									selectedNodeType = selectedNodeType % columnItemsHeight;
+								}
+							}
+							if( ImGui::IsKeyPressed( ImGuiKey_LeftArrow, true ) )
+							{
+								selectedNodeType -= columnItemsHeight;
+								if( selectedNodeType < 0 )
+								{
+		// Is there a simpler expression?
+									selectedNodeType = ( selectedNodeType + columnItemsHeight ) % columnItemsHeight + ( columnCount - 1 ) * columnItemsHeight;
+									// Only the last column can be not full.
+									if( selectedNodeType >= visibleTypesCount )
+									{
+										selectedNodeType -= columnItemsHeight;
+									}
+								}
+							}
 
-						if(ImGui::IsKeyReleased(ImGuiKey_Enter)){
-							if( selectedNodeType >= 0 && selectedNodeType < int(visibleNodeTypes.size())){
-								nodesToCreate[visibleNodeTypes[selectedNodeType]] += 1;
+							ImGui::PushItemWidth( columnWidth * columnCount );
+
+							if( focusTextField )
+								ImGui::SetKeyboardFocusHere();
+							if( ImGui::InputText( "##SearchField", &searchStr, ImGuiInputTextFlags_AutoSelectAll ) )
+							{
+// Refresh selection.
+								const std::string searchStrLow = TextUtilities::lowercase( searchStr );
+								visibleNodeTypes.clear();
+								visibleNodeTypes.reserve( NodeClass::COUNT_EXPOSED );
+								// Filter visible types.
+								for( uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i )
+								{
+									const NodeClass type = getOrderedType( i );
+									const std::string labelLow = TextUtilities::lowercase( getNodeName( type ) );
+									if( labelLow.find( searchStrLow ) == std::string::npos )
+										continue;
+									visibleNodeTypes.push_back( type );
+								}
+								selectedNodeType = 0;
+								visibleTypesCount = visibleNodeTypes.size();
+
+							}
+							ImGui::PopItemWidth();
+
+							for( int i = 0; i < columnItemsHeight; ++i )
+							{
+// Split in multiple columns.
+								for( int c = 0; c < columnCount; ++c )
+								{
+									const int index = c * columnItemsHeight + i;
+									if( index >= visibleTypesCount )
+									{
+										break;
+									}
+									const NodeClass type = visibleNodeTypes[ index ];
+									const std::string& label = getNodeName( type );
+									if( ImGui::Selectable( label.c_str(), index == selectedNodeType, 0, ImVec2( columnWidth - 2 * ImGui::GetStyle().FramePadding.x, 0 ) ) )
+									{
+										nodesToCreate[ type ] += 1;
+									}
+									if( ( c < columnCount - 1 ) && ( index + columnItemsHeight ) < visibleTypesCount )
+									{
+										ImGui::SameLine( ( c + 1 ) * columnWidth );
+									}
+								}
+							}
+
+							if( ImGui::IsKeyReleased( ImGuiKey_Enter ) )
+							{
+								if( selectedNodeType >= 0 && selectedNodeType < int( visibleNodeTypes.size() ) )
+								{
+									nodesToCreate[ visibleNodeTypes[ selectedNodeType ] ] += 1;
+									ImGui::CloseCurrentPopup();
+								}
+							}
+
+							if( ImGui::IsKeyReleased( ImGuiKey_Escape ) )
+							{
 								ImGui::CloseCurrentPopup();
 							}
+							ImGui::EndPopup();
 						}
-
-						if(ImGui::IsKeyReleased(ImGuiKey_Escape)){
-							ImGui::CloseCurrentPopup();
-						}
-						ImGui::EndPopup();
 					}
 
 					// Create queued nodes.

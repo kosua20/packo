@@ -34,6 +34,7 @@ public:
 	Node* node(uint node) { return _nodes[node]; }
 
 	uint getLinkCount() const { return _links.size(); }
+	uint getNodeCountUpperBound() const { return _nodes.size(); }
 
 	const Link& link(uint link) const { return _links[link]; }
 
@@ -42,7 +43,7 @@ public:
 
 private:
 
-	void addNode(Node* node);
+	uint addNode(Node* node);
 
 	void removeNode(uint node);
 
@@ -61,11 +62,12 @@ bool operator==(const Graph::Link& a, const Graph::Link& b);
 class GraphEditor {
 public:
 
-	GraphEditor(Graph& graph) : _graph(graph){}
+	GraphEditor( Graph& graph );
 
 	~GraphEditor();
 
-	void addNode(Node* node);
+	// Returns a 'fake' node index to use for creating links.
+	uint addNode(Node* node);
 
 	void addLink(uint fromNode, uint fromSlot, uint toNode, uint toSlot);
 
@@ -79,11 +81,18 @@ private:
 
 	Graph& _graph;
 
+	struct FutureNode
+	{
+		Node* node;
+		uint id;
+	};
+
 	std::set<uint> _deletedNodes;
 	std::set<uint> _deletedLinks;
-	std::vector<Node*> _addedNodes;
+	std::vector<FutureNode> _addedNodes;
 	std::vector<Graph::Link> _addedLinks;
-
+	uint _firstFutureNodeId{ 0u };
+	uint _nextFutureNodeId{ 0u };
 };
 
 

@@ -25,13 +25,14 @@ int Graph::findLink( const Link& link ){
 	return -1;
 }
 
-void Graph::addNode(Node* node){
+uint Graph::addNode(Node* node){
 	uint index = _freeListNodes.getIndex();
 	if(index == _nodes.size()){
 		_nodes.push_back( node );
 	} else {
 		_nodes[index] = node;
 	}
+	return index;
 }
 
 void Graph::removeNode(uint node){
@@ -135,16 +136,28 @@ bool operator==(const Graph::Link& a, const Graph::Link& b){
 		   && a.to.node == b.to.node && a.to.slot == b.to.slot;
 }
 
+GraphEditor::GraphEditor( Graph& graph ) : _graph( graph ) { 
+	// Ensure we avoid collision with existing node indices.
+	_firstFutureNodeId = graph.getNodeCountUpperBound();
+	_nextFutureNodeId = _firstFutureNodeId;
+}
+
 GraphEditor::~GraphEditor(){
 	// Make sure all modifications are complete.
 	commit();
 }
 
-void GraphEditor::addNode(Node* node){
-	if(std::find(_addedNodes.begin(), _addedNodes.end(), node) != _addedNodes.end()){
-		return;
+uint GraphEditor::addNode(Node* node){
+	auto existingNode = std::find_if( _addedNodes.begin(), _addedNodes.end(), [&node] ( const FutureNode& a ){
+		return a.node == node;
+	});
+	if( existingNode != _addedNodes.end()){
+		return existingNode->id;
 	}
-	_addedNodes.push_back(node);
+	const uint futureId = _nextFutureNodeId;
+	++_nextFutureNodeId;
+	_addedNodes.push_back( { node, futureId } );
+	return futureId;
 }
 
 void GraphEditor::removeNode(uint node){
@@ -222,11 +235,16 @@ void GraphEditor::commit(){
 	_graph._links.erase(itg, _graph._links.end());
 
 	// Add all new nodes
-	for(Node* nodeToAdd : _addedNodes){
-		_graph.addNode(nodeToAdd);
+	std::unordered_map<uint, uint> futureToRealIndices;
+	for(auto& nodeToAdd : _addedNodes){
+		// Update with the real index.
+		uint realId = _graph.addNode(nodeToAdd.node);
+		futureToRealIndices[ nodeToAdd.id ] = realId;
 	}
+
 	// and new links that are still valid
 	for(const Graph::Link& link : _addedLinks){
+		// TODO: check in table above if an index is a "future", in which case replace it by the real one.
 		_graph.addLink(link);
 	}
 
@@ -235,4 +253,6 @@ void GraphEditor::commit(){
 	_deletedLinks.clear();
 	_addedLinks.clear();
 	_addedNodes.clear();
+	_firstFutureNodeId = _graph.getNodeCountUpperBound();
+	_nextFutureNodeId = _firstFutureNodeId;
 }
