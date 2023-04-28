@@ -1410,7 +1410,16 @@ int main(int argc, char** argv){
 			bool res = compile(*graph, false, dummyContext, compiledGraph);
 			// TODO: when errors or unused nodes, do something to give feedback to the user.
 			const uint inputCount = compiledGraph.inputs.size();
-			const bool hasEnoughInputsForPreview = inputCount == 0u || !inputFiles.empty();
+			// Count selected input files.
+			uint inputFileCount = 0u;
+			for(const InputFile& input : inputFiles){
+				if(!input.active){
+					continue;
+				}
+				++inputFileCount;
+			}
+
+			const bool hasEnoughInputsForPreview = inputCount == 0u || (inputFileCount != 0u);
 			if(res && hasEnoughInputsForPreview){
 				// Defer purge by one frame because ImGui is keeping a reference to it for the current frame (partial evaluation?).
 				texturesToPurge = textures;
