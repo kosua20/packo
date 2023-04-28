@@ -158,7 +158,7 @@ void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& i
 	assert(outputs.size() == _channelCount);
 	assert(inputs.size() == _channelCount);
 	assert(_channelCount <= 4u);
-	const float radiusFrac = _attributes[0].flt;
+	const float radiusFrac = _attributes[0].flt * (context.shared->scale.x + context.shared->scale.y) * 0.5f;
 	const float sigma = radiusFrac / 3.f;
 	const float sigma2 = sigma * sigma;
 	const int radius = std::ceil(radiusFrac);
