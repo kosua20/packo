@@ -20,6 +20,8 @@ NODE_DEFINE_TYPE_AND_VERSION(InputNode, NodeClass::INPUT_IMG, false, 1)
 void InputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
 	assert(outputs.size() == 4u);
+	(void)inputs;
+
 	const Image& inputImg = context.shared->inputImages[_index];
 	const glm::vec4& color = inputImg.pixel(context.coords);
 	for (uint i = 0u; i < 4u; ++i) {
@@ -47,6 +49,8 @@ NODE_DEFINE_TYPE_AND_VERSION(OutputNode, NodeClass::OUTPUT_IMG, false, 1)
 void OutputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 4u);
 	assert(outputs.size() == 0u);
+	(void)outputs;
+	
 	Image& outImage = context.shared->outputImages[_index];
 	glm::vec4& color = outImage.pixel(context.coords);
 	for (uint i = 0u; i < 4u; ++i) {

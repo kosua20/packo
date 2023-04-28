@@ -467,6 +467,8 @@ int main(int argc, char** argv){
 	std::vector<NodeClass> visibleNodeTypes;
 	int selectedNodeType = 0;
 	std::atomic<int> showProgress = -1;
+	bool forceCustomResolution = false;
+	glm::ivec2 customResolution = {64, 64};
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -666,7 +668,7 @@ int main(int argc, char** argv){
 								inputPaths.push_back( file.path );
 							}
 						}
-						evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, {64, 64}, showProgress);
+						evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, customResolution, forceCustomResolution, showProgress);
 					}
 
 					ImGui::Separator();
@@ -719,8 +721,9 @@ int main(int argc, char** argv){
 							inputPaths.push_back(file.path);
 						}
 					}
-					evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, {64, 64}, showProgress);
+					evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, customResolution, forceCustomResolution, showProgress);
 				}
+
 				ImGui::SameLine(inputsWindowWidth - 30.f);
 				ImGui::TextDisabled("(?)");
 				if(ImGui::IsItemHovered()){
@@ -730,6 +733,7 @@ int main(int argc, char** argv){
 				if(showProgress >= 0){
 					ImGui::ProgressBar(float(showProgress) / float(kProgressCostGranularity));
 				}
+				ImGui::Separator();
 
 				const std::string inputDirStr = inputDirectory.string();
 				const std::string outputDirStr = outputDirectory.string();
@@ -744,8 +748,15 @@ int main(int argc, char** argv){
 						}
 					}
 				}
-				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
 
+				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
+				ImGui::Checkbox("Custom resolution", &forceCustomResolution);
+				if(forceCustomResolution){
+					if(ImGui::InputInt2("##res", &customResolution[0])){
+						customResolution = glm::max(customResolution, {4, 4});
+					}
+				}
+				ImGui::Separator();
 				ImGui::Text( "Input:" ); ImGui::SameLine(); 
 				if(ImGui::SmallButton("Select...##input")){
 					char* rawPath = nullptr;
@@ -1069,7 +1080,7 @@ int main(int argc, char** argv){
 									editor.addLink(newNodeId, i, pin.node, pin.slot + i);
 								}
 							}
-							
+							editedGraph = true;
 						}
 					}
 

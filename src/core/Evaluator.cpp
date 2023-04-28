@@ -822,7 +822,7 @@ void saveContextForBatch(const Batch& batch, const SharedContext& context){
 }
 
 
-bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& fallbackRes){
+bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes){
 
 	CompiledGraph compiledGraph;
 	if(!compile(editGraph, true, errors, compiledGraph)){
@@ -841,7 +841,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs
 	for(const Batch& batch : batches){
 
 		SharedContext sharedContext;
-		allocateContextForBatch(batch, compiledGraph, fallbackRes, false, sharedContext);
+		allocateContextForBatch(batch, compiledGraph, outputRes, forceOutputRes, sharedContext);
 
 		evaluateGraphForBatchOptimized(compiledGraph, sharedContext);
 
@@ -851,7 +851,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs
 	return true;
 }
 
-bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& fallbackRes, std::atomic<int>& progress){
+bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes, std::atomic<int>& progress){
 
 	CompiledGraph compiledGraph;
 	if(!compile(editGraph, true, errors, compiledGraph)){
@@ -872,7 +872,7 @@ bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const st
 	}
 
 	// Pass local objects by copy.
-	std::thread thread([&progress, compiledGraph, batches, fallbackRes ](){
+	std::thread thread([&progress, compiledGraph, batches, outputRes, forceOutputRes ](){
 		progress = 0.f;
 		const int batchCost = std::floor(1.f / float(batches.size()) * kProgressCostGranularity);
 		for(const Batch& batch : batches){
@@ -880,7 +880,7 @@ bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const st
 				break;
 			}
 			SharedContext sharedContext;
-			allocateContextForBatch(batch, compiledGraph, fallbackRes, false, sharedContext);
+			allocateContextForBatch(batch, compiledGraph, outputRes, forceOutputRes, sharedContext);
 
 			evaluateGraphForBatchOptimized(compiledGraph, sharedContext);
 

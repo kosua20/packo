@@ -90,6 +90,6 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 
 void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize, SharedContext& sharedContext);
 
-bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes);
+bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes);
 
-bool evaluateInBackground(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, std::atomic<int>& progress);
+bool evaluateInBackground(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes, std::atomic<int>& progress);
