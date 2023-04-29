@@ -1401,7 +1401,7 @@ TriangleOffsets CalculateTriangleOffsets(const float side_length)
 
 void DrawPinShape(const ImVec2& pin_pos, const ImPinData& pin, const ImU32 pin_color)
 {
-    static const int CIRCLE_NUM_SEGMENTS = 8;
+    static const int CIRCLE_NUM_SEGMENTS = 16;
 
     switch (pin.Shape)
     {
