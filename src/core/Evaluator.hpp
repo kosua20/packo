@@ -22,7 +22,7 @@ public:
 	
 	uint errorCount() const { return _errors.size(); }
 
-	void getError( uint i, const char*& message, const Node*& node, int& slot );
+	void getError( uint i, const char*& message, const Node*& node, int& slot ) const;
 
 private:
 
@@ -90,6 +90,6 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 
 void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize, SharedContext& sharedContext);
 
-bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes);
+//bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes);
 
 bool evaluateInBackground(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes, std::atomic<int>& progress);

@@ -40,10 +40,10 @@ std::string ErrorContext::summarizeErrors(){
 	return _cachedSummary;
 }
 
-void ErrorContext::getError( uint i, const char*& message, const Node*& node, int& slot )
+void ErrorContext::getError( uint i, const char*& message, const Node*& node, int& slot ) const
 {
 	assert( i < _errors.size() );
-	Error& error = _errors[ i ];
+	const Error& error = _errors[ i ];
 	message = error.message.c_str();
 	node = error.node;
 	slot = error.slot;
@@ -372,6 +372,17 @@ public:
 
 		for(Vertex* vert : nodes){
 			CompiledNode& compiledNode = compiledNodes[vert->tmpData];
+			// Assign registers to children.
+			for(Neighbor& child : vert->children){
+				for(Edge& edge : child.edges){
+					// Skip outputs that have already been assigned when processing a previous child.
+					if(compiledNode.outputs[edge.from] == -1){
+						const uint newRegister = availableRegisters.getIndex();
+						compiledNode.outputs[edge.from] = newRegister;
+						maxRegister = (std::max)(maxRegister, int(newRegister));
+					}
+				}
+			}
 			// Retrieve registers used by parents for their outputs.
 			for(Neighbor& parent : vert->parents){
 				CompiledNode& compiledParent = compiledNodes[parent.node->tmpData];
@@ -389,20 +400,7 @@ public:
 						availableRegisters.returnIndex(linkRegister);
 					}
 				}
-
 			}
-			// Assign registers to children.
-			for(Neighbor& child : vert->children){
-				for(Edge& edge : child.edges){
-					// Skip outputs that have already been assigned when processing a previous child.
-					if(compiledNode.outputs[edge.from] == -1){
-						const uint newRegister = availableRegisters.getIndex();
-						compiledNode.outputs[edge.from] = newRegister;
-						maxRegister = (std::max)(maxRegister, int(newRegister));
-					}
-				}
-			}
-
 		}
 		uint stackSize = (uint)(maxRegister + 1);
 		const int firstDummyRegister = stackSize;
@@ -686,7 +684,6 @@ bool compile( const Graph& editGraph, bool optimize, ErrorContext& errors, Compi
 
 	// Compile the graph for real.
 	graph.compile( compiledGraph, optimize );
-	// Don't alter global nodes. (or boolean?)
 
 	if(optimize){
 		compiledGraph.ensureGlobalNodesConsistency();
