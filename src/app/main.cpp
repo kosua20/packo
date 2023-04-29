@@ -22,8 +22,6 @@
 
 #include <json/json.hpp>
 
-#include "fonts/font_data_Lato.h"
-
 #include <unordered_map>
 
 #ifdef _WIN32
@@ -35,55 +33,7 @@
 #endif
 #endif
 
-const uint kMaxRefreshDelayInFrames = 60u;
-
-unsigned int packedColorFromVec4( const ImVec4& _col )
-{
-	unsigned char r = ( unsigned int )glm::clamp( std::round( _col.x * 255.f ), 0.f, 255.f );
-	unsigned char g = ( unsigned int )glm::clamp( std::round( _col.y * 255.f ), 0.f, 255.f );
-	unsigned char b = ( unsigned int )glm::clamp( std::round( _col.z * 255.f ), 0.f, 255.f );
-	unsigned char a = ( unsigned int )glm::clamp( std::round( _col.w * 255.f ), 0.f, 255.f );
-	return IM_COL32( r, g, b, a );
-}
-
-unsigned int packedOpaqueColorFromVec4( const ImVec4& _col )
-{
-	unsigned char r = ( unsigned int )glm::clamp( std::round( _col.x * 255.f ), 0.f, 255.f );
-	unsigned char g = ( unsigned int )glm::clamp( std::round( _col.y * 255.f ), 0.f, 255.f );
-	unsigned char b = ( unsigned int )glm::clamp( std::round( _col.z * 255.f ), 0.f, 255.f );
-	return IM_COL32( r, g, b, 255 );
-}
-
-void autoLayout( const Graph& graph )
-{
-	// Nodes need to be valid.
-	uint nodeCount = 0u;
-	GraphNodes nodes(graph);
-	ImVec2 maxNodeSize( 100.f, 170.f );
-	for( uint node : nodes )
-	{
-		const ImVec2 nodeSize = ImNodes::GetNodeDimensions( node );
-		maxNodeSize.x = ( std::max )( nodeSize.x, maxNodeSize.x );
-		maxNodeSize.y = ( std::max )( nodeSize.y, maxNodeSize.y );
-		++nodeCount;
-	}
-	// Add padding 
-	maxNodeSize.x *= 1.1f;
-	maxNodeSize.y *= 1.1f;
-
-	const uint gridSize = uint( std::ceil( std::sqrt( ( float )nodeCount ) ) );
-
-	GraphNodes nodes2( graph );
-	uint id = 0;
-	for( uint node : nodes2 )
-	{
-		ImVec2 pos( ( float )( id % gridSize ), ( float )( id / gridSize ) );
-		pos.x *= maxNodeSize.x;
-		pos.y *= maxNodeSize.y;
-		ImNodes::SetNodeGridSpacePos( node, pos );
-		++id;
-	}
-}
+/// Window & GPU handling
 
 GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont) {
 
@@ -123,158 +73,158 @@ GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont)
 
 	ImGui::CreateContext();
 	ImNodes::CreateContext();
-	
-	ImFontConfig fontLato = ImFontConfig();
-	fontLato.FontData = (void*)(fontDataLato);
-	fontLato.FontDataSize = size_fontDataLato;
-	fontLato.SizePixels = 18.0f;
-	fontLato.FontDataOwnedByAtlas = false; // Font data is static
 
-	ImFontConfig fontLatoSmall = ImFontConfig();
-	fontLatoSmall.FontData = (void*)(fontDataLato);
-	fontLatoSmall.FontDataSize = size_fontDataLato;
-	fontLatoSmall.SizePixels = 12.0f;
-	fontLatoSmall.GlyphOffset = ImVec2(0, 12);
-	fontLatoSmall.FontDataOwnedByAtlas = false;
-
-	ImGuiIO & io = ImGui::GetIO();
-	io.IniFilename = nullptr;
-	defaultFont = io.Fonts->AddFont(&fontLato);
-	smallFont = io.Fonts->AddFont(&fontLatoSmall);
+	applyStyleImGuiAndImNodes(defaultFont, smallFont);
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 330");
 
-	ImNodes::GetIO().EmulateThreeButtonMouse.Modifier = &ImGui::GetIO().KeyAlt;
-#ifdef _MACOS
-	ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeySuper;
-#else
-	ImNodes::GetIO().LinkDetachWithModifierClick.Modifier = &ImGui::GetIO().KeyCtrl;
-#endif
-	
-	ImGui::StyleColorsDark();
-	ImGuiStyle& style = ImGui::GetStyle();
-	style.WindowPadding = ImVec2( 8, 8 );
-	style.FramePadding = ImVec2( 10, 4 );
-	style.CellPadding = ImVec2( 4, 2 );
-	style.ItemSpacing = ImVec2( 10, 10 );
-	style.ItemInnerSpacing = ImVec2( 4, 4 );
-	style.GrabMinSize = 18;
-	style.FrameBorderSize = 0;
-	style.WindowBorderSize = 0;
-	style.FrameRounding = 12;
-	style.GrabRounding = 12;
-	style.PopupBorderSize = 0;
-	style.PopupRounding = 4;
-	style.WindowRounding = 12;
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	sr_gui_init();
 
-	ImVec4* colors = style.Colors;
-	colors[ ImGuiCol_FrameBg ] = ImVec4( 0.58f, 0.58f, 0.58f, 0.54f );
-	colors[ ImGuiCol_FrameBgHovered ] = ImVec4( 0.26f, 0.84f, 0.98f, 0.40f );
-	colors[ ImGuiCol_FrameBgActive ] = ImVec4( 0.26f, 0.84f, 0.98f, 0.40f );
-	colors[ ImGuiCol_TitleBgActive ] = ImVec4( 0.04f, 0.04f, 0.04f, 1.00f );
-	colors[ ImGuiCol_CheckMark ] = ImVec4( 0.08f, 0.71f, 0.77f, 1.00f );
-	colors[ ImGuiCol_SliderGrab ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-	colors[ ImGuiCol_SliderGrabActive ] = ImVec4( 0.03f, 0.69f, 0.82f, 1.00f );
-	colors[ ImGuiCol_Button ] = ImVec4( 0.05f, 0.39f, 0.45f, 1.00f );
-	colors[ ImGuiCol_ButtonHovered ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-	colors[ ImGuiCol_ButtonActive ] = ImVec4( 0.03f, 0.69f, 0.82f, 1.00f );
-	colors[ ImGuiCol_Header ] = ImVec4( 0.05f, 0.39f, 0.45f, 1.00f );
-	colors[ ImGuiCol_HeaderHovered ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-	colors[ ImGuiCol_HeaderActive ] = ImVec4( 0.03f, 0.69f, 0.82f, 1.00f );
-	colors[ ImGuiCol_SeparatorHovered ] = ImVec4( 0.05f, 0.39f, 0.45f, 1.00f );
-	colors[ ImGuiCol_SeparatorActive ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-	colors[ ImGuiCol_ResizeGrip ] = ImVec4( 0.05f, 0.39f, 0.45f, 1.00f );
-	colors[ ImGuiCol_ResizeGripHovered ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-	colors[ ImGuiCol_ResizeGripActive ] = ImVec4( 0.03f, 0.69f, 0.82f, 1.00f );
-	colors[ ImGuiCol_Tab ] = ImVec4( 0.05f, 0.39f, 0.45f, 1.00f );
-	colors[ ImGuiCol_TabHovered ] = ImVec4( 0.03f, 0.69f, 0.82f, 1.00f );
-	colors[ ImGuiCol_TabActive ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-	colors[ ImGuiCol_TabUnfocused ] = ImVec4( 0.02f, 0.16f, 0.18f, 1.00f );
-	colors[ ImGuiCol_TabUnfocusedActive ] = ImVec4( 0.04f, 0.26f, 0.31f, 1.00f );
-	colors[ ImGuiCol_TextSelectedBg ] = ImVec4( 0.04f, 0.26f, 0.31f, 1.00f );
-	colors[ ImGuiCol_NavHighlight ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-	colors[ ImGuiCol_PlotHistogram ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-	colors[ ImGuiCol_PlotHistogramHovered ] = ImVec4( 0.05f, 0.61f, 0.73f, 1.00f );
-
-	ImNodesStyle& nodesStyle = ImNodes::GetStyle();
-	nodesStyle.NodeCornerRounding = 8;
-	nodesStyle.PinCircleRadius = 7.f;
-	nodesStyle.PinOffset = 0.0f;
-	nodesStyle.Flags = ImNodesStyleFlags_GridLines | ImNodesStyleFlags_NodeOutline;
-	nodesStyle.GridSpacing = 64.0f;
-
-	unsigned int* nodesColors = nodesStyle.Colors;
-	nodesColors[ ImNodesCol_NodeBackground ] = IM_COL32( 50, 50, 50, 255 );
-	nodesColors[ ImNodesCol_NodeBackgroundHovered ] = IM_COL32( 50, 50, 50, 255);
-	nodesColors[ ImNodesCol_NodeBackgroundSelected ] = IM_COL32( 65, 65, 65, 255 );
-	nodesColors[ ImNodesCol_NodeOutline ] = IM_COL32( 100, 100, 100, 255 );
-	// title bar colors match ImGui's titlebg colors
-	nodesColors[ ImNodesCol_TitleBar ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrab ] );
-	nodesColors[ ImNodesCol_TitleBarHovered ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrabActive ] );
-	nodesColors[ ImNodesCol_TitleBarSelected ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrabActive ] );
-	// link colors match ImGui's slider grab colors
-	nodesColors[ ImNodesCol_Link ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrab ] );
-	nodesColors[ ImNodesCol_LinkHovered ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrabActive ] );
-	nodesColors[ ImNodesCol_LinkSelected ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrabActive ] );
-	// pin colors match ImGui's button colors
-	nodesColors[ ImNodesCol_Pin ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrab ] );
-	nodesColors[ ImNodesCol_PinHovered ] = packedColorFromVec4( colors[ ImGuiCol_SliderGrabActive ] );
-	nodesColors[ ImNodesCol_BoxSelector ] = IM_COL32( 133, 133, 133, 30 );
-	nodesColors[ ImNodesCol_BoxSelectorOutline ] = IM_COL32( 133, 133, 133, 150 );
-	nodesColors[ ImNodesCol_GridBackground ] = IM_COL32( 40, 40, 50, 200 );
-	nodesColors[ ImNodesCol_GridLine ] = IM_COL32( 200, 200, 200, 40 );
-	nodesColors[ ImNodesCol_GridLinePrimary ] = IM_COL32( 240, 240, 240, 60 );
-	// minimap colors
-	nodesColors[ ImNodesCol_MiniMapBackground ] = IM_COL32( 25, 25, 25, 150 );
-	nodesColors[ ImNodesCol_MiniMapBackgroundHovered ] = IM_COL32( 25, 25, 25, 200 );
-	nodesColors[ ImNodesCol_MiniMapOutline ] = IM_COL32( 150, 150, 150, 100 );
-	nodesColors[ ImNodesCol_MiniMapOutlineHovered ] = IM_COL32( 150, 150, 150, 200 );
-	nodesColors[ ImNodesCol_MiniMapNodeBackground ] = IM_COL32( 200, 200, 200, 100 );
-	nodesColors[ ImNodesCol_MiniMapNodeBackgroundHovered ] = IM_COL32( 200, 200, 200, 255 );
-	nodesColors[ ImNodesCol_MiniMapNodeBackgroundSelected ] = nodesColors[ ImNodesCol_MiniMapNodeBackgroundHovered ];
-	nodesColors[ ImNodesCol_MiniMapNodeOutline ] = IM_COL32( 200, 200, 200, 100 );
-	nodesColors[ ImNodesCol_MiniMapLink ] = nodesColors[ ImNodesCol_Link ];
-	nodesColors[ ImNodesCol_MiniMapLinkSelected ] = nodesColors[ ImNodesCol_LinkSelected ];
-	nodesColors[ ImNodesCol_MiniMapCanvas ] = IM_COL32( 200, 200, 200, 25 );
-	nodesColors[ ImNodesCol_MiniMapCanvasOutline ] = IM_COL32( 200, 200, 200, 200 );
 	return window;
 }
 
-const uint kMaxSlotCount = 12;
-
-uint fromInputSlotToLink(Graph::Slot slot){
-	return 2 * (slot.node * kMaxSlotCount + slot.slot);
-}
-
-uint fromOutputSlotToLink(Graph::Slot slot){
-	return 2 * (slot.node * kMaxSlotCount + slot.slot) + 1;
-}
-
-Graph::Slot fromLinkToSlot(uint link, bool& input){
-	input = link % 2u == 0u;
-	uint baseLink = link / 2u;
-	return {baseLink / kMaxSlotCount, (baseLink % kMaxSlotCount)};
-}
-
-bool getAttributeComboItem(void* data, int index, const char** str){
-	const auto& values = static_cast<Node::Attribute*>(data)->values;
-	if(size_t(index) >= values.size()){
-		return false;
-	}
-	*str = values[index].c_str();
-	return true;
-}
-
-void purgeTextures( std::unordered_map<const Node*, GLuint>& textures )
-{
-	for( const auto& texture : textures )
-	{
+void purgeTextures( std::unordered_map<const Node*, GLuint>& textures ){
+	for(const auto& texture : textures){
 		GLuint tex = texture.second;
-		glDeleteTextures( 1, &tex );
+		glDeleteTextures(1, &tex);
 	}
 	textures.clear();
 }
+
+/// Graph layout
+
+void autoLayout(const Graph& graph){
+	// Nodes need to be valid.
+	uint nodeCount = 0u;
+	GraphNodes nodes(graph);
+	ImVec2 maxNodeSize( 100.f, 170.f );
+	for( uint node : nodes )
+	{
+		const ImVec2 nodeSize = ImNodes::GetNodeDimensions( node );
+		maxNodeSize.x = ( std::max )( nodeSize.x, maxNodeSize.x );
+		maxNodeSize.y = ( std::max )( nodeSize.y, maxNodeSize.y );
+		++nodeCount;
+	}
+	// Add padding 
+	maxNodeSize.x *= 1.1f;
+	maxNodeSize.y *= 1.1f;
+
+	const uint gridSize = uint( std::ceil( std::sqrt( ( float )nodeCount ) ) );
+
+	GraphNodes nodes2( graph );
+	uint id = 0;
+	for( uint node : nodes2 )
+	{
+		ImVec2 pos( ( float )( id % gridSize ), ( float )( id / gridSize ) );
+		pos.x *= maxNodeSize.x;
+		pos.y *= maxNodeSize.y;
+		ImNodes::SetNodeGridSpacePos( node, pos );
+		++id;
+	}
+}
+
+Graph* createDefaultGraph(){
+	Graph* graph = new Graph();
+
+	GraphEditor editor(*graph);
+	editor.addNode(new InputNode());
+	editor.addNode(new OutputNode());
+
+	for(uint i = 0; i < 4; ++i)
+		editor.addLink( 0, i, 1, i );
+
+	editor.commit();
+
+	return graph;
+}
+
+bool loadGraph(std::unique_ptr<Graph>& graph, ErrorContext& errorContext){
+	int count = 0;
+	char** paths = nullptr;
+	if(sr_gui_ask_load_files("Load graph", "", "packgraph", &paths, &count) != SR_GUI_VALIDATED){
+		return false;
+	}
+	if(count == 0 || !paths || !paths[0]){
+		if(paths){
+			free(paths);
+		}
+		return false;
+	}
+	const std::string path(paths[0]);
+	// Immediately clean up the paths.
+	for(int i = 0; i < count; ++i){
+		free(paths[i]);
+	}
+	free(paths);
+
+	std::ifstream file(path);
+	if(!file.is_open()){
+		errorContext.addError("Unable to load graph from file at path \"" + path + "\"");
+		return false;
+	}
+
+	json data = json::parse(file, nullptr, false);
+	// Done with the file.
+	file.close();
+	// Invalid JSON.
+	if(data.is_discarded()){
+		errorContext.addError("Unable to parse graph from file at path \"" + path + "\"");
+		return false;
+	}
+
+	// Issue: numbered inputs/outputs are created before the freelist indices are reset...
+	// So we have to destroy the current graph first.
+	// In case of rollback, use a serialized copy of the old graph and hope for the best.
+	json oldGraph;
+	graph->serialize( oldGraph );
+	graph.reset(new Graph());
+	errorContext.clear();
+
+	if(!graph->deserialize(data)){
+		errorContext.addError("Unable to deserialize graph from file at path \"" + path + "\"");
+		// Restore the previous graph.
+		graph.reset( new Graph() );
+		graph->deserialize( oldGraph );
+		return true;
+	}
+	if(data.contains("layout")){
+		std::string state = data["layout"];
+		ImNodes::LoadCurrentEditorStateFromIniString(state.c_str(), state.size());
+	}
+	return true;
+}
+
+void saveGraph(std::unique_ptr<Graph>& graph, ErrorContext& errorContext){
+	char* rawPath = nullptr;
+	if(sr_gui_ask_save_file("Save graph", "", "packgraph", &rawPath) != SR_GUI_VALIDATED){
+		if(rawPath)
+			free(rawPath);
+		return;
+	}
+
+	json data;
+	// Graph is guaranteed to exist.
+	graph->serialize(data);
+	std::string state = ImNodes::SaveCurrentEditorStateToIniString();
+	data["layout"] = state;
+
+	std::string path(rawPath);
+	free(rawPath);
+
+	std::ofstream file(path);
+	if(!file.is_open()){
+		errorContext.addError("Unable to create file at path \"" + path + "\"");
+		return;
+	}
+
+	file << std::setw(4) << data << "\n";
+	file.close();
+}
+
+/// Input/output files
 
 struct InputFile {
 	fs::path path;
@@ -325,65 +275,630 @@ bool refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	return (reusedCount != newCount) || (newCount != oldCount);
 }
 
-float TextIndexSize(const std::string& str, bool multiChannel, float fontRatio){
-	const int size = str.size();
-	if(size == 0){
-		return 0.f;
+std::vector<fs::path> filterInputFiles(std::vector<InputFile>& files){
+	std::vector<fs::path> inputPaths;
+	for(InputFile& file : files){
+		if(file.active){
+			inputPaths.push_back( file.path );
+		}
 	}
-	if(!multiChannel){
-		return ImGui::CalcTextSize(str.c_str()).x;
-	}
-	const int lastCharIndex = size - 1;
-	float baseSize = ImGui::CalcTextSize(str.c_str(), str.c_str() + lastCharIndex).x;
-	float indexSize = ImGui::CalcTextSize(str.c_str() + lastCharIndex).x;
-	return baseSize + fontRatio * indexSize;
+	return inputPaths;
 }
 
-void TextIndex(const std::string& str, bool multiChannel, ImFont* font){
-	const int size = str.size();
-	if(size == 0){
-		return;
-	}
-	if(!multiChannel){
-		ImGui::TextUnformatted(str.c_str());
-		return;
-	}
-	const int lastCharIndex = size - 1;
-	ImGui::TextUnformatted(str.c_str(), str.c_str() + lastCharIndex);
-	ImGui::SameLine(0,0);
-	ImGui::PushFont(font);
-	ImGui::TextUnformatted(str.c_str() + lastCharIndex);
-	ImGui::PopFont();
-}
-
-struct TextInfo {
-	const std::string& str;
-	float width = 0.f;
+enum DirectoryType : int {
+	INPUT = 1 << 0,
+	OUTPUT = 1 << 1,
+	BOTH = INPUT | OUTPUT
 };
 
-int commentTextCallback(ImGuiInputTextCallbackData* data){
-	if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
-		TextInfo& info = *(TextInfo*)(data->UserData);
-		// Find the previous line begin
-		std::string::size_type pos = info.str.find_last_of('\n', data->CursorPos);
-		if(pos == std::string::npos){
-			pos = 0;
-		} else {
-			++pos;
-		}
+void askForDirectories(DirectoryType types, fs::path& inputDirectory, fs::path& outputDirectory){
 
-		if(int(pos) <= data->CursorPos){
-			const char* strStart = info.str.data();
-			float width = ImGui::CalcTextSize(strStart + pos, strStart + data->CursorPos ).x;
-			if(width >= info.width ){
-				data->InsertChars(data->CursorPos - 1, "\n");
+	if(types & INPUT){
+		char* rawPath = nullptr;
+		if(sr_gui_ask_directory("Input directory", "", &rawPath) == SR_GUI_VALIDATED){
+			if(rawPath){
+				inputDirectory = rawPath;
 			}
 		}
-		return 0;
+		if(rawPath){
+			free(rawPath);
+		}
 	}
-	return 0;
+	if(types & OUTPUT){
+		char* rawPath = nullptr;
+		if(sr_gui_ask_directory("Output directory", "", &rawPath) == SR_GUI_VALIDATED){
+			if(rawPath){
+				outputDirectory = rawPath;
+			}
+		}
+		if(rawPath){
+			free(rawPath);
+		}
+	}
 }
 
+/// GUI Panels
+
+struct Styling {
+	ImFont* defaultFont;
+	ImFont* smallFont;
+	float kSplitBarWidth;
+	uint kMaxRefreshDelayInFrames;
+	ImNodesPinShape kPinsShape;
+	float kPreviewDisplayWidth;
+	float kSlotLabelWidth;
+	float kNodeInternalWidth;
+	float kNodeTotalWidth;
+	unsigned int kWinFlags;
+	float kSafetyMargin;
+};
+
+const Node* showErrorPanel(const ErrorContext& errorContext, float winWidth, float winHeight){
+	const int kWinFlags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+
+	const Node* nodeToFocus = nullptr;
+
+	ImGui::SetNextWindowPos(ImVec2(winWidth, winHeight), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+	if(ImGui::Begin("Error messages", nullptr, kWinFlags)){
+
+		const uint errorCount = errorContext.errorCount();
+
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+		ImGui::Text( "Graph validation: %u errors", errorCount );
+		ImGui::PopStyleColor();
+
+		ImGui::BeginTable("##Errors", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg, ImVec2(400,0));
+		ImGui::TableSetupColumn("Node");
+		ImGui::TableSetupColumn("Slot");
+		ImGui::TableSetupColumn("Message");
+		ImGui::TableHeadersRow();
+		for( uint i = 0; i < errorCount; ++i ){
+
+			ImGui::PushID(i);
+			const char* msg;
+			const Node* node;
+			int slot;
+			errorContext.getError(i, msg, node, slot);
+
+			ImGui::TableNextColumn();
+			if(node){
+				if(ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap)){
+					nodeToFocus = node;
+				}
+			}
+
+			ImGui::TableNextColumn();
+			if(slot >= 0){
+				if(node && ((uint)slot < node->inputs().size())){
+					ImGui::TextUnformatted(node->inputs()[slot].c_str());
+				} else {
+					ImGui::Text("%d", slot + 1);
+				}
+			}
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted( msg );
+			ImGui::PopID();
+
+		}
+		ImGui::EndTable();
+	}
+	ImGui::End();
+	return nodeToFocus;
+}
+
+bool drawCommentNode(Node* node, uint nodeId, const Styling& style){
+	ImNodes::BeginNode( nodeId );
+	Node::Attribute& att = node->attributes()[ 0 ];
+	// Count line returns.
+	uint lineCount = 1;
+	for(char c : att.str){
+		if(c == '\n'){
+			++lineCount;
+		}
+	}
+
+	const ImVec2 fieldSize(style.kNodeInternalWidth, (float(lineCount) + 1.5f) * ImGui::GetTextLineHeight());
+	TextCallbackInfo commentInfo{att.str.c_str(), fieldSize.x - style.kSafetyMargin };
+	ImGui::InputTextMultiline( "##Comment", &(att.str), fieldSize, ImGuiInputTextFlags_CallbackEdit, &commentTextCallback, (void*)&commentInfo);
+	const bool edited = ImGui::IsItemActive();
+
+	ImNodes::EndNode();
+	return edited;
+}
+
+bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordered_map<const Node*, GLuint>& textures, int& nodeToPurgeLinks){
+	bool editedGraph = false;
+	ImNodes::BeginNode(nodeId);
+
+	ImNodes::BeginNodeTitleBar();
+	{
+		if(node->channelled()){
+			const char* labels[] = {"0", "1", "2", "3", "4"};
+			const uint channelCount = node->channelCount();
+			if(ImGui::SmallButton( labels[channelCount])){
+				node->setChannelCount(channelCount % 4 + 1);
+				editedGraph = true;
+				// We'll have to remove extraneous links.
+				nodeToPurgeLinks = int(nodeId);
+			}
+			ImGui::SameLine(style.kSlotLabelWidth);
+			ImGui::TextUnformatted( node->name().c_str() );
+		} else {
+			ImGui::Indent(style.kSlotLabelWidth);
+			ImGui::TextUnformatted( node->name().c_str() );
+			ImGui::Unindent();
+		}
+		ImGui::SameLine(style.kPreviewDisplayWidth + style.kSlotLabelWidth * 1.1f);
+		ImGui::Bullet();
+		if( ImGui::IsItemHovered()){
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10,10));
+			ImGui::SetTooltip( "%s", node->description().c_str());
+			ImGui::PopStyleVar();
+		}
+	}
+	ImNodes::EndNodeTitleBar();
+
+	const bool multiChannel = node->channelCount() > 1;
+
+	// Draw all inputs.
+	ImGui::BeginGroup();
+	{
+		uint slotId = 0u;
+		for( const std::string& name : node->inputs() ){
+			ImNodes::BeginInputAttribute( fromInputSlotToLink( { nodeId, slotId } ), style.kPinsShape);
+			TextIndex( name, multiChannel, style.smallFont );
+			ImNodes::EndInputAttribute();
+			++slotId;
+		}
+		// Force group size.
+		ImGui::Dummy(ImVec2(style.kSlotLabelWidth, 0));
+	}
+	ImGui::EndGroup();
+
+	ImGui::SameLine(0,0);
+	ImGui::BeginGroup();
+	// Draw texture preview.
+	{
+		auto texKey = textures.find( node );
+		if(texKey != textures.end()){
+			GLuint tex = texKey->second;
+			ImGui::Image( ( ImTextureID )(uintptr_t)tex, ImVec2( style.kPreviewDisplayWidth, style.kPreviewDisplayWidth ) );
+		} else{
+			// Ensure node width is always the same.
+			ImGui::Dummy( ImVec2( style.kPreviewDisplayWidth, 0.f ) );
+		}
+	}
+	// Draw attributes
+	{
+		// Compute size of all attributes (for nice alignment)
+		float minAttributeSize = style.kPreviewDisplayWidth;
+		for( const Node::Attribute& attribute : node->attributes() )
+		{
+			// Subtract label size if not hidden.
+			float attLabelSize = ImGui::CalcTextSize( attribute.name.c_str(), nullptr, true ).x;
+			if( attLabelSize != 0.f ){
+				attLabelSize += ImGui::GetStyle().ItemInnerSpacing.x;
+			}
+			minAttributeSize = std::min( minAttributeSize, style.kPreviewDisplayWidth - attLabelSize );
+		}
+		minAttributeSize = std::max( 0.f, minAttributeSize );
+
+		for( Node::Attribute& attribute : node->attributes() ){
+
+			ImGui::PushItemWidth( minAttributeSize );
+			switch( attribute.type )
+			{
+				case Node::Attribute::Type::FLOAT:
+					editedGraph |= ImGui::DragFloat( attribute.name.c_str(), &attribute.flt, 0.05f, 0.0f, 0.0f, "%.6f" );
+					break;
+				case Node::Attribute::Type::COLOR:
+					editedGraph |= ImGui::ColorPicker4( attribute.name.c_str(), &attribute.clr[ 0 ], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_DisplayHex | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_NoSmallPreview );
+					break;
+				case Node::Attribute::Type::STRING:
+					editedGraph |= ImGui::InputText( attribute.name.c_str(), &(attribute.str) );
+					break;
+				case Node::Attribute::Type::COMBO:
+					editedGraph |= ImGui::Combo( attribute.name.c_str(), &attribute.cmb, &getAttributeComboItemCallback, &attribute, attribute.values.size() );
+					break;
+				case Node::Attribute::Type::BOOL:
+					editedGraph |= ImGui::Checkbox( attribute.name.c_str(), &attribute.bln );
+					break;
+				default:
+					assert( false );
+					break;
+			}
+			ImGui::PopItemWidth();
+		}
+	}
+	ImGui::EndGroup();
+
+	// Draw all outputs
+	ImGui::SameLine(0,0);
+	ImGui::BeginGroup();
+	{
+		const bool multiChannel = node->channelCount() > 1;
+		uint slotId = 0u;
+		for( const std::string& name : node->outputs() ){
+
+			const float labelSize = TextIndexSize( name, multiChannel, style.smallFont->FontSize / style.defaultFont->FontSize );
+			const float offset = std::max( 0.f, style.kSlotLabelWidth - labelSize );
+
+			ImNodes::BeginOutputAttribute( fromOutputSlotToLink( { nodeId, slotId } ), style.kPinsShape);
+			ImGui::Indent(offset);
+			TextIndex( name, multiChannel, style.smallFont );
+			ImGui::Unindent();
+			ImNodes::EndOutputAttribute();
+			++slotId;
+		}
+		// Force group size.
+		ImGui::Dummy(ImVec2(style.kSlotLabelWidth, 0));
+	}
+	ImGui::EndGroup();
+
+	ImNodes::EndNode();
+	return editedGraph;
+}
+
+void showCreationPopup(std::unordered_map<NodeClass, uint>& nodesToCreate, std::string& searchStr, int& selectedNodeType, std::vector<NodeClass>& visibleNodeTypes, bool focusTextField) {
+
+	int visibleTypesCount = int(visibleNodeTypes.size());
+	const int columnWidth = 200;
+	const int columnItemsHeight = 12;
+	const int columnCount = (visibleTypesCount + columnItemsHeight - 1 ) / columnItemsHeight;
+
+	if(ImGui::IsKeyPressed(ImGuiKey_UpArrow, true)){
+		--selectedNodeType;
+		if(selectedNodeType < 0){
+			selectedNodeType = visibleTypesCount - 1;
+		}
+	}
+	if(ImGui::IsKeyPressed(ImGuiKey_DownArrow, true)){
+		++selectedNodeType;
+		if(selectedNodeType >= visibleTypesCount){
+			selectedNodeType = 0;
+		}
+	}
+	if(ImGui::IsKeyPressed(ImGuiKey_RightArrow, true)){
+		selectedNodeType += columnItemsHeight;
+		if(selectedNodeType >= visibleTypesCount){
+			selectedNodeType = selectedNodeType % columnItemsHeight;
+		}
+	}
+	if(ImGui::IsKeyPressed(ImGuiKey_LeftArrow, true)){
+		selectedNodeType -= columnItemsHeight;
+		if(selectedNodeType < 0){
+			// Is there a simpler expression?
+			selectedNodeType = (selectedNodeType + columnItemsHeight) % columnItemsHeight + (columnCount - 1) * columnItemsHeight;
+			// Only the last column can be not full.
+			if(selectedNodeType >= visibleTypesCount){
+				selectedNodeType -= columnItemsHeight;
+			}
+		}
+	}
+
+	ImGui::PushItemWidth(columnWidth * columnCount);
+
+	if(focusTextField){
+		ImGui::SetKeyboardFocusHere();
+	}
+
+	if(ImGui::InputText("##SearchField", &searchStr, ImGuiInputTextFlags_AutoSelectAll)){
+		// Refresh selection.
+		const std::string searchStrLow = TextUtilities::lowercase(searchStr);
+		visibleNodeTypes.clear();
+		visibleNodeTypes.reserve(NodeClass::COUNT_EXPOSED);
+		// Filter visible types.
+		for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
+			const NodeClass type = getOrderedType(i);
+			const std::string labelLow = TextUtilities::lowercase(getNodeName(type));
+			if(labelLow.find(searchStrLow) == std::string::npos)
+				continue;
+			visibleNodeTypes.push_back(type);
+		}
+		selectedNodeType = 0;
+		visibleTypesCount = visibleNodeTypes.size();
+	}
+	ImGui::PopItemWidth();
+
+	for(int i = 0; i < columnItemsHeight; ++i){
+		// Split in multiple columns.
+		for(int c = 0; c < columnCount; ++c){
+			const int index = c * columnItemsHeight + i;
+			if( index >= visibleTypesCount )
+				break;
+
+			const NodeClass type = visibleNodeTypes[index];
+			const std::string& label = getNodeName(type);
+			const ImVec2 selectSize = ImVec2(columnWidth - 2 * ImGui::GetStyle().FramePadding.x, 0);
+			if(ImGui::Selectable(label.c_str(), index == selectedNodeType, 0, selectSize)){
+				nodesToCreate[type] += 1;
+			}
+			if((c < columnCount - 1) && (index + columnItemsHeight) < visibleTypesCount){
+				ImGui::SameLine((c + 1) * columnWidth);
+			}
+		}
+	}
+
+	if(ImGui::IsKeyReleased(ImGuiKey_Enter)){
+		if(selectedNodeType >= 0 && selectedNodeType < int(visibleNodeTypes.size())){
+			nodesToCreate[visibleNodeTypes[selectedNodeType]] += 1;
+			ImGui::CloseCurrentPopup();
+		}
+	}
+
+	if(ImGui::IsKeyReleased(ImGuiKey_Escape)){
+		ImGui::CloseCurrentPopup();
+	}
+}
+
+bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<NodeClass, uint>& nodesToCreate, int nodeToPurgeLinks, const Styling& style, ImVec2& mouseRightClick, std::vector<Node *>& createdNodes) {
+
+	const bool shftModifierHeld = ImGui::GetIO().KeyShift;
+	const bool altModifierHeld  = ImGui::GetIO().KeyAlt;
+#ifdef _MACOS
+	const bool ctrlModifierHeld = ImGui::GetIO().KeySuper;
+#else
+	const bool ctrlModifierHeld = ImGui::GetIO().KeyCtrl;
+#endif
+
+	bool editedGraph = false;
+
+	GraphEditor editor(*graph);
+	if(nodeToPurgeLinks >= 0){
+		const Node* node = graph->node(nodeToPurgeLinks);
+		const uint newInputCount = node->inputs().size();
+		const uint newOutputCount = node->outputs().size();
+		for(uint i = 0; i < graph->getLinkCount(); ++i){
+			const Graph::Link& link = graph->link(i);
+			if(int(link.from.node) == nodeToPurgeLinks && link.from.slot >= newOutputCount){
+				editor.removeLink(i);
+			}
+			if(int(link.to.node) == nodeToPurgeLinks && link.to.slot >= newInputCount){
+				editor.removeLink(i);
+			}
+		}
+		nodeToPurgeLinks = -1;
+	}
+
+	int dropId;
+	if(ImNodes::IsLinkDropped(&dropId, false) && altModifierHeld){
+		bool isInput = false;
+		const Graph::Slot pin = fromLinkToSlot(dropId, isInput);
+		if(isInput){
+			// Create a constant node and link it.
+			Node* createdNode = createNode( shftModifierHeld ? NodeClass::CONST_COLOR : NodeClass::CONST_FLOAT );
+			const uint newNodeId = editor.addNode( createdNode );
+			// Register for placement at next frame.
+			createdNodes.push_back( createdNode );
+			mouseRightClick = ImGui::GetMousePos();
+			// Shift position to have the end link placed approximately at the mouse.
+			mouseRightClick.x -= style.kNodeTotalWidth;
+			mouseRightClick.y -= 2.f * ImGui::GetTextLineHeightWithSpacing();
+
+			editor.addLink( newNodeId, 0, pin.node, pin.slot );
+			if(shftModifierHeld){
+				// Autolink four channels if possible.
+				const Node* const toNode = graph->node( pin.node );
+				const uint toCount = toNode->inputs().size();
+				const uint maxCommonSlots = (std::min)( 4u, toCount - pin.slot );
+				for(uint i = 1; i < maxCommonSlots; ++i){
+					editor.addLink(newNodeId, i, pin.node, pin.slot + i);
+				}
+			}
+			editedGraph = true;
+		}
+	}
+
+	int startLink, endLink;
+	if(ImNodes::IsLinkCreated(&startLink, &endLink)){
+		bool fromIsInput, toIsInput;
+		const Graph::Slot from = fromLinkToSlot( startLink, fromIsInput );
+		const Graph::Slot to = fromLinkToSlot( endLink, toIsInput );
+		assert( toIsInput && !fromIsInput );
+
+		editor.addLink(from.node, from.slot, to.node, to.slot);
+
+		// Multi-link creation
+		if(shftModifierHeld){
+			const Node* const fromNode = graph->node(from.node);
+			const Node* const toNode = graph->node( to.node );
+			const uint fromCount = fromNode->outputs().size();
+			const uint toCount = toNode->inputs().size();
+			const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
+			for(uint i = 1; i < maxCommonSlots; ++i){
+				editor.addLink(from.node, from.slot + i, to.node, to.slot + i);
+			}
+		}
+		editedGraph = true;
+	}
+
+	int linkId;
+	if(ImNodes::IsLinkDestroyed(&linkId)){
+
+		if(shftModifierHeld){
+			const Graph::Link& link = graph->link(linkId);
+			const Graph::Slot& from = link.from;
+			const Graph::Slot& to = link.to;
+			// Find other links between the two nodes, matching channels.
+			const Node* const fromNode = graph->node( from.node );
+			const Node* const toNode = graph->node( to.node );
+			const uint fromCount = fromNode->outputs().size();
+			const uint toCount = toNode->inputs().size();
+			const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
+			for( uint i = 1; i < maxCommonSlots; ++i )
+			{
+				Graph::Link oLink = link;
+				oLink.from.slot += i;
+				oLink.to.slot += i;
+				const int oLinkId = graph->findLink( oLink );
+				if( oLinkId >= 0 ){
+					editor.removeLink(oLinkId);
+				}
+			}
+		}
+		editor.removeLink(linkId);
+		editedGraph = true;
+	}
+
+	if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
+	   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && ctrlModifierHeld)){
+		const uint nodesCount = ImNodes::NumSelectedNodes();
+		if(nodesCount > 0u){
+			std::vector<int> nodeIds(nodesCount);
+			ImNodes::GetSelectedNodes(nodeIds.data());
+			for(const int nodeId : nodeIds){
+				editor.removeNode((uint)nodeId);
+			}
+			editedGraph = true;
+		}
+		const uint linkCount = ImNodes::NumSelectedLinks();
+		if(linkCount > 0){
+			std::vector<int> linkIds(linkCount);
+			ImNodes::GetSelectedLinks(linkIds.data());
+			for(const int linkId : linkIds){
+				editor.removeLink((uint)linkId);
+			}
+			editedGraph = true;
+		}
+	}
+
+	// Create queued nodes.
+	for(const auto& nodeTypeToCreate : nodesToCreate){
+		if(nodeTypeToCreate.first >= NodeClass::COUNT_EXPOSED){
+			continue;
+		}
+		for(uint i = 0u; i < nodeTypeToCreate.second; ++i){
+			Node* createdNode = createNode(nodeTypeToCreate.first);
+			editor.addNode( createdNode );
+			// Register for placement at next frame.
+			createdNodes.push_back(createdNode);
+		}
+		editedGraph = true;
+	}
+
+	editor.commit();
+	return editedGraph;
+}
+
+bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<InputFile>& inputFiles, int previewQuality, bool showAlphaPreview, std::unordered_map<const Node *, GLuint>& textures) {
+
+	CompiledGraph compiledGraph;
+	ErrorContext dummyContext;
+	bool res = compile(*graph, false, dummyContext, compiledGraph);
+	if(!res){
+		return false;
+	}
+	
+	// TODO: when errors or unused nodes, do something to give feedback to the user.
+	const uint inputCount = compiledGraph.inputs.size();
+	// Count selected input files.
+	uint inputFileCount = 0u;
+	for(const InputFile& input : inputFiles){
+		if(!input.active){
+			continue;
+		}
+		++inputFileCount;
+	}
+
+	const bool hasEnoughInputsForPreview = inputCount == 0u || (inputFileCount != 0u);
+	if(!hasEnoughInputsForPreview){
+		return false;
+	}
+
+	textures.clear();
+	const uint previewSize = 128u / (1u << previewQuality);
+	// We can evaluate the graph to generate textures.
+	// Prepare a batch by hand
+	Batch batch;
+	// Find the N first selected inputs
+	for(const InputFile& input : inputFiles){
+		if(!input.active){
+			continue;
+		}
+		batch.inputs.push_back(input.path);
+		if(batch.inputs.size() == inputCount){
+			break;
+		}
+	}
+	if(!batch.inputs.empty()){
+		while(batch.inputs.size() < inputCount){
+			// Not enough input images, repeat the last one?
+			batch.inputs.push_back(batch.inputs.back());
+		}
+	}
+
+	// Dummy output names.
+	for(uint i = 0; i < compiledGraph.outputs.size(); ++i ){
+		Batch::Output& output = batch.outputs.emplace_back();
+		output.path = std::to_string(i);
+		output.format = Image::Format::PNG;
+	}
+
+	SharedContext sharedContext;
+	allocateContextForBatch(batch, compiledGraph, {previewSize, previewSize}, true, sharedContext);
+	for(const CompiledNode& node : compiledGraph.nodes){
+		evaluateGraphStepForBatch(node, compiledGraph.stackSize, sharedContext);
+		Image outputImg(previewSize, previewSize, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+		{
+			// Use inputs for outputs nodes, to be able to preview the result.
+			const bool useInputs = node.outputs.empty();
+			const std::vector<int>& registers = useInputs ? node.inputs : node.outputs;
+			const std::vector<Image>& images = useInputs ? sharedContext.tmpImagesRead : sharedContext.tmpImagesWrite;
+			const uint channelCount = registers.size();
+			// Populate image with available channels from registers.
+			for(uint c = 0; c < channelCount; ++c){
+				const uint reg = registers[c];
+				const Image& img = images[reg/4];
+				const uint srcChannel = reg % 4u;
+				for(uint y = 0; y < previewSize; ++y){
+					for(uint x = 0; x < previewSize; ++x){
+						outputImg.pixel(x,y)[c] = img.pixel(x,y)[srcChannel];
+					}
+				}
+			}
+			// If we have only one channel, broadcast to RGB, otherwise leave initialized to 0 (or 1 for alpha).
+			if(channelCount == 1){
+				for(uint y = 0; y < previewSize; ++y){
+					for(uint x = 0; x < previewSize; ++x){
+						for(uint c = 1; c < 3; ++c){
+							outputImg.pixel(x,y)[c] = outputImg.pixel(x,y)[0];
+						}
+					}
+				}
+			}
+			if(showAlphaPreview){
+				for(uint y = 0; y < previewSize; ++y){
+					for(uint x = 0; x < previewSize; ++x){
+						const float gridLevel = float(((x / 8) % 2) ^ ((y / 8) % 2));
+						const glm::vec4 gridColor(gridLevel * 0.5 + 0.25f);
+						const float alpha = (outputImg.pixel(x,y)[3]);
+						outputImg.pixel(x, y) = glm::mix(gridColor, outputImg.pixel(x, y), alpha);
+						outputImg.pixel(x, y)[3] = 1.0f;
+					}
+				}
+			}
+
+		}
+		// Upload GL texture and associate to node.
+		GLuint tex = 0;
+		glGenTextures( 1, &tex );
+		glBindTexture( GL_TEXTURE_2D, tex );
+		glTexImage2D( GL_TEXTURE_2D, 0,  GL_RGBA32F, previewSize, previewSize, 0, GL_RGBA, GL_FLOAT,  outputImg.rawPixels() );
+		glGenerateMipmap( GL_TEXTURE_2D );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		glBindTexture( GL_TEXTURE_2D, 0 );
+		textures[ node.node ] = tex;
+
+		// And swap for next node.
+		std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
+	}
+	return true;
+}
+
+/// Main loop
 
 int main(int argc, char** argv){
 
@@ -406,69 +921,56 @@ int main(int argc, char** argv){
 	ImFont* defaultFont = nullptr;
 	ImFont* smallFont = nullptr;
 	GLFWwindow* window = createWindow(1000, 700, defaultFont, smallFont);
-	const uint errorTitleBar			= IM_COL32( 190, 15, 15, 255 ); 
-	const uint errorTitleBarActive		= IM_COL32( 220, 15, 15, 255 ); 
-	const uint errorBackground			= IM_COL32( 50, 5, 5, 255 );
-	const uint errorBackgroundActive	= IM_COL32( 75, 5, 5, 255 );
-
 	if(!window){
 		Log::Error() << "Unable to create window." << std::endl;
 		return 1;
 	}
 
-	glPixelStorei(GL_PACK_ALIGNMENT, 1);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	sr_gui_init();
-
 	int winW, winH;
 	glfwGetWindowSize(window, &winW, &winH);
 
-	std::unique_ptr<Graph> graph(new Graph());
-
-	{
-		GraphEditor editor(*graph);
-		editor.addNode(new InputNode());
-		editor.addNode( new OutputNode() );
-		for(uint i = 0; i < 4; ++i)
-			editor.addLink( 0, i, 1, i );
-		editor.commit();
-	}
-
-	std::unordered_map<NodeClass, uint> nodesPasteboard;
-	std::vector<Node*> createdNodes;
-	ImVec2 mouseRightClick( 0.f, 0.f );
+	std::unique_ptr<Graph> graph(createDefaultGraph());
 	ErrorContext errorContext;
 
-	bool showPreview = true;
-	bool needsPreviewRefresh = true;
-	bool needAutoLayout = true;
-	float inputsWindowWidth = (std::min)(300.0f, 0.25f * float(winW));
-	const float kSplitBarWidth = 8.0f;
-	const ImNodesPinShape kPinsShape = ImNodesPinShape_CircleFilled;
+	// Constants
+	Styling style;
+	style.kSplitBarWidth = 8.0f;
+	style.kPinsShape = ImNodesPinShape_CircleFilled;
+	style.kPreviewDisplayWidth = 128.f;
+	style.kSlotLabelWidth = 24.f;
+	style.kNodeInternalWidth = style.kPreviewDisplayWidth + 2.f * style.kSlotLabelWidth;
+	style.kNodeTotalWidth = style.kNodeInternalWidth + 2.f * ImNodes::GetStyle().NodePadding.x;
+	style.kWinFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
+	style.defaultFont = defaultFont;
+	style.smallFont = smallFont;
 
+	const uint kMaxRefreshDelayInFrames = 60u;
+	// Input/output state
 	fs::path inputDirectory;
 	fs::path outputDirectory;
 	std::vector<InputFile> inputFiles;
 	uint timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 
-	const float kPreviewDisplayWidth = 128.f;
-	const float kSlotLabelWidth = 24.f;
-	const float kNodeInternalWidth = kPreviewDisplayWidth + 2.f * kSlotLabelWidth;
-	const float kNodeTotalWidth = kNodeInternalWidth + 2.f * ImNodes::GetStyle().NodePadding.x;
-
-	int previewQuality = 1;
-	bool showAlphaPreview = true;
+	// GUI state
+	std::atomic<int> showProgress = -1;
+	std::string searchStr;
+	std::vector<NodeClass> visibleNodeTypes;
+	std::unordered_map<NodeClass, uint> nodesPasteboard;
+	std::vector<Node*> createdNodes;
 	std::unordered_map<const Node*, GLuint> textures;
 	std::unordered_map<const Node*, GLuint> texturesToPurge;
-
-	bool anyPopupOpen = false;
-	std::string searchStr;
-	int seed = Random::getSeed();
-	std::vector<NodeClass> visibleNodeTypes;
-	int selectedNodeType = 0;
-	std::atomic<int> showProgress = -1;
-	bool forceCustomResolution = false;
+	ImVec2 mouseRightClick( 0.f, 0.f );
 	glm::ivec2 customResolution = {64, 64};
+	float inputsWindowWidth = (std::min)(300.0f, 0.25f * float(winW));
+	int selectedNodeType = 0;
+	int seed = Random::getSeed();
+	int previewQuality = 1;
+	bool showAlphaPreview = true;
+	bool showPreview = true;
+	bool needsPreviewRefresh = true;
+	bool needAutoLayout = true;
+	bool anyPopupOpen = false;
+	bool forceCustomResolution = false;
 
 	while(!glfwWindowShouldClose(window)) {
 
@@ -484,21 +986,28 @@ int main(int argc, char** argv){
 		glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		purgeTextures(texturesToPurge);
+
+		// Frame state
 		bool editedGraph = false;
 		bool editedInputList = false;
 		bool wantsExit = false;
+		int nodeToPurgeLinks = -1;
+		bool editingTextField = false;
+		style.kSafetyMargin = ImGui::CalcTextSize("M").x;
+
+		// Request exit if pressing escape on main window.
 		if(!anyPopupOpen && ImGui::IsKeyReleased(ImGuiKey_Escape)){
 			wantsExit = true;
 		}
 		anyPopupOpen = false;
 
+		// Cyclic input files refresh.
 		++timeSinceLastInputUpdate;
 		if((timeSinceLastInputUpdate > kMaxRefreshDelayInFrames) && !inputDirectory.empty()){
 			editedInputList = refreshFiles(inputDirectory, inputFiles);
 			timeSinceLastInputUpdate = 0;
 		}
-
-		purgeTextures( texturesToPurge );
 
 		// Menus and settings
 		{
@@ -506,62 +1015,30 @@ int main(int argc, char** argv){
 
 				if(ImGui::BeginMenu("File")){
 
-					char* rawInPath = nullptr;
-					char* rawOutPath = nullptr;
-
 					if(ImGui::MenuItem("Select directories...")){
-						if(sr_gui_ask_directory("Input directory", "", &rawInPath) == SR_GUI_VALIDATED){
-							if(rawInPath){
-								inputDirectory = rawInPath;
-								// Force refresh
-								timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
-							}
-						}
-						if(sr_gui_ask_directory("Output directory", "", &rawOutPath) == SR_GUI_VALIDATED){
-							if(rawOutPath){
-								outputDirectory = rawOutPath;
-							}
-						}
+						askForDirectories(BOTH, inputDirectory, outputDirectory);
+						timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 					}
 
-					if(!inputDirectory.empty()){
-						if(ImGui::MenuItem("Change input directory...")){
-							if(sr_gui_ask_directory("Input directory", "", &rawInPath) == SR_GUI_VALIDATED){
-								if(rawInPath){
-									inputDirectory = rawInPath;
-									// Force refresh
-									timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
-								}
-							}
-						}
-					}
-					if(!outputDirectory.empty()){
-						if(ImGui::MenuItem("Change output directory...")){
-							if(sr_gui_ask_directory("Output directory", "", &rawOutPath) == SR_GUI_VALIDATED){
-								if(rawOutPath){
-									outputDirectory = rawOutPath;
-								}
-							}
-						}
+					if(ImGui::MenuItem("Change input directory...", nullptr, false, !inputDirectory.empty())){
+						askForDirectories(INPUT, inputDirectory, outputDirectory);
+						timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 					}
 
-					if(rawInPath){
-						free(rawInPath);
-					}
-					if(rawOutPath){
-						free(rawOutPath);
+					if(ImGui::MenuItem("Change output directory...", nullptr, false, !outputDirectory.empty())){
+						askForDirectories(OUTPUT, inputDirectory, outputDirectory);
+						timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 					}
 
 					ImGui::Separator();
 
 					if(ImGui::BeginMenu("Settings")){
 
-						if( ImGui::MenuItem( "Show preview", "", &showPreview) ) {
-							if( !showPreview ){
+						if(ImGui::MenuItem("Show preview", "", &showPreview)){
+							needsPreviewRefresh = true;
+							if(!showPreview){
 								texturesToPurge = textures;
 								textures.clear();
-							} else {
-								needsPreviewRefresh = true;
 							}
 						}
 						if(ImGui::MenuItem("Preview alpha grid", "", &showAlphaPreview)){
@@ -588,71 +1065,11 @@ int main(int argc, char** argv){
 				if(ImGui::BeginMenu("Graph")){
 
 					if(ImGui::MenuItem("Open...")){
-						int count = 0;
-						char** paths = nullptr;
-						if(sr_gui_ask_load_files("Load graph", "", "packgraph", &paths, &count) == SR_GUI_VALIDATED){
-							if(count != 0){
-								const std::string path(paths[0]);
-								std::ifstream file(path);
-								if(file.is_open()){
-									json data = json::parse(file, nullptr, false);
-									if(data.is_discarded()){
-										errorContext.addError("Unable to parse graph from file at path \"" + path + "\"");
-									} else {
-										// Issue: numbered inputs/outputs are created before the freelist indices are reset...
-										// So we have to destroy the current graph first.
-										// In case of rollback, use a serialized copy of the old graph and hope for the best.
-										json oldGraph;
-										graph->serialize( oldGraph );
-
-										graph.reset(new Graph());
-										errorContext.clear();
-										if(graph->deserialize(data)){
-											if(data.contains("layout")){
-												std::string state = data["layout"];
-												ImNodes::LoadCurrentEditorStateFromIniString(state.c_str(), state.size());
-											}
-										} else {
-											errorContext.addError("Unable to deserialize graph from file at path \"" + path + "\"");
-											// Restore the previous graph.
-											graph.reset( new Graph() );
-											graph->deserialize( oldGraph );
-										}
-										editedGraph = true;
-									}
-									file.close();
-								} else {
-									errorContext.addError("Unable to load graph from file at path \"" + path + "\"");
-								}
-								for(int i = 0; i < count; ++i){
-									free(paths[i]);
-								}
-							}
-							if(paths){
-								free(paths);
-							}
-						}
+						editedGraph = loadGraph(graph, errorContext);
 					}
 
 					if(ImGui::MenuItem("Save...", nullptr, false, graph != nullptr)){
-						char* rawPath = nullptr;
-						if(sr_gui_ask_save_file("Save graph", "", "packgraph", &rawPath) == SR_GUI_VALIDATED){
-							json data;
-							// Graph is guaranteed to exist.
-							graph->serialize(data);
-							std::string state = ImNodes::SaveCurrentEditorStateToIniString();
-							data["layout"] = state;
-
-							std::string path(rawPath);
-							std::ofstream file(path);
-							if(file.is_open()){
-								file << std::setw(4) << data << "\n";
-								file.close();
-							} else {
-								errorContext.addError("Unable to create file at path \"" + path + "\"");
-							}
-							free(rawPath);
-						}
+						saveGraph(graph, errorContext);
 					}
 
 					ImGui::Separator();
@@ -662,28 +1079,15 @@ int main(int argc, char** argv){
 					}
 					
 					if(ImGui::MenuItem( "Run graph" )){
-						std::vector<fs::path> inputPaths;
-						for( InputFile& file : inputFiles ){
-							if( file.active ){
-								inputPaths.push_back( file.path );
-							}
-						}
+						const std::vector<fs::path> inputPaths = filterInputFiles(inputFiles);
 						evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, customResolution, forceCustomResolution, showProgress);
 					}
 
 					ImGui::Separator();
 
 					if(ImGui::MenuItem("Reset...")){
-						graph.reset(new Graph());
 						errorContext.clear();
-
-						GraphEditor editor(*graph);
-						editor.addNode(new InputNode());
-						editor.addNode( new OutputNode() );
-						for(uint i = 0; i < 4; ++i)
-							editor.addLink( 0, i, 1, i );
-						editor.commit();
-
+						graph.reset(createDefaultGraph());
 						needAutoLayout = true;
 						editedGraph = true;
 					}
@@ -698,29 +1102,25 @@ int main(int argc, char** argv){
 				ImGui::EndMainMenuBar();
 			}
 		}
+		
+		// Has to be computed after the menu bar.
 		const float menuBarHeight = ImGui::GetItemRectSize().y;
-
-		const unsigned int winFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
-
-		float editorWindowHeight = float(winH) - menuBarHeight;
-		float editorWindowWidth = float( winW ) - inputsWindowWidth - kSplitBarWidth - 2.f * ImGui::GetStyle().FramePadding.x;
+		const float editorWindowHeight = float(winH) - menuBarHeight;
+		float editorWindowWidth = float(winW) - inputsWindowWidth - style.kSplitBarWidth - 2.f * ImGui::GetStyle().FramePadding.x;
 
 		ImGui::SetNextWindowPos(ImVec2(0.0f, menuBarHeight));
 		ImGui::SetNextWindowSize(ImVec2(float(winW), editorWindowHeight));
 
-		if(ImGui::Begin("PackoMainWindow", nullptr, winFlags)){
+		if(ImGui::Begin("PackoMainWindow", nullptr, style.kWinFlags)){
 
-			ImGui::Splitter(true, kSplitBarWidth, &inputsWindowWidth, &editorWindowWidth, 200, 300);
+			ImGui::Splitter(true, style.kSplitBarWidth, &inputsWindowWidth, &editorWindowWidth, 200, 300);
+
+			// Inputs & outputs panel
 			{
 				ImGui::BeginChild("Inputs & Outputs", ImVec2(inputsWindowWidth, 0), true);
 
 				if(ImGui::Button("Run")){
-					std::vector<fs::path> inputPaths;
-					for(InputFile& file : inputFiles){
-						if(file.active){
-							inputPaths.push_back(file.path);
-						}
-					}
+					const std::vector<fs::path> inputPaths = filterInputFiles(inputFiles);
 					evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, customResolution, forceCustomResolution, showProgress);
 				}
 
@@ -735,21 +1135,13 @@ int main(int argc, char** argv){
 				}
 				ImGui::Separator();
 
-				const std::string inputDirStr = inputDirectory.string();
-				const std::string outputDirStr = outputDirectory.string();
-				
 				ImGui::Text( "Output:" ); ImGui::SameLine();
 				if(ImGui::SmallButton("Select...##output")){
-					char* rawPath = nullptr;
-					if(sr_gui_ask_directory("Output directory", "", &rawPath) == SR_GUI_VALIDATED){
-						if(rawPath){
-							outputDirectory = rawPath;
-							free(rawPath);
-						}
-					}
+					askForDirectories(OUTPUT, inputDirectory, outputDirectory);
 				}
-
+				const std::string outputDirStr = outputDirectory.string();
 				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
+
 				ImGui::Checkbox("Custom resolution", &forceCustomResolution);
 				if(forceCustomResolution){
 					if(ImGui::InputInt2("##res", &customResolution[0])){
@@ -757,40 +1149,34 @@ int main(int argc, char** argv){
 					}
 				}
 				ImGui::Separator();
+
 				ImGui::Text( "Input:" ); ImGui::SameLine(); 
 				if(ImGui::SmallButton("Select...##input")){
-					char* rawPath = nullptr;
-					if(sr_gui_ask_directory("Input directory", "", &rawPath) == SR_GUI_VALIDATED){
-						if(rawPath){
-							inputDirectory = rawPath;
-							// Force refresh
-							timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
-							free(rawPath);
-						}
-					}
+					askForDirectories(INPUT, inputDirectory, outputDirectory);
+					timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 				}
+				const std::string inputDirStr = inputDirectory.string();
 				ImGui::TextWrapped( "%s", inputDirStr.c_str());
 
 				if(ImGui::Button("Select all")){
-					for(InputFile& file : inputFiles ){
+					for(InputFile& file : inputFiles){
 						file.active = true;
 					}
 				}
 				ImGui::SameLine();
 				if(ImGui::Button("Select none")){
-					for(InputFile& file : inputFiles ){
+					for(InputFile& file : inputFiles){
 						file.active = false;
 					}
 				}
 
-				if( ImGui::BeginTable( "##Inputs", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg ) )
-				{
+				if(ImGui::BeginTable( "##Inputs", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg)){
 					ImGui::TableSetupColumn( "##bullet", ImGuiTableColumnFlags_WidthFixed, 12 );
 					ImGui::TableSetupColumn("Name");
 					ImGui::TableHeadersRow();
 					for( uint i = 0; i < inputFiles.size(); ++i ){
-
 						ImGui::PushID(i);
+
 						ImGui::TableNextColumn();
 						if( ImGui::Selectable("##selec", &inputFiles[i].active, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, 13))){
 							editedInputList = true;
@@ -801,9 +1187,8 @@ int main(int argc, char** argv){
 
 						ImGui::TableNextColumn();
 						const std::string filename = inputFiles[ i ].path.filename().string();
-						
 						ImGui::Text( "%s", filename.c_str() );
-						
+
 						ImGui::PopID();
 
 					}
@@ -812,11 +1197,12 @@ int main(int argc, char** argv){
 				}
 				ImGui::EndChild();
 			}
-			bool editingTextField = false;
+
 			ImGui::SameLine();
+
+			// Editor
 			{
 				ImGui::BeginChild( "Editor", ImVec2( editorWindowWidth, 0 ) );
-				int nodeToPurgeLinks = -1;
 
 				// Graph viewer.
 				{
@@ -829,7 +1215,6 @@ int main(int argc, char** argv){
 
 					// First, immediately register the position for newly created nodes if there are some.
 					for(uint nodeId = 0; nodeId < createdNodes.size(); ++nodeId){
-
 						int createdNodeIndex = graph->findNode( createdNodes[nodeId] );
 						if( createdNodeIndex >= 0 ){
 							const float delta = float( nodeId ) * 20.f;
@@ -839,175 +1224,26 @@ int main(int argc, char** argv){
 					}
 					createdNodes.clear();
 
-					const float safetyMargin = ImGui::CalcTextSize("M").x;
-
 					GraphNodes nodes(*graph);
 					for(const uint nodeId : nodes){
-						 Node* node = graph->node(nodeId);
-
-						 // Very specific case
+						Node* node = graph->node(nodeId);
+						// Very specific case for comments
 						if( node->type() == NodeClass::COMMENT ){
-							ImNodes::BeginNode( nodeId );
-							Node::Attribute& att = node->attributes()[ 0 ];
-							// Count line returns.
-							uint lineCount = 1;
-							for(char c : att.str){
-								if(c == '\n')
-									++lineCount;
+							if(drawCommentNode(node, nodeId, style)){
+								editingTextField = true;
 							}
-							const ImVec2 fieldSize(kNodeInternalWidth, (float(lineCount) + 1.5f) * ImGui::GetTextLineHeight() );
-							TextInfo commentInfo{att.str.c_str(), fieldSize.x - safetyMargin };
-							ImGui::InputTextMultiline( "##Comment", &(att.str), fieldSize, ImGuiInputTextFlags_CallbackEdit, &commentTextCallback, (void*)&commentInfo);
-							editingTextField |= ImGui::IsItemActive();
-
-							ImNodes::EndNode();
 							continue;
 						}
-
+						// Styling for erroring nodes.
 						const bool nodeHasIssue = errorContext.contains(node);
 						if(nodeHasIssue){
-							ImNodes::PushColorStyle(ImNodesCol_TitleBar, errorTitleBar);
-							ImNodes::PushColorStyle(ImNodesCol_TitleBarHovered, errorTitleBarActive);
-							ImNodes::PushColorStyle(ImNodesCol_TitleBarSelected, errorTitleBarActive);
-							ImNodes::PushColorStyle(ImNodesCol_NodeBackground, errorBackground);
-							ImNodes::PushColorStyle(ImNodesCol_NodeBackgroundHovered, errorBackgroundActive);
-							ImNodes::PushColorStyle(ImNodesCol_NodeBackgroundSelected, errorBackgroundActive);
+							applyNodeErrorStyle();
 						}
-
-						ImNodes::BeginNode(nodeId);
-
-						ImNodes::BeginNodeTitleBar();
-						{
-							if(node->channelled()){
-								const char* labels[] = {"0", "1", "2", "3", "4"};
-								const uint channelCount = node->channelCount();
-								if(ImGui::SmallButton( labels[channelCount])){
-									node->setChannelCount(channelCount % 4 + 1);
-									editedGraph = true;
-									// We'll have to remove extraneous links.
-									nodeToPurgeLinks = int(nodeId);
-								}
-								ImGui::SameLine(kSlotLabelWidth);
-								ImGui::TextUnformatted( node->name().c_str() );
-							} else {
-								ImGui::Indent(kSlotLabelWidth);
-								ImGui::TextUnformatted( node->name().c_str() );
-								ImGui::Unindent();
-							}
-							ImGui::SameLine(kPreviewDisplayWidth + kSlotLabelWidth * 1.1f);
-							ImGui::Bullet();
-							if( ImGui::IsItemHovered()){
-								ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10,10));
-								ImGui::SetTooltip( "%s", node->description().c_str());
-								ImGui::PopStyleVar();
-							}
+						// Standard node.
+						editedGraph |= drawNode(node, nodeId, style, textures, nodeToPurgeLinks);
+						if( nodeHasIssue ){
+							reverseNodeErrorStyle();
 						}
-						ImNodes::EndNodeTitleBar();
-
-						const bool multiChannel = node->channelCount() > 1;
-
-						// Draw all inputs.
-						ImGui::BeginGroup();
-						{
-							uint slotId = 0u;
-							for( const std::string& name : node->inputs() ){
-								ImNodes::BeginInputAttribute( fromInputSlotToLink( { nodeId, slotId } ), kPinsShape);
-								TextIndex( name, multiChannel, smallFont );
-								ImNodes::EndInputAttribute();
-								++slotId;
-							}
-							// Force group size.
-							ImGui::Dummy(ImVec2(kSlotLabelWidth, 0));
-						}
-						ImGui::EndGroup();
-
-						ImGui::SameLine(0,0);
-						ImGui::BeginGroup();
-						// Draw texture preview.
-						{
-							auto texKey = textures.find( node );
-							if(texKey != textures.end()){
-								GLuint tex = texKey->second;
-								ImGui::Image( ( ImTextureID )(uintptr_t)tex, ImVec2( kPreviewDisplayWidth, kPreviewDisplayWidth ) );
-							} else{
-								// Ensure node width is always the same.
-								ImGui::Dummy( ImVec2( kPreviewDisplayWidth, 0.f ) );
-							}
-						}
-						// Draw attributes
-						{
-							// Compute size of all attributes (for nice alignment)
-							float minAttributeSize = kPreviewDisplayWidth;
-							for( const Node::Attribute& attribute : node->attributes() )
-							{
-								// Subtract label size if not hidden.
-								float attLabelSize = ImGui::CalcTextSize( attribute.name.c_str(), nullptr, true ).x;
-								if( attLabelSize != 0.f ){
-									attLabelSize += ImGui::GetStyle().ItemInnerSpacing.x;
-								}
-								minAttributeSize = std::min( minAttributeSize, kPreviewDisplayWidth - attLabelSize );
-							}
-							minAttributeSize = std::max( 0.f, minAttributeSize );
-
-							for( Node::Attribute& attribute : node->attributes() ){
-
-								ImGui::PushItemWidth( minAttributeSize );
-								switch( attribute.type )
-								{
-									case Node::Attribute::Type::FLOAT:
-										editedGraph |= ImGui::DragFloat( attribute.name.c_str(), &attribute.flt, 1.f, 0.0f, 0.0f, "%.6f" );
-										break;
-									case Node::Attribute::Type::COLOR:
-										editedGraph |= ImGui::ColorPicker4( attribute.name.c_str(), &attribute.clr[ 0 ], ImGuiColorEditFlags_Float | ImGuiColorEditFlags_DisplayHex | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_NoSmallPreview );
-										break;
-									case Node::Attribute::Type::STRING:
-										editedGraph |= ImGui::InputText( attribute.name.c_str(), &(attribute.str) );
-										break;
-									case Node::Attribute::Type::COMBO:
-										editedGraph |= ImGui::Combo( attribute.name.c_str(), &attribute.cmb, &getAttributeComboItem, &attribute, attribute.values.size() );
-										break;
-									case Node::Attribute::Type::BOOL:
-										editedGraph |= ImGui::Checkbox( attribute.name.c_str(), &attribute.bln );
-										break;
-									default:
-										assert( false );
-										break;
-								}
-								ImGui::PopItemWidth();
-							}
-						}
-						ImGui::EndGroup();
-
-						// Draw all outputs
-						ImGui::SameLine(0,0);
-						ImGui::BeginGroup();
-						{
-							const bool multiChannel = node->channelCount() > 1;
-							uint slotId = 0u;
-							for( const std::string& name : node->outputs() ){
-
-								const float labelSize = TextIndexSize( name, multiChannel, smallFont->FontSize / defaultFont->FontSize );
-								const float offset = std::max( 0.f, kSlotLabelWidth - labelSize );
-
-								ImNodes::BeginOutputAttribute( fromOutputSlotToLink( { nodeId, slotId } ), kPinsShape);
-								ImGui::Indent(offset);
-								TextIndex( name, multiChannel, smallFont );
-								ImGui::Unindent();
-								ImNodes::EndOutputAttribute();
-								++slotId;
-							}
-							// Force group size.
-							ImGui::Dummy(ImVec2(kSlotLabelWidth, 0));
-						}
-						ImGui::EndGroup();
-
-						ImNodes::EndNode();
-						if( nodeHasIssue )
-						{
-							for( uint i = 0; i < 6; ++i )
-								ImNodes::PopColorStyle();
-						}
-						
 					}
 
 					uint linkCount = graph->getLinkCount();
@@ -1027,136 +1263,44 @@ int main(int argc, char** argv){
 						needAutoLayout = false;
 					}
 				}
+				// List of copied nodes to create if pasting.
+				std::unordered_map<NodeClass, uint> nodesToCreate;
 
-
-#ifdef _MACOS
-				const bool ctrlModifierHeld = ImGui::GetIO().KeySuper;
-#else
-				const bool ctrlModifierHeld = ImGui::GetIO().KeyCtrl;
-#endif
-				const bool shftModifierHeld = ImGui::GetIO().KeyShift;
-				const bool altModifierHeld  = ImGui::GetIO().KeyAlt;
-
-				// Graph edition.
+				// Creation palette.
 				{
-					GraphEditor editor(*graph);
-					if(nodeToPurgeLinks >= 0){
-						const Node* node = graph->node(nodeToPurgeLinks);
-						const uint newInputCount = node->inputs().size();
-						const uint newOutputCount = node->outputs().size();
-						for(uint i = 0; i < graph->getLinkCount(); ++i){
-							const Graph::Link& link = graph->link(i);
-							if(int(link.from.node) == nodeToPurgeLinks && link.from.slot >= newOutputCount){
-								editor.removeLink(i);
-							}
-							if(int(link.to.node) == nodeToPurgeLinks && link.to.slot >= newInputCount){
-								editor.removeLink(i);
-							}
+					bool focusTextField = false;
+					const bool canOpenPopup = !ImGui::IsPopupOpen( "Create node" );
+					const bool clickedForPopup = ImGui::IsMouseClicked( ImGuiMouseButton_Right );
+					const bool typedForPopup = !editingTextField && ImGui::IsKeyReleased( ImGuiKey_Space );
+					if(canOpenPopup && (clickedForPopup || typedForPopup))
+					{
+						ImGui::OpenPopup("Create node");
+						// Save position for placing the new node on screen.
+						mouseRightClick = ImGui::GetMousePos();
+						focusTextField = true;
+						// All types visible by default
+						searchStr = "";
+						selectedNodeType = 0;
+						visibleNodeTypes.resize(NodeClass::COUNT_EXPOSED);
+						for(uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i){
+							visibleNodeTypes[i] = getOrderedType(i);
 						}
 					}
 
-					int dropId;
-					if(ImNodes::IsLinkDropped(&dropId, false) && altModifierHeld){
-						bool isInput = false;
-						const Graph::Slot pin = fromLinkToSlot(dropId, isInput);
-						if(isInput){
-							// Create a constant node and link it.
-							Node* createdNode = createNode( shftModifierHeld ? NodeClass::CONST_COLOR : NodeClass::CONST_FLOAT );
-							const uint newNodeId = editor.addNode( createdNode );
-							// Register for placement at next frame.
-							createdNodes.push_back( createdNode );
-							mouseRightClick = ImGui::GetMousePos();
-							// Shift position to have the end link placed approximately at the mouse.
-							mouseRightClick.x -= kNodeTotalWidth;
-							mouseRightClick.y -= 2.f * ImGui::GetTextLineHeightWithSpacing();
-
-							editor.addLink( newNodeId, 0, pin.node, pin.slot );
-							if(shftModifierHeld){
-								// Autolink four channels if possible.
-								const Node* const toNode = graph->node( pin.node );
-								const uint toCount = toNode->inputs().size();
-								const uint maxCommonSlots = (std::min)( 4u, toCount - pin.slot );
-								for(uint i = 1; i < maxCommonSlots; ++i){
-									editor.addLink(newNodeId, i, pin.node, pin.slot + i);
-								}
-							}
-							editedGraph = true;
-						}
+					if(ImGui::BeginPopup("Create node")){
+						anyPopupOpen = true;
+						showCreationPopup(nodesToCreate, searchStr, selectedNodeType, visibleNodeTypes, focusTextField);
+						ImGui::EndPopup();
 					}
+				}
 
-					int startLink, endLink;
-					if(ImNodes::IsLinkCreated(&startLink, &endLink)){
-						bool fromIsInput, toIsInput;
-						const Graph::Slot from = fromLinkToSlot( startLink, fromIsInput );
-						const Graph::Slot to = fromLinkToSlot( endLink, toIsInput );
-						assert( toIsInput && !fromIsInput );
-
-						editor.addLink(from.node, from.slot, to.node, to.slot);
-
-						// Multi-link creation
-						if(shftModifierHeld){
-							const Node* const fromNode = graph->node(from.node);
-							const Node* const toNode = graph->node( to.node );
-							const uint fromCount = fromNode->outputs().size();
-							const uint toCount = toNode->inputs().size();
-							const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
-							for(uint i = 1; i < maxCommonSlots; ++i){
-								editor.addLink(from.node, from.slot + i, to.node, to.slot + i);
-							}
-						}
-						editedGraph = true;
-					}
-
-					int linkId;
-					if(ImNodes::IsLinkDestroyed(&linkId)){
-
-						if(shftModifierHeld){
-							const Graph::Link& link = graph->link(linkId);
-							const Graph::Slot& from = link.from;
-							const Graph::Slot& to = link.to;
-							// Find other links between the two nodes, matching channels.
-							const Node* const fromNode = graph->node( from.node );
-							const Node* const toNode = graph->node( to.node );
-							const uint fromCount = fromNode->outputs().size();
-							const uint toCount = toNode->inputs().size();
-							const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
-							for( uint i = 1; i < maxCommonSlots; ++i )
-							{
-								Graph::Link oLink = link;
-								oLink.from.slot += i;
-								oLink.to.slot += i;
-								const int oLinkId = graph->findLink( oLink );
-								if( oLinkId >= 0 ){
-									editor.removeLink(oLinkId);
-								}
-							}
-						}
-						editor.removeLink(linkId);
-						editedGraph = true;
-					}
-
-					if(ImGui::IsKeyReleased(ImGuiKey_Delete) ||
-					   (ImGui::IsKeyReleased(ImGuiKey_Backspace) && ctrlModifierHeld)){
-						const uint nodesCount = ImNodes::NumSelectedNodes();
-						if(nodesCount > 0u){
-							std::vector<int> nodeIds(nodesCount);
-							ImNodes::GetSelectedNodes(nodeIds.data());
-							for(const int nodeId : nodeIds){
-								editor.removeNode((uint)nodeId);
-							}
-							editedGraph = true;
-						}
-						const uint linkCount = ImNodes::NumSelectedLinks();
-						if(linkCount > 0){
-							std::vector<int> linkIds(linkCount);
-							ImNodes::GetSelectedLinks(linkIds.data());
-							for(const int linkId : linkIds){
-								editor.removeLink((uint)linkId);
-							}
-							editedGraph = true;
-						}
-					}
-
+				// Ctrl-C/Ctrl-V
+				{
+#ifdef _MACOS
+					const bool ctrlModifierHeld = ImGui::GetIO().KeySuper;
+#else
+					const bool ctrlModifierHeld = ImGui::GetIO().KeyCtrl;
+#endif
 					// Add nodes to the pasteboard when copying.
 					if(ImGui::IsKeyReleased(ImGuiKey_C) && ctrlModifierHeld){
 						const uint nodesCount = ImNodes::NumSelectedNodes();
@@ -1175,8 +1319,6 @@ int main(int argc, char** argv){
 						}
 					}
 
-					// List of copied nodes to create if pasting.
-					std::unordered_map<NodeClass, uint> nodesToCreate;
 					if(ImGui::IsKeyReleased(ImGuiKey_V) && ctrlModifierHeld){
 						// Save position for placing the new node on screen.
 						mouseRightClick = ImGui::GetMousePos();
@@ -1184,335 +1326,48 @@ int main(int argc, char** argv){
 							nodesToCreate[nodeTypeCount.first] += nodeTypeCount.second;
 						}
 					}
-
-					{
-						bool focusTextField = false;
-						const bool canOpenPopup = !ImGui::IsPopupOpen( "Create node" );
-						const bool clickedForPopup = ImGui::IsMouseClicked( ImGuiMouseButton_Right );
-						const bool typedForPopup = !editingTextField && ImGui::IsKeyReleased( ImGuiKey_Space );
-						if( canOpenPopup && ( clickedForPopup || typedForPopup ) )
-						{
-							ImGui::OpenPopup( "Create node" );
-							// Save position for placing the new node on screen.
-							mouseRightClick = ImGui::GetMousePos();
-							focusTextField = true;
-							// All types visible by default
-							searchStr = "";
-							visibleNodeTypes.resize( NodeClass::COUNT_EXPOSED );
-							for( uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i )
-							{
-								visibleNodeTypes[ i ] = getOrderedType( i );
-							}
-							selectedNodeType = 0;
-						}
-
-						if( ImGui::BeginPopup( "Create node" ) )
-						{
-							anyPopupOpen = true;
-
-							int visibleTypesCount = int( visibleNodeTypes.size() );
-							const int columnWidth = 200;
-							const int columnItemsHeight = 12;
-							const int columnCount = ( visibleTypesCount + columnItemsHeight - 1 ) / columnItemsHeight;
-
-							if( ImGui::IsKeyPressed( ImGuiKey_UpArrow, true ) )
-							{
-								--selectedNodeType;
-								if( selectedNodeType < 0 )
-								{
-									selectedNodeType = visibleTypesCount - 1;
-								}
-							}
-							if( ImGui::IsKeyPressed( ImGuiKey_DownArrow, true ) )
-							{
-								++selectedNodeType;
-								if( selectedNodeType >= visibleTypesCount )
-								{
-									selectedNodeType = 0;
-								}
-							}
-							if( ImGui::IsKeyPressed( ImGuiKey_RightArrow, true ) )
-							{
-								selectedNodeType += columnItemsHeight;
-								if( selectedNodeType >= visibleTypesCount )
-								{
-									selectedNodeType = selectedNodeType % columnItemsHeight;
-								}
-							}
-							if( ImGui::IsKeyPressed( ImGuiKey_LeftArrow, true ) )
-							{
-								selectedNodeType -= columnItemsHeight;
-								if( selectedNodeType < 0 )
-								{
-		// Is there a simpler expression?
-									selectedNodeType = ( selectedNodeType + columnItemsHeight ) % columnItemsHeight + ( columnCount - 1 ) * columnItemsHeight;
-									// Only the last column can be not full.
-									if( selectedNodeType >= visibleTypesCount )
-									{
-										selectedNodeType -= columnItemsHeight;
-									}
-								}
-							}
-
-							ImGui::PushItemWidth( columnWidth * columnCount );
-
-							if( focusTextField )
-								ImGui::SetKeyboardFocusHere();
-							if( ImGui::InputText( "##SearchField", &searchStr, ImGuiInputTextFlags_AutoSelectAll ) )
-							{
-// Refresh selection.
-								const std::string searchStrLow = TextUtilities::lowercase( searchStr );
-								visibleNodeTypes.clear();
-								visibleNodeTypes.reserve( NodeClass::COUNT_EXPOSED );
-								// Filter visible types.
-								for( uint i = 0; i < NodeClass::COUNT_EXPOSED; ++i )
-								{
-									const NodeClass type = getOrderedType( i );
-									const std::string labelLow = TextUtilities::lowercase( getNodeName( type ) );
-									if( labelLow.find( searchStrLow ) == std::string::npos )
-										continue;
-									visibleNodeTypes.push_back( type );
-								}
-								selectedNodeType = 0;
-								visibleTypesCount = visibleNodeTypes.size();
-
-							}
-							ImGui::PopItemWidth();
-
-							for( int i = 0; i < columnItemsHeight; ++i )
-							{
-// Split in multiple columns.
-								for( int c = 0; c < columnCount; ++c )
-								{
-									const int index = c * columnItemsHeight + i;
-									if( index >= visibleTypesCount )
-									{
-										break;
-									}
-									const NodeClass type = visibleNodeTypes[ index ];
-									const std::string& label = getNodeName( type );
-									if( ImGui::Selectable( label.c_str(), index == selectedNodeType, 0, ImVec2( columnWidth - 2 * ImGui::GetStyle().FramePadding.x, 0 ) ) )
-									{
-										nodesToCreate[ type ] += 1;
-									}
-									if( ( c < columnCount - 1 ) && ( index + columnItemsHeight ) < visibleTypesCount )
-									{
-										ImGui::SameLine( ( c + 1 ) * columnWidth );
-									}
-								}
-							}
-
-							if( ImGui::IsKeyReleased( ImGuiKey_Enter ) )
-							{
-								if( selectedNodeType >= 0 && selectedNodeType < int( visibleNodeTypes.size() ) )
-								{
-									nodesToCreate[ visibleNodeTypes[ selectedNodeType ] ] += 1;
-									ImGui::CloseCurrentPopup();
-								}
-							}
-
-							if( ImGui::IsKeyReleased( ImGuiKey_Escape ) )
-							{
-								ImGui::CloseCurrentPopup();
-							}
-							ImGui::EndPopup();
-						}
-					}
-
-					// Create queued nodes.
-					for(const auto& nodeTypeToCreate : nodesToCreate){
-						if(nodeTypeToCreate.first >= NodeClass::COUNT_EXPOSED){
-							continue;
-						}
-						for(uint i = 0u; i < nodeTypeToCreate.second; ++i){
-							Node* createdNode = createNode(nodeTypeToCreate.first);
-							editor.addNode( createdNode );
-							// Register for placement at next frame.
-							createdNodes.push_back(createdNode);
-						}
-						editedGraph = true;
-					}
-
-					editor.commit();
 				}
+
+				// Graph edition based on nodes to create and editor actions.
+				editedGraph |= editGraph(graph, nodesToCreate, nodeToPurgeLinks, style, mouseRightClick, createdNodes);
+
 				ImGui::EndChild();
 			}
 		}
+
 		const float totalWindowHeight = ImGui::GetWindowHeight();
 		const float totalWindowWidth = ImGui::GetWindowWidth();
 		ImGui::End();
 
-		if( editedGraph ){
+		// Clear errors when the graph or inputs have been modified.
+		if(editedGraph || editedInputList){
 			errorContext.clear();
 		}
 
+		// Error panel.
 		if(errorContext.hasErrors()){
-
-			ImGui::SetNextWindowPos(ImVec2(totalWindowWidth, totalWindowHeight + menuBarHeight), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
-			if(ImGui::Begin("Error messages", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize)){
-				const uint errorCount = errorContext.errorCount();
-
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-				ImGui::Text( "Graph validation: %u errors", errorCount );
-				ImGui::PopStyleColor();
-
-				if(ImGui::BeginTable("##Errors", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg, ImVec2(400,0))){
-					ImGui::TableSetupColumn("Node");
-					ImGui::TableSetupColumn("Slot");
-					ImGui::TableSetupColumn("Message");
-					ImGui::TableHeadersRow();
-					for( uint i = 0; i < errorCount; ++i ){
-
-						ImGui::PushID(i);
-						const char* msg;
-						const Node* node;
-						int slot;
-						errorContext.getError( i, msg, node, slot );
-
-						ImGui::TableNextColumn();
-						if(node){
-							if(ImGui::Selectable( node->name().c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap ) ){
-								uint nodeId = graph->findNode( node );
-								ImNodes::EditorContextMoveToNode( nodeId );
-								ImVec2 pan = ImNodes::EditorContextGetPanning();
-								ImVec2 size = ImNodes::GetNodeDimensions(nodeId);
-								pan.x += 0.5f * (editorWindowWidth - size.x);
-								pan.y += 0.5f * (editorWindowHeight - size.y);
-								ImNodes::EditorContextResetPanning( pan );
-							}
-						}
-
-						ImGui::TableNextColumn();
-						if(slot >= 0){
-							if(node && ((uint)slot < node->inputs().size())){
-								ImGui::TextUnformatted(node->inputs()[slot].c_str());
-							} else {
-								ImGui::Text("%d", slot + 1);
-							}
-						}
-						ImGui::TableNextColumn();
-						ImGui::TextUnformatted( msg );
-						ImGui::PopID();
-
-					}
-
-					ImGui::EndTable();
-				}
+			// Bottom right corner.
+			const Node* errorNodeToFocus = showErrorPanel(errorContext, totalWindowWidth, totalWindowHeight + menuBarHeight);
+			if(errorNodeToFocus){
+				uint nodeId = graph->findNode( errorNodeToFocus );
+				ImNodes::EditorContextMoveToNode( nodeId );
+				ImVec2 pan = ImNodes::EditorContextGetPanning();
+				ImVec2 size = ImNodes::GetNodeDimensions(nodeId);
+				pan.x += 0.5f * (editorWindowWidth - size.x);
+				pan.y += 0.5f * (editorWindowHeight - size.y);
+				ImNodes::EditorContextResetPanning( pan );
 			}
-			ImGui::End();
 		}
 
 		needsPreviewRefresh |= editedGraph || editedInputList;
 
-		if( needsPreviewRefresh && showPreview){
-			CompiledGraph compiledGraph;
-			ErrorContext dummyContext;
-			bool res = compile(*graph, false, dummyContext, compiledGraph);
-			// TODO: when errors or unused nodes, do something to give feedback to the user.
-			const uint inputCount = compiledGraph.inputs.size();
-			// Count selected input files.
-			uint inputFileCount = 0u;
-			for(const InputFile& input : inputFiles){
-				if(!input.active){
-					continue;
-				}
-				++inputFileCount;
-			}
-
-			const bool hasEnoughInputsForPreview = inputCount == 0u || (inputFileCount != 0u);
-			if(res && hasEnoughInputsForPreview){
-				// Defer purge by one frame because ImGui is keeping a reference to it for the current frame (partial evaluation?).
-				texturesToPurge = textures;
-				textures.clear();
-				const uint previewSize = 128u / (1u << previewQuality);
-				// We can evaluate the graph to generate textures.
-				// Prepare a batch by hand
-				Batch batch;
-				// Find the N first selected inputs
-				for(const InputFile& input : inputFiles){
-					if(!input.active){
-						continue;
-					}
-					batch.inputs.push_back(input.path);
-					if(batch.inputs.size() == inputCount){
-						break;
-					}
-				}
-				if(!batch.inputs.empty()){
-					while(batch.inputs.size() < inputCount){
-						// Not enough input images, repeat the last one?
-						batch.inputs.push_back(batch.inputs.back());
-					}
-				}
-
-				// Dummy output names.
-				for(uint i = 0; i < compiledGraph.outputs.size(); ++i ){
-					Batch::Output& output = batch.outputs.emplace_back();
-					output.path = std::to_string(i);
-					output.format = Image::Format::PNG;
-				}
-				
-				SharedContext sharedContext;
-				allocateContextForBatch(batch, compiledGraph, {previewSize, previewSize}, true, sharedContext);
-				for(const CompiledNode& node : compiledGraph.nodes){
-					evaluateGraphStepForBatch(node, compiledGraph.stackSize, sharedContext);
-					Image outputImg(previewSize, previewSize, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-					{
-						// Use inputs for outputs nodes, to be able to preview the result.
-						const bool useInputs = node.outputs.empty();
-						const std::vector<int>& registers = useInputs ? node.inputs : node.outputs;
-						const std::vector<Image>& images = useInputs ? sharedContext.tmpImagesRead : sharedContext.tmpImagesWrite;
-						const uint channelCount = registers.size();
-						// Populate image with available channels from registers.
-						for(uint c = 0; c < channelCount; ++c){
-							const uint reg = registers[c];
-							const Image& img = images[reg/4];
-							const uint srcChannel = reg % 4u;
-							for(uint y = 0; y < previewSize; ++y){
-								for(uint x = 0; x < previewSize; ++x){
-									outputImg.pixel(x,y)[c] = img.pixel(x,y)[srcChannel];
-								}
-							}
-						}
-						// If we have only one channel, broadcast to RGB, otherwise leave initialized to 0 (or 1 for alpha).
-						if(channelCount == 1){
-							for(uint y = 0; y < previewSize; ++y){
-								for(uint x = 0; x < previewSize; ++x){
-									for(uint c = 1; c < 3; ++c){
-										outputImg.pixel(x,y)[c] = outputImg.pixel(x,y)[0];
-									}
-								}
-							}
-						}
-						if(showAlphaPreview){
-							for(uint y = 0; y < previewSize; ++y){
-								for(uint x = 0; x < previewSize; ++x){
-									const float gridLevel = float(((x / 8) % 2) ^ ((y / 8) % 2));
-									const glm::vec4 gridColor(gridLevel * 0.5 + 0.25f);
-									const float alpha = (outputImg.pixel(x,y)[3]);
-									outputImg.pixel(x, y) = glm::mix(gridColor, outputImg.pixel(x, y), alpha);
-									outputImg.pixel(x, y)[3] = 1.0f;
-								}
-							}
-						}
-
-					}
-					// Upload GL texture and associate to node.
-					GLuint tex = 0;
-					glGenTextures( 1, &tex );
-					glBindTexture( GL_TEXTURE_2D, tex );
-					glTexImage2D( GL_TEXTURE_2D, 0,  GL_RGBA32F, previewSize, previewSize, 0, GL_RGBA, GL_FLOAT,  outputImg.rawPixels() );
-					glGenerateMipmap( GL_TEXTURE_2D );
-					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-					glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-					glBindTexture( GL_TEXTURE_2D, 0 );
-					textures[ node.node ] = tex;
-
-					// And swap for next node.
-					std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
-				}
+		if(needsPreviewRefresh && showPreview){
+			// Defer purge by one frame because ImGui is keeping a reference to it for the current frame (partial evaluation?).
+			texturesToPurge = textures;
+			if(!refreshPreviews(graph, inputFiles, previewQuality, showAlphaPreview, textures)){
+				// This failed, don't purge.
+				textures = texturesToPurge;
+				texturesToPurge.clear();
 			}
 		}
 		needsPreviewRefresh = false;
@@ -1548,7 +1403,6 @@ int main(int argc, char** argv){
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-
 		glfwSwapBuffers(window);
 	}
 	// Signal threads that we want to exit.
@@ -1561,8 +1415,6 @@ int main(int argc, char** argv){
 
 	// Purge GL texture pool.
 	purgeTextures( textures );
-	
-	
 
 	// Cleanup.
 	ImGui_ImplOpenGL3_Shutdown();
