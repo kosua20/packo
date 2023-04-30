@@ -1087,6 +1087,8 @@ int main(int argc, char** argv){
 
 					if(ImGui::MenuItem("Reset...")){
 						errorContext.clear();
+						// Force the indices free list to purge first.
+						graph.reset(nullptr);
 						graph.reset(createDefaultGraph());
 						needAutoLayout = true;
 						editedGraph = true;
