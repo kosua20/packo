@@ -157,3 +157,11 @@ public:
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
+
+class AbsNode : public Node {
+public:
+
+	AbsNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};

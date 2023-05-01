@@ -81,6 +81,8 @@ Node* createNode(NodeClass type){
 			return new ArcTanNode();
 		case DOT:
 			return new DotProductNode();
+		case ABS:
+			return new AbsNode();
 		default:
 			assert(false);
 			break;
@@ -95,6 +97,7 @@ const std::string& getNodeName(NodeClass type){
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
 		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product",
+		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product", "Filter", "Absolute value",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -112,7 +115,7 @@ NodeClass getOrderedType(uint i){
 		// Colors
 		CONST_COLOR, RANDOM_COLOR, PICKER,
 		// Math
-		ADD, SUBTRACT, PRODUCT, DIVIDE, POWER, SQRT, EXPONENTIAL, LOGARITHM,
+		ADD, SUBTRACT, PRODUCT, DIVIDE, ABS, POWER, SQRT, EXPONENTIAL, LOGARITHM,
 		MINI, MAXI, CLAMP, MIX, DOT,
 		// Trigo
 		COSINE, SINE, TANGENT, ARCCOSINE, ARCSINE, ARCTANGENT,

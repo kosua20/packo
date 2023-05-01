@@ -353,3 +353,21 @@ void DotProductNode::evaluate(LocalContext& context, const std::vector<int>& inp
 		context.stack[outputs[i]] = dot;
 	}
 }
+
+AbsNode::AbsNode(){
+	_name = "Absolute value";
+	_description = "M=|X|";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(AbsNode, NodeClass::ABS, true, 1)
+
+void AbsNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = std::abs(context.stack[inputs[i]]);
+	}
+}
