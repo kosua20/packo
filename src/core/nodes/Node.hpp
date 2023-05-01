@@ -29,7 +29,7 @@ public:
 	{
 		enum class Type
 		{
-			FLOAT, STRING, COLOR, COMBO, BOOL
+			FLOAT, STRING, COLOR, COMBO, BOOL, VEC3
 		};
 
 		std::string name;

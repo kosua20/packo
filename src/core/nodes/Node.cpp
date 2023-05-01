@@ -72,6 +72,7 @@ void Node::serialize(json& data) const {
 				attrData["flt"] = att.flt;
 				break;
 			case Node::Attribute::Type::COLOR:
+			case Node::Attribute::Type::VEC3:
 				for(uint colId = 0; colId < 4; ++colId){
 					attrData["clr"][colId] = att.clr[colId];
 				}
@@ -134,12 +135,15 @@ bool Node::deserialize(const json& data){
 				}
 				break;
 			case Node::Attribute::Type::COLOR:
-				if(attrData.contains("clr") && attrData["clr"].size() >= 4){
-					for(uint colId = 0; colId < 4; ++colId){
+			case Node::Attribute::Type::VEC3:
+			{
+				if(attrData.contains("clr")){
+					const uint count = std::min(uint(attrData["clr"].size()), 4u);
+					for(uint colId = 0; colId < count; ++colId){
 						att.clr[colId] = attrData["clr"][colId];
 					}
 				}
-				break;
+			}
 			case Node::Attribute::Type::STRING:
 				if(attrData.contains("str")){
 					att.str = attrData["str"];

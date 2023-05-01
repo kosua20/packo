@@ -503,6 +503,9 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 				case Node::Attribute::Type::BOOL:
 					editedGraph |= ImGui::Checkbox( attribute.name.c_str(), &attribute.bln );
 					break;
+				case Node::Attribute::Type::VEC3:
+					editedGraph |= ImGui::DragFloat3( attribute.name.c_str(), &attribute.clr[0], 0.05f, 0.0f, 0.0f, "%.6f" );
+					break;
 				default:
 					assert( false );
 					break;
