@@ -826,6 +826,11 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs
 		return false;
 	}
 
+	if(outputDir.empty()){
+		errors.addError("Not output directory specified.");
+		return false;
+	}
+	
 	// Populate batches with file info.
 	std::vector<Batch> batches;
 

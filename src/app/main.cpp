@@ -1,5 +1,4 @@
 #include "core/Common.hpp"
-#include "core/Settings.hpp"
 #include "core/Random.hpp"
 
 #include "core/Graph.hpp"
@@ -904,21 +903,8 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 /// Main loop
 
 int main(int argc, char** argv){
-
-	PackoConfig config(std::vector<std::string>(argv, argv+argc));
-	if(config.version){
-		Log::Info() << versionMessage << std::endl;
-		return 0;
-	} else if(config.license){
-		Log::Info() << licenseMessage << std::endl;
-		return 0;
-	} else if(config.bonus){
-		Log::Info() << bonusMessage << std::endl;
-		return 0;
-	} else if(config.showHelp(false)){
-		return 0;
-	}
-
+	(void)argc, argv;
+	
 	Random::seed(743936);
 
 	ImFont* defaultFont = nullptr;
