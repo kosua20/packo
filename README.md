@@ -28,8 +28,7 @@ Packo is a nodal editor for image processing, designed to easily mix and combine
 
 * Handling of images with different sizes
 * Improve global nodes computation speed
-* Command line for batch processing
-* More nodes (Perlin, 3x3 convolution...)
+* More nodes (Perlin,...)
 * HDR support
 
 

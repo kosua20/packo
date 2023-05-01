@@ -56,6 +56,19 @@ include("libs/glfw/premake5.lua")
 
 group("Packo")
 
+project("PackoTool")
+
+	kind("ConsoleApp")
+	CommonFlags()
+
+	includedirs({"src/"})
+	sysincludedirs({ "libs/", "src/libs" })
+
+	-- common files
+	files({"src/core/**", "src/libs/ghc/*.hpp", "src/libs/json/*.hpp", "src/libs/stb_image/*.h", "src/libs/glm/*/*.cpp", "src/libs/glm/*/*.hpp", "src/libs/glm/*/*.c", "src/tool/**", "premake5.lua"})
+
+	removefiles({"**.DS_STORE", "**.thumbs"})
+
 
 project("Packo")
 	
@@ -78,7 +91,7 @@ project("Packo")
 	filter("action:xcode*")
 		files({"resources/macos/*"})
 		
-   filter({})
+    filter({})
 	
 	links({"sr_gui", "glfw3"})
 

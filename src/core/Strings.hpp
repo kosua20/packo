@@ -3,7 +3,7 @@
 const std::string versionMessage = "Packo version 1.0";
 
 const std::string licenseMessage = "Packo is licensed under the MIT license (see below).\n"
-"Packo would not exist without the tremendous help of the following libraries: imgui, imnodes, gl3w, glfw, glm\n"
+"Packo would not exist without the tremendous help of the following libraries: imgui, imnodes, gl3w, glfw, glm, ghc, json for modern C++.\n"
 "MIT License\n"
 "\n"
 "Copyright (c) 2023 Simon Rodriguez\n"
