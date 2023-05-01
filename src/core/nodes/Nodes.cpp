@@ -81,6 +81,8 @@ Node* createNode(NodeClass type){
 			return new ArcTanNode();
 		case DOT:
 			return new DotProductNode();
+		case FILTER:
+			return new FilterNode();
 		case ABS:
 			return new AbsNode();
 		default:
@@ -96,7 +98,6 @@ const std::string& getNodeName(NodeClass type){
 		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
-		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product",
 		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product", "Filter", "Absolute value",
 		"Internal", "Backup", "Restore",
 		"Unknown"
@@ -122,7 +123,7 @@ NodeClass getOrderedType(uint i){
 		// Comparisons
 		SELECT, EQUAL, DIFFERENT, NOT, GREATER, LESSER,
 		// Global
-		FLIP, TILE, ROTATE, GAUSSIAN_BLUR,
+		FLIP, TILE, ROTATE, GAUSSIAN_BLUR, FILTER,
 		// Helpers
 		COMMENT, LOG
 	};

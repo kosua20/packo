@@ -225,3 +225,52 @@ void PickerNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 		context.stack[dstId] = src.pixel(coords)[channelId];
 	}
 }
+
+FilterNode::FilterNode(){
+	_name = "Filter";
+	_description = "Apply a 3x3 filter to each pixel image, using its neighborhood.";
+	_inputNames = {"X"};
+	_outputNames = {"Y"};
+	_attributes = { {"##Row0", Attribute::Type::VEC3}, {"##Row1", Attribute::Type::VEC3}, {"##Row2", Attribute::Type::VEC3}};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(FilterNode, NodeClass::FILTER, true, 1)
+
+void FilterNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(outputs.size() == _channelCount);
+	assert(inputs.size() == _channelCount);
+
+
+	// Preload images infos.
+	glm::uvec4 channelIds;
+	const Image* images[4];
+	for(uint i = 0u; i < _channelCount; ++i){
+		const uint srcId = inputs[i];
+		const uint imageId = srcId / 4u;
+		images[i] = &context.shared->tmpImagesRead[imageId];
+		channelIds[i] = srcId % 4u;
+	}
+
+	const glm::mat3 m{ glm::vec3(_attributes[0].clr), glm::vec3(_attributes[1].clr), glm::vec3(_attributes[2].clr)};
+	glm::vec4 accum{ 0.0f};
+
+	// No axis separation for now.
+	for(int dy = -1; dy <= 1; ++dy){
+		for(int dx = -1; dx <= 1; ++dx){
+			glm::ivec2 dcoords{context.coords.x + dx, context.coords.y + dy};
+			dcoords = glm::clamp(dcoords, {0.0f, 0.0f}, context.shared->dims - 1);
+			const float weight = m[dy + 1][dx + 1];
+			for(uint i = 0; i < _channelCount; ++i){
+				accum[i] += weight * images[i]->pixel(dcoords)[channelIds[i]];
+			}
+		}
+	}
+
+	const float denom = m[0][0] + m[0][1] + m[0][2] + m[1][0] + m[1][1] + m[1][2] + m[2][0] + m[2][1] + m[2][2];
+	accum /= std::max(denom, 1e-4f);
+
+	for(uint i = 0u; i < _channelCount; ++i){
+		context.stack[outputs[i]] = accum[i];
+	}
+}
