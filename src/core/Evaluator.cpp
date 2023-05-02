@@ -700,19 +700,21 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 	for(uint i = 0u; i < inputCountInBatch; ++i){
 		sharedContext.inputImages[i].load(batch.inputs[i]);
 	}
-	// Check that all images have the same size.
-	const glm::ivec2 minRes = computeOutputResolution( sharedContext.inputImages, fallbackRes );
-	sharedContext.dims = minRes;
+	// Find the minimal size among images (or the fallback if no inputs)
+	const glm::ivec2 outRes = computeOutputResolution( sharedContext.inputImages, fallbackRes );
+	sharedContext.dims = forceRes ? fallbackRes : outRes;
 	sharedContext.scale = { 1.f, 1.f };
 
-	if(forceRes){
-		sharedContext.dims = fallbackRes;
-		sharedContext.scale = glm::vec2( fallbackRes ) / glm::max( glm::vec2( minRes ), { 1.f, 1.f } );
-
-		for(uint i = 0u; i < inputCountInBatch; ++i){
-			sharedContext.inputImages[i].resize(sharedContext.dims);
+	// TODO: When forcing the output res, correct the scale to ensure consistency? We only want to do it for previews?
+	// sharedContext.scale = glm::vec2( fallbackRes ) / glm::max( glm::vec2( outRes ), { 1.f, 1.f } );
+	 
+	// Ensure all images are the same size.
+	for( Image& img : sharedContext.inputImages ){
+		if( (img.w() != sharedContext.dims.x) || (img.h() != sharedContext.dims.y) ){
+			img.resize( sharedContext.dims );
 		}
 	}
+
 	// Allocate outputs
 	const uint w = sharedContext.dims.x;
 	const uint h = sharedContext.dims.y;
