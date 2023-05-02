@@ -285,14 +285,14 @@ std::vector<fs::path> filterInputFiles(std::vector<InputFile>& files){
 }
 
 enum DirectoryType : int {
-	INPUT = 1 << 0,
-	OUTPUT = 1 << 1,
-	BOTH = INPUT | OUTPUT
+	INPUT_IMAGES = 1 << 0,
+	OUTPUT_IMAGES = 1 << 1,
+	BOTH = INPUT_IMAGES | OUTPUT_IMAGES
 };
 
 void askForDirectories(DirectoryType types, fs::path& inputDirectory, fs::path& outputDirectory){
 
-	if(types & INPUT){
+	if(types & INPUT_IMAGES ){
 		char* rawPath = nullptr;
 		if(sr_gui_ask_directory("Input directory", "", &rawPath) == SR_GUI_VALIDATED){
 			if(rawPath){
@@ -303,7 +303,7 @@ void askForDirectories(DirectoryType types, fs::path& inputDirectory, fs::path& 
 			free(rawPath);
 		}
 	}
-	if(types & OUTPUT){
+	if(types & OUTPUT_IMAGES ){
 		char* rawPath = nullptr;
 		if(sr_gui_ask_directory("Output directory", "", &rawPath) == SR_GUI_VALIDATED){
 			if(rawPath){
@@ -1010,12 +1010,12 @@ int main(int argc, char** argv){
 					}
 
 					if(ImGui::MenuItem("Change input directory...", nullptr, false, !inputDirectory.empty())){
-						askForDirectories(INPUT, inputDirectory, outputDirectory);
+						askForDirectories(INPUT_IMAGES, inputDirectory, outputDirectory);
 						timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 					}
 
 					if(ImGui::MenuItem("Change output directory...", nullptr, false, !outputDirectory.empty())){
-						askForDirectories(OUTPUT, inputDirectory, outputDirectory);
+						askForDirectories(OUTPUT_IMAGES, inputDirectory, outputDirectory);
 						timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 					}
 
@@ -1128,7 +1128,7 @@ int main(int argc, char** argv){
 
 				ImGui::Text( "Output:" ); ImGui::SameLine();
 				if(ImGui::SmallButton("Select...##output")){
-					askForDirectories(OUTPUT, inputDirectory, outputDirectory);
+					askForDirectories(OUTPUT_IMAGES, inputDirectory, outputDirectory);
 				}
 				const std::string outputDirStr = outputDirectory.string();
 				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
@@ -1143,7 +1143,7 @@ int main(int argc, char** argv){
 
 				ImGui::Text( "Input:" ); ImGui::SameLine(); 
 				if(ImGui::SmallButton("Select...##input")){
-					askForDirectories(INPUT, inputDirectory, outputDirectory);
+					askForDirectories(INPUT_IMAGES, inputDirectory, outputDirectory);
 					timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
 				}
 				const std::string inputDirStr = inputDirectory.string();
