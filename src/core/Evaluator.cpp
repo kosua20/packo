@@ -691,7 +691,7 @@ bool compile( const Graph& editGraph, bool optimize, ErrorContext& errors, Compi
 	return true;
 }
 
-void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, bool forceRes, SharedContext& sharedContext){
+void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, bool forceRes, SharedContext& sharedContext, const glm::ivec2& maxRes){
 
 	const uint inputCountInBatch  = batch.inputs.size();
 	const uint outputCountInBatch = batch.outputs.size();
@@ -701,16 +701,21 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 		sharedContext.inputImages[i].load(batch.inputs[i]);
 	}
 	// Find the minimal size among images (or the fallback if no inputs)
-	const glm::ivec2 outRes = computeOutputResolution( sharedContext.inputImages, fallbackRes );
-	sharedContext.dims = forceRes ? fallbackRes : outRes;
-	sharedContext.scale = { 1.f, 1.f };
+	glm::ivec2 outRes = computeOutputResolution( sharedContext.inputImages, fallbackRes );
+	outRes = forceRes ? fallbackRes : outRes;
+	// Use our target resolution
+	sharedContext.scale = {1.f, 1.f};
+	sharedContext.dims = outRes;
+	// Except if external constraint is not satisfied (preview thumbnail)
+	if(outRes.x > maxRes.x || outRes.y > maxRes.y){
+		// Only keep track of max size rescaling.
+		sharedContext.scale = glm::vec2(maxRes) / glm::max( glm::vec2( outRes ), { 1.f, 1.f } );
+		sharedContext.dims = maxRes;
+	}
 
-	// TODO: When forcing the output res, correct the scale to ensure consistency? We only want to do it for previews?
-	// sharedContext.scale = glm::vec2( fallbackRes ) / glm::max( glm::vec2( outRes ), { 1.f, 1.f } );
-	 
 	// Ensure all images are the same size.
 	for( Image& img : sharedContext.inputImages ){
-		if( (img.w() != sharedContext.dims.x) || (img.h() != sharedContext.dims.y) ){
+		if( (img.w() != uint(sharedContext.dims.x)) || (img.h() != uint(sharedContext.dims.y)) ){
 			img.resize( sharedContext.dims );
 		}
 	}
@@ -843,7 +848,6 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs
 	}
 
 	for(const Batch& batch : batches){
-
 		SharedContext sharedContext;
 		allocateContextForBatch(batch, compiledGraph, outputRes, forceOutputRes, sharedContext);
 
