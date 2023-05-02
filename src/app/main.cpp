@@ -1140,10 +1140,11 @@ int main(int argc, char** argv){
 				const std::string outputDirStr = outputDirectory.string();
 				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
 
-				ImGui::Checkbox("Custom resolution", &forceCustomResolution);
+				editedInputList |= ImGui::Checkbox("Custom resolution", &forceCustomResolution);
 				if(forceCustomResolution){
 					if(ImGui::InputInt2("##res", &customResolution[0])){
 						customResolution = glm::max(customResolution, {4, 4});
+						editedInputList = true;
 					}
 				}
 				ImGui::Separator();
@@ -1152,6 +1153,7 @@ int main(int argc, char** argv){
 				if(ImGui::SmallButton("Select...##input")){
 					askForDirectories(INPUT_IMAGES, inputDirectory, outputDirectory);
 					timeSinceLastInputUpdate = kMaxRefreshDelayInFrames;
+					editedInputList = true;
 				}
 				const std::string inputDirStr = inputDirectory.string();
 				ImGui::TextWrapped( "%s", inputDirStr.c_str());
@@ -1160,12 +1162,14 @@ int main(int argc, char** argv){
 					for(InputFile& file : inputFiles){
 						file.active = true;
 					}
+					editedInputList = true;
 				}
 				ImGui::SameLine();
 				if(ImGui::Button("Select none")){
 					for(InputFile& file : inputFiles){
 						file.active = false;
 					}
+					editedInputList = true;
 				}
 
 				if(ImGui::BeginTable( "##Inputs", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg)){
