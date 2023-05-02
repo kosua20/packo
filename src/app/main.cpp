@@ -782,7 +782,7 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 	return editedGraph;
 }
 
-bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<InputFile>& inputFiles, int previewQuality, bool showAlphaPreview, std::unordered_map<const Node *, GLuint>& textures) {
+bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<InputFile>& inputFiles, const glm::ivec2& customResolution, bool forceCustomResolution, int previewQuality, bool showAlphaPreview, std::unordered_map<const Node *, GLuint>& textures) {
 
 	CompiledGraph compiledGraph;
 	ErrorContext dummyContext;
@@ -808,7 +808,8 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 	}
 
 	textures.clear();
-	const uint previewSize = 128u / (1u << previewQuality);
+	const int previewSize = int(128u / (1u << previewQuality));
+	const glm::ivec2 previewRes{previewSize, previewSize};
 	// We can evaluate the graph to generate textures.
 	// Prepare a batch by hand
 	Batch batch;
@@ -837,10 +838,16 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 	}
 
 	SharedContext sharedContext;
-	allocateContextForBatch(batch, compiledGraph, {previewSize, previewSize}, true, sharedContext);
+	allocateContextForBatch(batch, compiledGraph, customResolution, forceCustomResolution, sharedContext, previewRes);
 	for(const CompiledNode& node : compiledGraph.nodes){
 		evaluateGraphStepForBatch(node, compiledGraph.stackSize, sharedContext);
-		Image outputImg(previewSize, previewSize, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		// Use inputs for outputs nodes, to be able to preview the result.
+		const bool useInputs = node.outputs.empty();
+		const std::vector<Image>& images = useInputs ? sharedContext.tmpImagesRead : sharedContext.tmpImagesWrite;
+		const uint texW = images.empty() ? 1 : images[0].w();
+		const uint texH = images.empty() ? 1 : images[0].h();
+		Image outputImg(texW, texH, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
 		{
 			// Use inputs for outputs nodes, to be able to preview the result.
 			const bool useInputs = node.outputs.empty();
@@ -852,16 +859,16 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 				const uint reg = registers[c];
 				const Image& img = images[reg/4];
 				const uint srcChannel = reg % 4u;
-				for(uint y = 0; y < previewSize; ++y){
-					for(uint x = 0; x < previewSize; ++x){
+				for(uint y = 0; y < outputImg.h(); ++y){
+					for(uint x = 0; x < outputImg.w(); ++x){
 						outputImg.pixel(x,y)[c] = img.pixel(x,y)[srcChannel];
 					}
 				}
 			}
 			// If we have only one channel, broadcast to RGB, otherwise leave initialized to 0 (or 1 for alpha).
 			if(channelCount == 1){
-				for(uint y = 0; y < previewSize; ++y){
-					for(uint x = 0; x < previewSize; ++x){
+				for(uint y = 0; y < outputImg.h(); ++y){
+					for(uint x = 0; x < outputImg.w(); ++x){
 						for(uint c = 1; c < 3; ++c){
 							outputImg.pixel(x,y)[c] = outputImg.pixel(x,y)[0];
 						}
@@ -869,8 +876,8 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 				}
 			}
 			if(showAlphaPreview){
-				for(uint y = 0; y < previewSize; ++y){
-					for(uint x = 0; x < previewSize; ++x){
+				for(uint y = 0; y < outputImg.h(); ++y){
+					for(uint x = 0; x < outputImg.w(); ++x){
 						const float gridLevel = float(((x / 8) % 2) ^ ((y / 8) % 2));
 						const glm::vec4 gridColor(gridLevel * 0.5 + 0.25f);
 						const float alpha = (outputImg.pixel(x,y)[3]);
@@ -885,7 +892,7 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 		GLuint tex = 0;
 		glGenTextures( 1, &tex );
 		glBindTexture( GL_TEXTURE_2D, tex );
-		glTexImage2D( GL_TEXTURE_2D, 0,  GL_RGBA32F, previewSize, previewSize, 0, GL_RGBA, GL_FLOAT,  outputImg.rawPixels() );
+		glTexImage2D( GL_TEXTURE_2D, 0,  GL_RGBA32F, outputImg.w(), outputImg.h(), 0, GL_RGBA, GL_FLOAT,  outputImg.rawPixels() );
 		glGenerateMipmap( GL_TEXTURE_2D );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
 		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
@@ -1355,7 +1362,7 @@ int main(int argc, char** argv){
 		if(needsPreviewRefresh && showPreview){
 			// Defer purge by one frame because ImGui is keeping a reference to it for the current frame (partial evaluation?).
 			texturesToPurge = textures;
-			if(!refreshPreviews(graph, inputFiles, previewQuality, showAlphaPreview, textures)){
+			if(!refreshPreviews(graph, inputFiles, customResolution, forceCustomResolution, previewQuality, showAlphaPreview, textures)){
 				// This failed, don't purge.
 				textures = texturesToPurge;
 				texturesToPurge.clear();
