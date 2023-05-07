@@ -371,3 +371,129 @@ void AbsNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 		context.stack[outputs[i]] = std::abs(context.stack[inputs[i]]);
 	}
 }
+
+FractNode::FractNode(){
+	_name = "Fractional part";
+	_description = "M=X-\\X/";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(FractNode, NodeClass::FRACT, true, 1)
+
+void FractNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::fract(context.stack[inputs[i]]);
+	}
+}
+
+ModuloNode::ModuloNode(){
+	_name = "Modulo";
+	_description = "M=X%Y";
+	_inputNames = {"X", "Y"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(ModuloNode, NodeClass::MODULO, true, 1)
+
+void ModuloNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 2 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::mod(context.stack[inputs[i]], context.stack[inputs[i+_channelCount]]);
+	}
+}
+
+FloorNode::FloorNode(){
+	_name = "Floor";
+	_description = "M=\\X/";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(FloorNode, NodeClass::FLOOR, true, 1)
+
+void FloorNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::floor(context.stack[inputs[i]]);
+	}
+}
+
+CeilNode::CeilNode(){
+	_name = "Ceiling";
+	_description = "M=/X\\";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(CeilNode, NodeClass::CEIL, true, 1)
+
+void CeilNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::ceil(context.stack[inputs[i]]);
+	}
+}
+
+StepNode::StepNode(){
+	_name = "Step";
+	_description = "M=if X>A then 1 else 0";
+	_inputNames = {"X", "A"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(StepNode, NodeClass::STEP, true, 1)
+
+void StepNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 2 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::step(context.stack[inputs[i+_channelCount]], context.stack[inputs[i]]);
+	}
+}
+
+SmoothstepNode::SmoothstepNode(){
+	_name = "Smoothstep";
+	_description = "M=smooth transition from 0 to 1 when X goes from A to B";
+	_inputNames = {"X", "A", "B"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(SmoothstepNode, NodeClass::SMOOTHSTEP, true, 1)
+
+void SmoothstepNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 3 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::smoothstep(context.stack[inputs[i+_channelCount]], context.stack[inputs[i+2*_channelCount]], context.stack[inputs[i]]);
+	}
+}
+
+SignNode::SignNode(){
+	_name = "Sign";
+	_description = "M=if X > 0 then 1, if X < 0 then -1, if X = 0 then 0";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(SignNode, NodeClass::SIGN, true, 1)
+
+void SignNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = glm::sign(context.stack[inputs[i]]);
+	}
+}

@@ -85,6 +85,20 @@ Node* createNode(NodeClass type){
 			return new FilterNode();
 		case ABS:
 			return new AbsNode();
+		case FRACT:
+			return new FractNode();
+		case MODULO:
+			return new ModuloNode();
+		case FLOOR:
+			return new FloorNode();
+		case CEIL:
+			return new CeilNode();
+		case STEP:
+			return new StepNode();
+		case SMOOTHSTEP:
+			return new SmoothstepNode();
+		case SIGN:
+			return new SignNode();
 		default:
 			assert(false);
 			break;
@@ -99,6 +113,7 @@ const std::string& getNodeName(NodeClass type){
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
 		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product", "Filter", "Absolute value",
+		"Fract", "Modulo", "Floor", "Ceiling", "Step", "Smoothstep", "Sign",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -117,7 +132,7 @@ NodeClass getOrderedType(uint i){
 		CONST_COLOR, RANDOM_COLOR, PICKER,
 		// Math
 		ADD, SUBTRACT, PRODUCT, DIVIDE, ABS, POWER, SQRT, EXPONENTIAL, LOGARITHM,
-		MINI, MAXI, CLAMP, MIX, DOT,
+		MINI, MAXI, FRACT, FLOOR, CEIL, CLAMP, MODULO, MIX, SIGN, STEP, SMOOTHSTEP, DOT,
 		// Trigo
 		COSINE, SINE, TANGENT, ARCCOSINE, ARCSINE, ARCTANGENT,
 		// Comparisons

@@ -165,3 +165,59 @@ public:
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
+
+class FractNode : public Node {
+public:
+
+	FractNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class ModuloNode : public Node {
+public:
+
+	ModuloNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class FloorNode : public Node {
+public:
+
+	FloorNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class CeilNode : public Node {
+public:
+
+	CeilNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class StepNode : public Node {
+public:
+
+	StepNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class SmoothstepNode : public Node {
+public:
+
+	SmoothstepNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class SignNode : public Node {
+public:
+
+	SignNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
