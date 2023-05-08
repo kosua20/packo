@@ -18,3 +18,19 @@ public:
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
+class ResolutionNode : public Node {
+public:
+
+	ResolutionNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class MathConstantNode : public Node {
+public:
+
+	MathConstantNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+

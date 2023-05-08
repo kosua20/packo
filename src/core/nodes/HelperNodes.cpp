@@ -67,3 +67,48 @@ void LogNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 	}
 
 }
+
+ResolutionNode::ResolutionNode(){
+	_name = "Resolution";
+	_description = "Output image(s) resolution.";
+	_outputNames = {"W", "H"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(ResolutionNode, NodeClass::RESOLUTION, false, 1)
+
+void ResolutionNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 0u);
+	assert(outputs.size() == 2u);
+	(void)inputs;
+	context.stack[outputs[0]] = float(context.shared->dims.x);
+	context.stack[outputs[1]] = float(context.shared->dims.y);
+}
+
+MathConstantNode::MathConstantNode(){
+	_name = "Math constant";
+	_description = "if invert then 1/(constant * scale) else (constant*scale)";
+	_outputNames = {"X"};
+
+	_attributes = { {"##X", {"pi", "sqrt(pi)", "sqrt(2pi)", "sqrt(pi/2)", "e", "ln(2)", "sqrt(2)", "sqrt(3)", "phi"  } }, {"Scale", Attribute::Type::FLOAT}, {"Invert", Attribute::Type::BOOL} };
+	_attributes[1].flt = 1.f;
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(MathConstantNode, NodeClass::CONST_MATH, false, 1)
+
+void MathConstantNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 0u);
+	assert(outputs.size() == 1u);
+	(void)inputs;
+
+	const float values[] = { glm::pi<float>(), glm::root_pi<float>(), glm::root_two_pi<float>(), glm::root_half_pi<float>(),
+		glm::e<float>(), glm::ln_two<float>(), glm::root_two<float>(), glm::root_three<float>(), glm::golden_ratio<float>() };
+	assert(sizeof(values) / sizeof(values[0]) == _attributes[0].values.size());
+
+	float value = values[_attributes[0].cmb];
+	const float scale = _attributes[1].flt;
+	const bool invert = _attributes[2].bln;
+
+	context.stack[outputs[0]] = invert ? 1.f / (scale * value) : (scale * value);
+}

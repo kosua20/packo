@@ -99,6 +99,10 @@ Node* createNode(NodeClass type){
 			return new SmoothstepNode();
 		case SIGN:
 			return new SignNode();
+		case RESOLUTION:
+			return new ResolutionNode();
+		case CONST_MATH:
+			return new MathConstantNode();
 		default:
 			assert(false);
 			break;
@@ -113,7 +117,7 @@ const std::string& getNodeName(NodeClass type){
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
 		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product", "Filter", "Absolute value",
-		"Fract", "Modulo", "Floor", "Ceiling", "Step", "Smoothstep", "Sign",
+		"Fract", "Modulo", "Floor", "Ceiling", "Step", "Smoothstep", "Sign", "Resolution", "Constant Math",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -127,7 +131,7 @@ NodeClass getOrderedType(uint i){
 		// Inputs outputs
 		INPUT_IMG, OUTPUT_IMG,
 		// Scalars
-		CONST_FLOAT, RANDOM_FLOAT, GRADIENT,
+		CONST_FLOAT, RANDOM_FLOAT, CONST_MATH, GRADIENT,
 		// Colors
 		CONST_COLOR, RANDOM_COLOR, PICKER,
 		// Math
@@ -140,7 +144,7 @@ NodeClass getOrderedType(uint i){
 		// Global
 		FLIP, TILE, ROTATE, GAUSSIAN_BLUR, FILTER,
 		// Helpers
-		COMMENT, LOG
+		RESOLUTION, COMMENT, LOG
 	};
 	assert(classes.size() == NodeClass::COUNT_EXPOSED);
 	assert(i < classes.size());
