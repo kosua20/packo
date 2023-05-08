@@ -544,8 +544,8 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 void showCreationPopup(std::unordered_map<NodeClass, uint>& nodesToCreate, std::string& searchStr, int& selectedNodeType, std::vector<NodeClass>& visibleNodeTypes, bool focusTextField) {
 
 	int visibleTypesCount = int(visibleNodeTypes.size());
-	const int columnWidth = 200;
-	const int columnItemsHeight = 12;
+	const int columnWidth = 160;
+	const int columnItemsHeight = 14;
 	const int columnCount = (visibleTypesCount + columnItemsHeight - 1 ) / columnItemsHeight;
 
 	if(ImGui::IsKeyPressed(ImGuiKey_UpArrow, true)){
