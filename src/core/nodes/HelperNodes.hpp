@@ -26,6 +26,15 @@ public:
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
+class CoordinatesNode : public Node
+{
+public:
+
+	CoordinatesNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
 class MathConstantNode : public Node {
 public:
 

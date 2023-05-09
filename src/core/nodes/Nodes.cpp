@@ -103,6 +103,8 @@ Node* createNode(NodeClass type){
 			return new ResolutionNode();
 		case CONST_MATH:
 			return new MathConstantNode();
+		case COORDINATES:
+			return new CoordinatesNode();
 		default:
 			assert(false);
 			break;
@@ -117,7 +119,7 @@ const std::string& getNodeName(NodeClass type){
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
 		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product", "Filter", "Absolute value",
-		"Fract", "Modulo", "Floor", "Ceiling", "Step", "Smoothstep", "Sign", "Resolution", "Constant Math",
+		"Fract", "Modulo", "Floor", "Ceiling", "Step", "Smoothstep", "Sign", "Resolution", "Constant Math", "Coordinates",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -144,7 +146,7 @@ NodeClass getOrderedType(uint i){
 		// Global
 		FLIP, TILE, ROTATE, GAUSSIAN_BLUR, FILTER,
 		// Helpers
-		RESOLUTION, COMMENT, LOG
+		COORDINATES, RESOLUTION, COMMENT, LOG
 	};
 	assert(classes.size() == NodeClass::COUNT_EXPOSED);
 	assert(i < classes.size());

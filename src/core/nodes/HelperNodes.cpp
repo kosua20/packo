@@ -85,6 +85,32 @@ void ResolutionNode::evaluate(LocalContext& context, const std::vector<int>& inp
 	context.stack[outputs[1]] = float(context.shared->dims.y);
 }
 
+
+CoordinatesNode::CoordinatesNode()
+{
+	_name = "Coordinates";
+	_description = "Output pixel coordinates.";
+	_outputNames = { "X", "Y" };
+	_attributes = { {"Range", {"Unit", "Pixel"}}};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION( CoordinatesNode, NodeClass::COORDINATES, false, 1 )
+
+void CoordinatesNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
+{
+	assert( inputs.size() == 0u );
+	assert( outputs.size() == 2u );
+	( void )inputs;
+	glm::vec2 coords = context.coords;
+	// Normalize if requested
+	if(_attributes[ 0 ].cmb == 0){
+		coords /= glm::vec2( context.shared->dims );
+	}
+	context.stack[ outputs[ 0 ] ] = coords[0];
+	context.stack[ outputs[ 1 ] ] = coords[1];
+}
+
 MathConstantNode::MathConstantNode(){
 	_name = "Math constant";
 	_description = "if invert then 1/(constant * scale) else (constant*scale)";
