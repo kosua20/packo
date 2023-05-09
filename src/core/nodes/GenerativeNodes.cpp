@@ -79,8 +79,8 @@ void RandomColorNode::evaluate(LocalContext& context, const std::vector<int>& in
 
 GradientNode::GradientNode(){
 	_name = "Gradient";
-	_description = "Gradient in X, Y directions, radial and angular";
-	_outputNames = { "X", "Y", "R", "T" };
+	_description = "Gradient: radial, angular, diamond, spiral";
+	_outputNames = { "R", "A", "D", "M"};
 	finalize();
 }
 
@@ -96,8 +96,10 @@ void GradientNode::evaluate(LocalContext& context, const std::vector<int>& input
 	const float radius = glm::min(glm::length(ndc), 1.f);
 	float angle = ndc.x == 0.f ? glm::sign(ndc.y) * glm::half_pi<float>() : glm::atan(ndc.y, ndc.x);
 	angle = angle / glm::pi<float>() * 0.5f + 0.5f;
-
-	const glm::vec4 result(uv.x, uv.y, radius, angle);
+		
+	const float diamond = 1.f - (1.f - std::abs( ndc.x )) * (1.f - std::abs( ndc.y ));
+	const float mirror = std::abs(ndc.x);
+	const glm::vec4 result(radius, angle, diamond, mirror );
 
 	for (uint i = 0u; i < 4u; ++i) {
 		context.stack[outputs[i]] = result[i];
