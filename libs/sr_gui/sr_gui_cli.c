@@ -66,24 +66,31 @@ void sr_gui_show_message(const char* title, const char* message, int level) {
 	} else if(level == SR_GUI_MESSAGE_LEVEL_WARN) {
 		header = "Warning";
 	}
-	fprintf(stdout, "--- %s --- %s\n", header, title);
-	fprintf(stdout, "%s\n", message);
+	fprintf(stdout, "--- %s --- %s\n", header, title ? title : "");
+	if(message){
+		fprintf(stdout, "%s\n", message);
+	}
 	fprintf(stdout, "Press enter to continue...");
 	_sr_gui_absorb_line_from_cin();
 }
 
 void sr_gui_show_notification(const char* title, const char* message) {
-	fprintf(stdout, "--- %s\n", title);
-	fprintf(stdout, "%s", message);
+	fprintf(stdout, "--- %s\n", title ? title : "Notification");
+	if(message){
+		fprintf(stdout, "%s", message);
+	}
 	// And play sound.
 	fprintf(stdout, "\a\n");
 }
 
 int sr_gui_ask_directory(const char* title, const char* startDir, char** outPath) {
+	if(!outPath){
+		return SR_GUI_CANCELLED;
+	}
 	*outPath = NULL;
 	(void)startDir;
 
-	fprintf(stdout, "--- Directory selection --- %s\n", title);
+	fprintf(stdout, "--- Directory selection --- %s\n", title ? title : "");
 	fprintf(stdout, "Type the absolute path to a directory below and press enter to validate, or submit an empty line to cancel.\n");
 	char buffer[SR_GUI_MAX_STR_SIZE];
 	const int size = _sr_gui_query_line_from_cin(buffer, SR_GUI_MAX_STR_SIZE);
@@ -100,11 +107,14 @@ int sr_gui_ask_directory(const char* title, const char* startDir, char** outPath
 }
 
 int sr_gui_ask_load_files(const char* title, const char* startDir, const char* exts, char*** outPaths, int* outCount) {
+	if(!outCount || !outPaths){
+		return SR_GUI_CANCELLED;
+	}
 	*outCount = 0;
 	*outPaths = NULL;
 	(void)startDir;
 
-	fprintf(stdout, "--- File(s) selection --- %s\n", title);
+	fprintf(stdout, "--- File(s) selection --- %s\n", title ? title : "");
 	if(exts && strlen(exts) > 0) {
 		fprintf(stdout, "Allowed extensions: %s\n", exts);
 	}
@@ -138,7 +148,7 @@ int sr_gui_ask_load_files(const char* title, const char* startDir, const char* e
 	if(*outPaths == NULL) {
 		// Free tempPaths string.
 		for(int i = 0; i < pathId; ++i) {
-			free(tempPaths[i]);
+			SR_GUI_FREE(tempPaths[i]);
 		}
 		return SR_GUI_CANCELLED;
 	}
@@ -146,11 +156,43 @@ int sr_gui_ask_load_files(const char* title, const char* startDir, const char* e
 	return SR_GUI_VALIDATED;
 }
 
-int sr_gui_ask_save_file(const char* title, const char* startDir, const char* exts, char** outPath) {
+
+int sr_gui_ask_load_file(const char* title, const char* startDir, const char* exts, char** outPath) {
+	if(!outPath){
+		return SR_GUI_CANCELLED;
+	}
 	*outPath = NULL;
 	(void)startDir;
 
-	fprintf(stdout, "--- Output selection --- %s\n", title);
+	fprintf(stdout, "--- File selection --- %s\n", title ? title : "");
+	if(exts && strlen(exts) > 0) {
+		fprintf(stdout, "Allowed extensions: %s\n", exts);
+	}
+	fprintf(stdout, "Type the absolute path to a file on disk below and press enter to finish. Submit an empty line to cancel\n");
+
+	char buffer[SR_GUI_MAX_STR_SIZE];
+	const int size = _sr_gui_query_line_from_cin(buffer, SR_GUI_MAX_STR_SIZE);
+	if(size == 0) {
+		return SR_GUI_CANCELLED;
+	}
+	// Copy to result, allocating enough space.
+	*outPath = (char*)SR_GUI_MALLOC(sizeof(char) * (size + 1));
+	if(*outPath == NULL) {
+		return SR_GUI_CANCELLED;
+	}
+	SR_GUI_MEMCPY(*outPath, buffer, sizeof(char) * (size + 1));
+	
+	return SR_GUI_VALIDATED;
+}
+
+int sr_gui_ask_save_file(const char* title, const char* startDir, const char* exts, char** outPath) {
+	if(!outPath){
+		return SR_GUI_CANCELLED;
+	}
+	*outPath = NULL;
+	(void)startDir;
+
+	fprintf(stdout, "--- Output selection --- %s\n", title ? title : "");
 	if(exts && strlen(exts) > 0) {
 		fprintf(stdout, "Allowed extensions: %s\n", exts);
 	}
@@ -180,8 +222,10 @@ int sr_gui_ask_choice(const char* title, const char* message, int level, const c
 	}
 	const char* buttons[] = { button0, button1, button2 };
 
-	fprintf(stdout, "--- %s --- %s\n", header, title);
-	fprintf(stdout, "%s\n", message);
+	fprintf(stdout, "--- %s --- %s\n", header, title ? title : "");
+	if(message){
+		fprintf(stdout, "%s\n", message);
+	}
 	
 	int following = 0;
 	const int bCount = sizeof(buttons)/sizeof(buttons[0]);
@@ -196,7 +240,9 @@ int sr_gui_ask_choice(const char* title, const char* message, int level, const c
 		fprintf(stdout, "(%d) %s ", (bid + 1), buttons[bid]);
 		following = 1;
 	}
-	fprintf(stdout, "\n");
+	if(following){
+		fprintf(stdout, "\n");
+	}
 	fprintf(stdout, "Type the number corresponding to your selected option, and press enter to validate.\n");
 
 	char buffer[64];
@@ -223,8 +269,14 @@ int sr_gui_ask_choice(const char* title, const char* message, int level, const c
 }
 
 int sr_gui_ask_string(const char* title, const char* message, char** result) {
-	fprintf(stdout, "--- %s\n", title);
-	fprintf(stdout, "%s\n", message);
+	if(!result){
+		return SR_GUI_CANCELLED;
+	}
+	*result = NULL;
+	fprintf(stdout, "--- %s\n", title ? title : "");
+	if(message){
+		fprintf(stdout, "%s\n", message);
+	}
 	fprintf(stdout, "Type your text, and press enter to validate, or submit an empty line to cancel.\n");
 	char buffer[SR_GUI_MAX_STR_SIZE];
 	const int size = _sr_gui_query_line_from_cin(buffer, SR_GUI_MAX_STR_SIZE);
@@ -240,6 +292,9 @@ int sr_gui_ask_string(const char* title, const char* message, char** result) {
 }
 
 int sr_gui_ask_color(unsigned char color[3]) {
+	if(!color){
+		return SR_GUI_CANCELLED;
+	}
 	fprintf(stdout, "--- Color selection\n");
 	fprintf(stdout, "Current RGB color is: %d %d %d\n", (int)color[0], (int)color[1], (int)color[2]);
 	fprintf(stdout, "Type the three values separated by space, and press enter to validate, or submit an empty line to cancel.\n");
@@ -260,5 +315,38 @@ int sr_gui_ask_color(unsigned char color[3]) {
 	for(int i = 0; i < 3; ++i) {
 		color[i] = (unsigned char)(fmin(fmax(rgb[i], 0), 255));
 	}
+	return SR_GUI_VALIDATED;
+}
+
+int sr_gui_open_in_explorer(const char* path){
+	fprintf(stdout, "* Path: %s\n", path ? path : "");
+	fprintf(stdout, "Press enter to continue...");
+	_sr_gui_absorb_line_from_cin();
+	return SR_GUI_VALIDATED;
+}
+
+int sr_gui_open_in_default_app(const char* path){
+	fprintf(stdout, "* Path: %s\n", path ? path : "");
+	fprintf(stdout, "Press enter to continue...");
+	_sr_gui_absorb_line_from_cin();
+	return SR_GUI_VALIDATED;
+}
+
+int sr_gui_open_in_browser(const char* url){
+	fprintf(stdout, "* URL: %s\n", url ? url : "");
+	fprintf(stdout, "Press enter to continue...");
+	_sr_gui_absorb_line_from_cin();
+	return SR_GUI_VALIDATED;
+}
+
+int sr_gui_get_app_data_path(char** outPath) {
+	if(!outPath){
+		return SR_GUI_CANCELLED;
+	}
+	*outPath = (char*)SR_GUI_MALLOC(sizeof(char) * 1);
+	if(*outPath == NULL) {
+		return SR_GUI_CANCELLED;
+	}
+	(*outPath)[0] = '\0';
 	return SR_GUI_VALIDATED;
 }
