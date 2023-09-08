@@ -5,7 +5,6 @@ end
 
 project("sr_gui")
 	kind("StaticLib")
-	systemversion("latest")
 	
 	filter("toolset:not msc*")
 		buildoptions({ "-Wall", "-Wextra" })

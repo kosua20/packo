@@ -12,8 +12,12 @@ workspace("Packo")
 	location("build")
 	targetdir ("build/%{prj.name}/%{cfg.longname}")
 	debugdir ("build/%{prj.name}/%{cfg.longname}")
-	architecture("x64")
+	architecture("x86_64")
 	systemversion("latest")
+
+	filter("system:macosx")
+		systemversion("10.12:latest")
+	filter({})
 
 	-- Configuration specific settings.
 	filter("configurations:Release")
@@ -62,7 +66,7 @@ project("PackoTool")
 	CommonFlags()
 
 	includedirs({"src/"})
-	sysincludedirs({ "libs/", "src/libs" })
+	externalincludedirs({ "libs/", "src/libs" })
 
 	-- common files
 	files({"src/core/**", "src/libs/ghc/*.hpp", "src/libs/json/*.hpp", "src/libs/stb_image/*.h", "src/libs/glm/*/*.cpp", "src/libs/glm/*/*.hpp", "src/libs/glm/*/*.c", "src/tool/**", "premake5.lua"})
@@ -77,7 +81,7 @@ project("Packo")
 	CommonFlags()
 
 	includedirs({"src/"})
-	sysincludedirs({ "libs/", "src/libs", "libs/glfw/include/" })
+	externalincludedirs({ "libs/", "src/libs", "libs/glfw/include/" })
 
 	-- common files
 	files({"src/core/**", "src/libs/**.hpp", "src/libs/*/*.cpp", "src/libs/**.h", "src/libs/*/*.c", "src/app/**", "premake5.lua"})
