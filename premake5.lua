@@ -73,6 +73,10 @@ project("PackoTool")
 
 	removefiles({"**.DS_STORE", "**.thumbs"})
 
+	filter("system:linux")
+		links({"pthread"})
+	filter({})
+
 
 project("Packo")
 	
