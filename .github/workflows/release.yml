@@ -64,7 +64,7 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: bash
         run: |
-          make all
+          make Packo
           chmod +x Packo/Release/Packo
           zip -r -j release.zip Packo/Release/Packo
       
