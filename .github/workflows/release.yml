@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  release:
+    types: 
+      - published
+
+jobs:
+  build:
+    env:
+      PREMAKE_URL: https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            premake-opts: gmake2
+            asset_name: Packo-ubuntu20.zip
+          - os: windows-2019
+            premake-opts: vs2019
+            asset_name: Packo-windows-64bits.zip
+          - os: macos-11
+            premake-opts: xcode4
+            asset_name: Packo-macos.zip
+    
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Dependencies-ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        shell: bash
+        run: |
+          sudo apt-get update -y && sudo apt-get install -yq xorg-dev libgtk-3-dev libnotify-dev
+          wget -O premake.tar.gz ${PREMAKE_URL}-linux.tar.gz
+          tar -xzf premake.tar.gz
+
+      - name: Dependencies-macos
+        if: startsWith(matrix.os, 'macos')
+        shell: bash
+        run: |
+          brew install wget
+          wget -O premake.tar.gz ${PREMAKE_URL}-macosx.tar.gz
+          tar -xzf premake.tar.gz
+
+      - name: Dependencies-windows
+        if: startsWith(matrix.os, 'windows')
+        shell: bash
+        run: |
+          choco install wget unzip zip
+          wget -O premake.zip ${PREMAKE_URL}-windows.zip
+          7z e premake.zip
+
+      - name: Configure
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: |
+          ./premake5 ${{matrix.premake-opts}}
+
+      - name: Build using Make
+        if: ${{matrix.premake-opts == 'gmake2' }}
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: |
+          make all
+          chmod +x Packo/Release/Packo
+          zip -r -j release.zip Packo/Release/Packo
+      
+      - name: Build using MSVC
+        if: ${{matrix.premake-opts == 'vs2019'}}
+        working-directory: ${{github.workspace}}/build
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe" .\Packo.sln -t:Packo -nologo -v:minimal -p:Configuration=Release -p:Platform=x64
+          zip -j release.zip Release/Packo.exe
+
+      - name: Build using Xcode
+        if: ${{matrix.premake-opts == 'xcode4'}}
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: |
+          xcodebuild -workspace Packo.xcworkspace -scheme Packo -arch x86_64 -arch arm64 only_active_arch=no -configuration Release
+          cp -r Packo/Release/Packo.app Packo.app
+          zip -r release.zip Packo.app
+
+      - name: Upload
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{github.workspace}}/build/release.zip
+          asset_name: ${{matrix.asset_name}}
+          asset_content_type: application/zip
+
+
+
+
