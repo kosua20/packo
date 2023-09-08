@@ -11,6 +11,7 @@ jobs:
       PREMAKE_URL: https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2
 
     strategy:
+      fail-fast: false #temporary
       matrix:
         include:
           - os: ubuntu-20.04
@@ -72,8 +73,8 @@ jobs:
         working-directory: ${{github.workspace}}/build
         shell: cmd
         run: |
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe" .\Packo.sln -t:Packo -nologo -v:minimal -p:Configuration=Release -p:Platform=x64
-          zip -j release.zip Release/Packo.exe
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe" .\Packo.sln -t:Packo.exe -nologo -v:minimal -p:Configuration=Release -p:Platform=x64
+          zip -j release.zip Packo/Release/Packo.exe
 
       - name: Build using Xcode
         if: ${{matrix.premake-opts == 'xcode4'}}
