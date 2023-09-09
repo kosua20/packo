@@ -105,6 +105,12 @@ Node* createNode(NodeClass type){
 			return new MathConstantNode();
 		case COORDINATES:
 			return new CoordinatesNode();
+		case LENGTH:
+			return new LengthNode();
+		case NORMALIZE:
+			return new NormalizeNode();
+		case SCALE_OFFSET:
+			return new ScaleOffsetNode();
 		default:
 			assert(false);
 			break;
@@ -115,11 +121,12 @@ Node* createNode(NodeClass type){
 const std::string& getNodeName(NodeClass type){
 	static const std::vector<std::string> names = {
 		"Input image", "Output image", "Add", "Constant Scalar", "Constant Color",
-		"Subtract", "Product", "Division", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
+		"Subtract", "Multiply", "Divide", "Minimum", "Maximum", "Clamp", "Power", "Square root", "Exponential", "Logarithm",
 		"Flip", "Gaussian Blur", "Random Scalar", "Random Color", "Tile", "Rotate",
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
 		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product", "Filter", "Absolute value",
 		"Fract", "Modulo", "Floor", "Ceiling", "Step", "Smoothstep", "Sign", "Resolution", "Constant Math", "Coordinates",
+		"Length", "Normalize", "Scale & Offset", "Broadcast",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -138,7 +145,9 @@ NodeClass getOrderedType(uint i){
 		CONST_COLOR, RANDOM_COLOR, PICKER,
 		// Math
 		ADD, SUBTRACT, PRODUCT, DIVIDE, ABS, POWER, SQRT, EXPONENTIAL, LOGARITHM,
-		MINI, MAXI, FRACT, FLOOR, CEIL, CLAMP, MODULO, MIX, SIGN, STEP, SMOOTHSTEP, DOT,
+		MINI, MAXI, FRACT, FLOOR, CEIL, CLAMP, SCALE_OFFSET, MODULO, MIX, SIGN, STEP, SMOOTHSTEP,
+		// Geometry
+		DOT, LENGTH, NORMALIZE,
 		// Trigo
 		COSINE, SINE, TANGENT, ARCCOSINE, ARCSINE, ARCTANGENT,
 		// Comparisons

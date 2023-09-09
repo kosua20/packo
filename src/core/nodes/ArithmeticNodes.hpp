@@ -27,7 +27,6 @@ public:
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
-
 class DivideNode : public Node {
 public:
 
@@ -36,6 +35,13 @@ public:
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
+class ScaleOffsetNode : public Node {
+public:
+
+	ScaleOffsetNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
 
 class MinNode : public Node {
 public:
@@ -218,6 +224,22 @@ class SignNode : public Node {
 public:
 
 	SignNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class LengthNode : public Node {
+public:
+
+	LengthNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+class NormalizeNode : public Node {
+public:
+
+	NormalizeNode();
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };

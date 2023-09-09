@@ -74,6 +74,27 @@ void DivideNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 	}
 }
 
+ScaleOffsetNode::ScaleOffsetNode(){
+	_name = "Scale & Offset";
+	_description = "M=A*X+B";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	_attributes = { {"A", Attribute::Type::FLOAT}, {"B", Attribute::Type::FLOAT} };
+	_attributes[0].flt = 1.0f;
+	_attributes[1].flt = 0.f;
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(ScaleOffsetNode, NodeClass::SCALE_OFFSET, true, true, 1)
+
+void ScaleOffsetNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = context.stack[inputs[i]] * _attributes[0].flt + _attributes[1].flt;
+	}
+}
+
 MinNode::MinNode(){
 	_name = "Minimum";
 	_description = "M=min(X,Y)";
@@ -493,5 +514,51 @@ void SignNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 	assert(outputs.size() == 1 * _channelCount);
 	for(uint i = 0; i < _channelCount; ++i){
 		context.stack[outputs[i]] = glm::sign(context.stack[inputs[i]]);
+	}
+}
+
+LengthNode::LengthNode(){
+	_name = "Length";
+	_description = "M=|X|";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(LengthNode, NodeClass::LENGTH, true, false, 1)
+
+void LengthNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1);
+	float denom = 0.f;
+	for(uint i = 0; i < _channelCount; ++i){
+		float comp = context.stack[inputs[i]];
+		denom += comp * comp;
+	}
+	denom = glm::sqrt(denom);
+	context.stack[outputs[0]] = denom;
+}
+
+NormalizeNode::NormalizeNode(){
+	_name = "Normalize";
+	_description = "M=X/|X|";
+	_inputNames = {"X"};
+	_outputNames = {"M"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(NormalizeNode, NodeClass::NORMALIZE, true, true, 1)
+
+void NormalizeNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1 * _channelCount);
+	float denom = 0.f;
+	for(uint i = 0; i < _channelCount; ++i){
+		float comp = context.stack[inputs[i]];
+		denom += comp * comp;
+	}
+	denom = glm::max(1e-3f, glm::sqrt(denom));
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = context.stack[inputs[i]] / denom;
 	}
 }
