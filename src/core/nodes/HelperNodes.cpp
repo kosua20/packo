@@ -8,7 +8,7 @@ CommentNode::CommentNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( CommentNode, NodeClass::COMMENT, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION( CommentNode, NodeClass::COMMENT, false, false, 1)
 
 void CommentNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -28,7 +28,7 @@ LogNode::LogNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( LogNode, NodeClass::LOG, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION( LogNode, NodeClass::LOG, true, false, 1)
 
 void LogNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == _channelCount);
@@ -75,7 +75,7 @@ ResolutionNode::ResolutionNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ResolutionNode, NodeClass::RESOLUTION, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ResolutionNode, NodeClass::RESOLUTION, false, false, 1)
 
 void ResolutionNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -95,7 +95,7 @@ CoordinatesNode::CoordinatesNode()
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( CoordinatesNode, NodeClass::COORDINATES, false, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( CoordinatesNode, NodeClass::COORDINATES, false, false, 1 )
 
 void CoordinatesNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
 {
@@ -121,11 +121,11 @@ MathConstantNode::MathConstantNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(MathConstantNode, NodeClass::CONST_MATH, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(MathConstantNode, NodeClass::CONST_MATH, false, true, 1)
 
 void MathConstantNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
-	assert(outputs.size() == 1u);
+	assert(outputs.size() == 1u * _channelCount);
 	(void)inputs;
 
 	const float values[] = { glm::pi<float>(), glm::root_pi<float>(), glm::root_two_pi<float>(), glm::root_half_pi<float>(),
@@ -136,5 +136,8 @@ void MathConstantNode::evaluate(LocalContext& context, const std::vector<int>& i
 	const float scale = _attributes[1].flt;
 	const bool invert = _attributes[2].bln;
 
-	context.stack[outputs[0]] = invert ? 1.f / (scale * value) : (scale * value);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = invert ? 1.f / (scale * value) : (scale * value);
+	}
+}
 }

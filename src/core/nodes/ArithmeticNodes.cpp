@@ -9,7 +9,7 @@ AddNode::AddNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(AddNode, NodeClass::ADD, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(AddNode, NodeClass::ADD, true, true, 1)
 
 void AddNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -28,7 +28,7 @@ SubtractNode::SubtractNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(SubtractNode, NodeClass::SUBTRACT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(SubtractNode, NodeClass::SUBTRACT, true, true, 1)
 
 void SubtractNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -46,7 +46,7 @@ ProductNode::ProductNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ProductNode, NodeClass::PRODUCT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ProductNode, NodeClass::PRODUCT, true, true, 1)
 
 void ProductNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -64,7 +64,7 @@ DivideNode::DivideNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(DivideNode, NodeClass::DIVIDE, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(DivideNode, NodeClass::DIVIDE, true, true, 1)
 
 void DivideNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -82,7 +82,7 @@ MinNode::MinNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(MinNode, NodeClass::MINI, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(MinNode, NodeClass::MINI, true, true, 1)
 
 void MinNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -100,7 +100,7 @@ MaxNode::MaxNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(MaxNode, NodeClass::MAXI, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(MaxNode, NodeClass::MAXI, true, true, 1)
 
 void MaxNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -119,7 +119,7 @@ ClampNode::ClampNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ClampNode, NodeClass::CLAMP, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ClampNode, NodeClass::CLAMP, true, true, 1)
 
 void ClampNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -137,7 +137,7 @@ PowerNode::PowerNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(PowerNode, NodeClass::POWER, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(PowerNode, NodeClass::POWER, true, true, 1)
 
 void PowerNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -155,7 +155,7 @@ SqrtNode::SqrtNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(SqrtNode, NodeClass::SQRT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(SqrtNode, NodeClass::SQRT, true, true, 1)
 
 void SqrtNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -173,7 +173,7 @@ ExponentialNode::ExponentialNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ExponentialNode, NodeClass::EXPONENTIAL, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ExponentialNode, NodeClass::EXPONENTIAL, true, true, 1)
 
 void ExponentialNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -193,7 +193,7 @@ LogarithmNode::LogarithmNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(LogarithmNode, NodeClass::LOGARITHM, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(LogarithmNode, NodeClass::LOGARITHM, true, true, 1)
 
 void LogarithmNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -211,7 +211,7 @@ MixNode::MixNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(MixNode, NodeClass::MIX, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(MixNode, NodeClass::MIX, true, true, 1)
 
 void MixNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 3 * _channelCount);
@@ -229,7 +229,7 @@ SinNode::SinNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(SinNode, NodeClass::SINE, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(SinNode, NodeClass::SINE, true, true, 1)
 
 void SinNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -247,7 +247,7 @@ CosNode::CosNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(CosNode, NodeClass::COSINE, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(CosNode, NodeClass::COSINE, true, true, 1)
 
 void CosNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -265,7 +265,7 @@ TanNode::TanNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(TanNode, NodeClass::TANGENT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(TanNode, NodeClass::TANGENT, true, true, 1)
 
 void TanNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -283,7 +283,7 @@ ArcSinNode::ArcSinNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ArcSinNode, NodeClass::ARCSINE, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ArcSinNode, NodeClass::ARCSINE, true, true, 1)
 
 void ArcSinNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -301,7 +301,7 @@ ArcCosNode::ArcCosNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ArcCosNode, NodeClass::ARCCOSINE, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ArcCosNode, NodeClass::ARCCOSINE, true, true, 1)
 
 void ArcCosNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -319,7 +319,7 @@ ArcTanNode::ArcTanNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ArcTanNode, NodeClass::ARCTANGENT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ArcTanNode, NodeClass::ARCTANGENT, true, true, 1)
 
 void ArcTanNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -337,11 +337,11 @@ DotProductNode::DotProductNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(DotProductNode, NodeClass::DOT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(DotProductNode, NodeClass::DOT, true, false, 1)
 
 void DotProductNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
-	assert(outputs.size() == 1 * _channelCount);
+	assert(outputs.size() == 1);
 
 	float dot = 0.f;
 	for(uint i = 0; i < _channelCount; ++i){
@@ -349,9 +349,7 @@ void DotProductNode::evaluate(LocalContext& context, const std::vector<int>& inp
 		const float x = context.stack[inputs[i]];
 		dot += x * y;
 	}
-	for(uint i = 0; i < _channelCount; ++i){
-		context.stack[outputs[i]] = dot;
-	}
+	context.stack[outputs[0]] = dot;
 }
 
 AbsNode::AbsNode(){
@@ -362,7 +360,7 @@ AbsNode::AbsNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(AbsNode, NodeClass::ABS, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(AbsNode, NodeClass::ABS, true, true, 1)
 
 void AbsNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -380,7 +378,7 @@ FractNode::FractNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FractNode, NodeClass::FRACT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FractNode, NodeClass::FRACT, true, true, 1)
 
 void FractNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -398,7 +396,7 @@ ModuloNode::ModuloNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ModuloNode, NodeClass::MODULO, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ModuloNode, NodeClass::MODULO, true, true, 1)
 
 void ModuloNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -416,7 +414,7 @@ FloorNode::FloorNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FloorNode, NodeClass::FLOOR, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FloorNode, NodeClass::FLOOR, true, true, 1)
 
 void FloorNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -434,7 +432,7 @@ CeilNode::CeilNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(CeilNode, NodeClass::CEIL, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(CeilNode, NodeClass::CEIL, true, true, 1)
 
 void CeilNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);
@@ -452,7 +450,7 @@ StepNode::StepNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(StepNode, NodeClass::STEP, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(StepNode, NodeClass::STEP, true, true, 1)
 
 void StepNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -470,7 +468,7 @@ SmoothstepNode::SmoothstepNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(SmoothstepNode, NodeClass::SMOOTHSTEP, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(SmoothstepNode, NodeClass::SMOOTHSTEP, true, true, 1)
 
 void SmoothstepNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 3 * _channelCount);
@@ -488,7 +486,7 @@ SignNode::SignNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(SignNode, NodeClass::SIGN, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(SignNode, NodeClass::SIGN, true, true, 1)
 
 void SignNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);

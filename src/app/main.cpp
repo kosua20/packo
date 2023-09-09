@@ -411,7 +411,7 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 
 	ImNodes::BeginNodeTitleBar();
 	{
-		if(node->channelled()){
+		if(node->channeled()){
 			const char* labels[] = {"0", "1", "2", "3", "4"};
 			const uint channelCount = node->channelCount();
 			if(ImGui::SmallButton( labels[channelCount])){
@@ -437,11 +437,10 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 	}
 	ImNodes::EndNodeTitleBar();
 
-	const bool multiChannel = node->channelCount() > 1;
-
 	// Draw all inputs.
 	ImGui::BeginGroup();
 	{
+		const bool multiChannel = (node->channelCount() > 1) && (node->channeledInputs());
 		uint slotId = 0u;
 		for( const std::string& name : node->inputs() ){
 			ImNodes::BeginInputAttribute( fromInputSlotToLink( { nodeId, slotId } ), style.kPinsShape);
@@ -518,7 +517,7 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 	ImGui::SameLine(0,0);
 	ImGui::BeginGroup();
 	{
-		const bool multiChannel = node->channelCount() > 1;
+		const bool multiChannel = (node->channelCount() > 1) && (node->channeledOutputs());
 		uint slotId = 0u;
 		for( const std::string& name : node->outputs() ){
 

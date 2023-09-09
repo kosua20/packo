@@ -15,7 +15,7 @@ InputNode::~InputNode(){
 	_freeList.returnIndex( _index );
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(InputNode, NodeClass::INPUT_IMG, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(InputNode, NodeClass::INPUT_IMG, false, false, 1)
 
 void InputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -44,7 +44,7 @@ OutputNode::~OutputNode(){
 	_freeList.returnIndex( _index );
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(OutputNode, NodeClass::OUTPUT_IMG, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(OutputNode, NodeClass::OUTPUT_IMG, false, false, 1)
 
 void OutputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 4u);
@@ -85,7 +85,7 @@ BackupNode::BackupNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(BackupNode, NodeClass::INTERNAL_BACKUP, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(BackupNode, NodeClass::INTERNAL_BACKUP, false, false, 1)
 
 void BackupNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == inputs.size());
@@ -108,7 +108,7 @@ RestoreNode::RestoreNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(RestoreNode, NodeClass::INTERNAL_RESTORE, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(RestoreNode, NodeClass::INTERNAL_RESTORE, false, false, 1)
 
 void RestoreNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == outputs.size());

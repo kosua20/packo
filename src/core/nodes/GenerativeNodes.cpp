@@ -10,13 +10,15 @@ ConstantFloatNode::ConstantFloatNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ConstantFloatNode, NodeClass::CONST_FLOAT, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ConstantFloatNode, NodeClass::CONST_FLOAT, false, true, 1)
 
 void ConstantFloatNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
-	assert(outputs.size() == 1u);
+	assert(outputs.size() == 1u * _channelCount);
 	(void)inputs;
-	context.stack[outputs[0]] = _attributes[0].flt;
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = _attributes[0].flt;
+	}
 }
 
 ConstantRGBANode::ConstantRGBANode(){
@@ -27,7 +29,7 @@ ConstantRGBANode::ConstantRGBANode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ConstantRGBANode, NodeClass::CONST_COLOR, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ConstantRGBANode, NodeClass::CONST_COLOR, false, false, 1)
 
 void ConstantRGBANode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -46,15 +48,18 @@ UniformRandomNode::UniformRandomNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(UniformRandomNode, NodeClass::RANDOM_FLOAT, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(UniformRandomNode, NodeClass::RANDOM_FLOAT, false, true, 1)
 
 void UniformRandomNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
-	assert(outputs.size() == 1u);
+	assert(outputs.size() == 1u * _channelCount);
 	(void)inputs;
 	const float mini = _attributes[0].flt;
 	const float maxi = _attributes[1].flt;
-	context.stack[outputs[0]] = Random::Float(mini, maxi);
+	float val = Random::Float(mini, maxi);
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = val;
+	}
 }
 
 RandomColorNode::RandomColorNode(){
@@ -64,7 +69,7 @@ RandomColorNode::RandomColorNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(RandomColorNode, NodeClass::RANDOM_COLOR, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(RandomColorNode, NodeClass::RANDOM_COLOR, false, false, 1)
 
 void RandomColorNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -84,7 +89,7 @@ GradientNode::GradientNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(GradientNode, NodeClass::GRADIENT, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(GradientNode, NodeClass::GRADIENT, false, false, 1)
 
 void GradientNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);

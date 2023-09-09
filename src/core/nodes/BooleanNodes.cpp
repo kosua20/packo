@@ -9,7 +9,7 @@ SelectNode::SelectNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(SelectNode, NodeClass::SELECT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(SelectNode, NodeClass::SELECT, true, true, 1)
 
 void SelectNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 3 * _channelCount);
@@ -29,7 +29,7 @@ EqualNode::EqualNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(EqualNode, NodeClass::EQUAL, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(EqualNode, NodeClass::EQUAL, true, true, 1)
 
 void EqualNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -48,7 +48,7 @@ DifferentNode::DifferentNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(DifferentNode, NodeClass::DIFFERENT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(DifferentNode, NodeClass::DIFFERENT, true, true, 1)
 
 void DifferentNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -68,7 +68,7 @@ GreaterNode::GreaterNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(GreaterNode, NodeClass::GREATER, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(GreaterNode, NodeClass::GREATER, true, true, 1)
 
 void GreaterNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -95,7 +95,7 @@ LessNode::LessNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(LessNode, NodeClass::LESSER, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(LessNode, NodeClass::LESSER, true, true, 1)
 
 void LessNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -119,7 +119,7 @@ NegateNode::NegateNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(NegateNode, NodeClass::NOT, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(NegateNode, NodeClass::NOT, true, true, 1)
 
 void NegateNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);

@@ -27,7 +27,7 @@ Node::Attribute::Attribute( const std::string& aname, const std::vector<std::str
 Node::Attribute::~Attribute() {}
 
 void Node::setChannelCount(uint c){
-	if( !channelled() ){
+	if( !channeled() ){
 		_currentInputs = _inputNames;
 		_currentOutputs = _outputNames;
 		return;
@@ -40,19 +40,23 @@ void Node::setChannelCount(uint c){
 		_currentOutputs = _outputNames;
 		return;
 	}
-	_currentInputs.clear();
-	_currentOutputs.clear();
 
 	const std::string suffixes[4] = {"R", "G", "B", "A"};
 
-	for(const std::string& input : _inputNames){
-		for(uint i = 0; i < _channelCount; ++i){
-			_currentInputs.push_back(input + suffixes[i]);
+	if(channeledInputs()){
+		_currentInputs.clear();
+		for(const std::string& input : _inputNames){
+			for(uint i = 0; i < _channelCount; ++i){
+				_currentInputs.push_back(input + suffixes[i]);
+			}
 		}
 	}
-	for(const std::string& output : _outputNames){
-		for(uint i = 0; i < _channelCount; ++i){
-			_currentOutputs.push_back(output + suffixes[i]);
+	if(channeledOutputs()){
+		_currentOutputs.clear();
+		for(const std::string& output : _outputNames){
+			for(uint i = 0; i < _channelCount; ++i){
+				_currentOutputs.push_back(output + suffixes[i]);
+			}
 		}
 	}
 }
@@ -143,6 +147,7 @@ bool Node::deserialize(const json& data){
 						att.clr[colId] = attrData["clr"][colId];
 					}
 				}
+				break;
 			}
 			case Node::Attribute::Type::STRING:
 				if(attrData.contains("str")){

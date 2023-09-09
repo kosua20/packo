@@ -10,7 +10,7 @@ FlipNode::FlipNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FlipNode, NodeClass::FLIP, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FlipNode, NodeClass::FLIP, true, true, 1)
 
 void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
@@ -45,7 +45,7 @@ TileNode::TileNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( TileNode, NodeClass::TILE, true, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( TileNode, NodeClass::TILE, true, true, 1 )
 
 void TileNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert( outputs.size() == _channelCount );
@@ -96,7 +96,7 @@ RotateNode::RotateNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( RotateNode, NodeClass::ROTATE, true, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( RotateNode, NodeClass::ROTATE, true,true,  1 )
 
 void RotateNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
 {
@@ -152,7 +152,7 @@ GaussianBlurNode::GaussianBlurNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(GaussianBlurNode, NodeClass::GAUSSIAN_BLUR, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(GaussianBlurNode, NodeClass::GAUSSIAN_BLUR, true, true, 1)
 
 void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
@@ -203,7 +203,7 @@ PickerNode::PickerNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(PickerNode, NodeClass::PICKER, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(PickerNode, NodeClass::PICKER, true, true, 1)
 
 void PickerNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
@@ -235,7 +235,7 @@ FilterNode::FilterNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FilterNode, NodeClass::FILTER, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FilterNode, NodeClass::FILTER, true, true, 1)
 
 void FilterNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
