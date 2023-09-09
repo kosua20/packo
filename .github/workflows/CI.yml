@@ -1,0 +1,81 @@
+name: CI
+
+on:
+   # Run the workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    env:
+      PREMAKE_URL: https://github.com/premake/premake-core/releases/download/v5.0.0-beta2/premake-5.0.0-beta2
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-20.04
+            premake-opts: gmake2
+          - os: windows-2019
+            premake-opts: vs2019
+          - os: macos-11
+            premake-opts: xcode4
+    
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Dependencies for ubuntu
+        if: startsWith(matrix.os, 'ubuntu')
+        shell: bash
+        run: |
+          sudo apt-get update -y && sudo apt-get install -yq xorg-dev libgtk-3-dev libnotify-dev
+          wget -O premake.tar.gz ${PREMAKE_URL}-linux.tar.gz
+          tar -xzf premake.tar.gz
+
+      - name: Dependencies for macOS
+        if: startsWith(matrix.os, 'macos')
+        shell: bash
+        run: |
+          brew install wget
+          wget -O premake.tar.gz ${PREMAKE_URL}-macosx.tar.gz
+          tar -xzf premake.tar.gz
+
+      - name: Dependencies for Windows
+        if: startsWith(matrix.os, 'windows')
+        shell: bash
+        run: |
+          choco install wget
+          wget -O premake.zip ${PREMAKE_URL}-windows.zip
+          7z e premake.zip
+
+      - name: Configure
+        shell: bash
+        working-directory: ${{github.workspace}}
+        run: |
+          ./premake5 ${{matrix.premake-opts}}
+
+      - name: Build using Make
+        if: ${{matrix.premake-opts == 'gmake2' }}
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: |
+          make Packo
+      
+      - name: Build using MSVC
+        if: ${{matrix.premake-opts == 'vs2019'}}
+        working-directory: ${{github.workspace}}/build
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe" .\Packo.sln -t:Packo\Packo -nologo -v:minimal -p:Configuration=Release -p:Platform=x64
+          
+      - name: Build using Xcode
+        if: ${{matrix.premake-opts == 'xcode4'}}
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: |
+          xcodebuild -workspace Packo.xcworkspace -scheme Packo -arch x86_64 -arch arm64 only_active_arch=no -configuration Release
+
+
+
+
