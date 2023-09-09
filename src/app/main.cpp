@@ -141,23 +141,16 @@ Graph* createDefaultGraph(){
 }
 
 bool loadGraph(std::unique_ptr<Graph>& graph, ErrorContext& errorContext){
-	int count = 0;
-	char** paths = nullptr;
-	if(sr_gui_ask_load_files("Load graph", "", "packgraph", &paths, &count) != SR_GUI_VALIDATED){
+	char* rawPath = nullptr;
+	if(sr_gui_ask_load_file("Load graph", "", "packgraph", &rawPath) != SR_GUI_VALIDATED){
 		return false;
 	}
-	if(count == 0 || !paths || !paths[0]){
-		if(paths){
-			free(paths);
-		}
+	if(!rawPath){
 		return false;
 	}
-	const std::string path(paths[0]);
-	// Immediately clean up the paths.
-	for(int i = 0; i < count; ++i){
-		free(paths[i]);
-	}
-	free(paths);
+	const std::string path(rawPath);
+	// Immediately clean up the path.
+	free(rawPath);
 
 	std::ifstream file(path);
 	if(!file.is_open()){
@@ -212,6 +205,9 @@ void saveGraph(std::unique_ptr<Graph>& graph, ErrorContext& errorContext){
 
 	std::string path(rawPath);
 	free(rawPath);
+	if(!TextUtilities::hasSuffix(path, ".packgraph")){
+		path += ".packgraph";
+	}
 
 	std::ofstream file(path);
 	if(!file.is_open()){
@@ -1092,8 +1088,12 @@ int main(int argc, char** argv){
 				}
 
 				if(ImGui::BeginMenu("About")){
-					ImGui::Text( "%s", versionMessage.c_str() );
-					ImGui::Text( "© Simon Rodriguez 2023" );
+					if(ImGui::MenuItem(versionMessage.c_str())){
+						sr_gui_open_in_browser("https://github.com/kosua20/Packo");
+					}
+					if(ImGui::MenuItem("© Simon Rodriguez 2023")){
+						sr_gui_open_in_browser("http://simonrodriguez.fr");
+					}
 					ImGui::EndMenu();
 				}
 				ImGui::EndMainMenuBar();
@@ -1135,6 +1135,10 @@ int main(int argc, char** argv){
 				ImGui::Text( "Output:" ); ImGui::SameLine();
 				if(ImGui::SmallButton("Select...##output")){
 					askForDirectories(OUTPUT_IMAGES, inputDirectory, outputDirectory);
+				}
+				ImGui::SameLine();
+				if(ImGui::SmallButton("Show...##output")){
+					sr_gui_open_in_explorer(outputDirectory.c_str());
 				}
 				const std::string outputDirStr = outputDirectory.string();
 				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
