@@ -88,7 +88,9 @@ jobs:
       - name: Prepare asset for release
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: mv release.zip ${{matrix.asset_name}}
+        run: |
+          cp release.zip ${{matrix.asset_name}}
+          ls -la
 
       - name: Upload asset for release
         uses: softprops/action-gh-release@v1
