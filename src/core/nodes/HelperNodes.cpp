@@ -140,4 +140,23 @@ void MathConstantNode::evaluate(LocalContext& context, const std::vector<int>& i
 		context.stack[outputs[i]] = invert ? 1.f / (scale * value) : (scale * value);
 	}
 }
+
+BroadcastNode::BroadcastNode(){
+	_name = "Broadcast";
+	_description = "Replicate X to Y.";
+	_inputNames = {"X"};
+	_outputNames = {"Y"};
+
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(BroadcastNode, NodeClass::BROADCAST, false, true, 1)
+
+void BroadcastNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(inputs.size() == 1u);
+	assert(outputs.size() == 1u * _channelCount);
+
+	for(uint i = 0; i < _channelCount; ++i){
+		context.stack[outputs[i]] = context.stack[inputs[0]];
+	}
 }

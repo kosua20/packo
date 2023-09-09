@@ -43,3 +43,13 @@ public:
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 };
 
+class BroadcastNode : public Node {
+public:
+
+	BroadcastNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+};
+
+
+

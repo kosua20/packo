@@ -111,6 +111,8 @@ Node* createNode(NodeClass type){
 			return new NormalizeNode();
 		case SCALE_OFFSET:
 			return new ScaleOffsetNode();
+		case BROADCAST:
+			return new BroadcastNode();
 		default:
 			assert(false);
 			break;
@@ -155,7 +157,7 @@ NodeClass getOrderedType(uint i){
 		// Global
 		FLIP, TILE, ROTATE, GAUSSIAN_BLUR, FILTER,
 		// Helpers
-		COORDINATES, RESOLUTION, COMMENT, LOG
+		BROADCAST, COORDINATES, RESOLUTION, COMMENT, LOG
 	};
 	assert(classes.size() == NodeClass::COUNT_EXPOSED);
 	assert(i < classes.size());
