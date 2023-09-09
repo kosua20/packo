@@ -232,6 +232,7 @@ FilterNode::FilterNode(){
 	_inputNames = {"X"};
 	_outputNames = {"Y"};
 	_attributes = { {"##Row0", Attribute::Type::VEC3}, {"##Row1", Attribute::Type::VEC3}, {"##Row2", Attribute::Type::VEC3}};
+	_attributes[0].clr = _attributes[1].clr = _attributes[2].clr = glm::vec4(1.0f);
 	finalize();
 }
 

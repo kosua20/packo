@@ -137,6 +137,8 @@ ClampNode::ClampNode(){
 	_inputNames = {"X"};
 	_outputNames = { "M" };
 	_attributes = { {"A", Attribute::Type::FLOAT}, {"B", Attribute::Type::FLOAT} };
+	_attributes[0].flt = 0.f;
+	_attributes[1].flt = 1.f;
 	finalize();
 }
 

@@ -7,6 +7,7 @@ ConstantFloatNode::ConstantFloatNode(){
 	_description = "Constant scalar value.";
 	_outputNames = {"X"};
 	_attributes = { {"##X", Attribute::Type::FLOAT} };
+	_attributes[0].flt = 1.0f;
 	finalize();
 }
 
@@ -26,6 +27,7 @@ ConstantRGBANode::ConstantRGBANode(){
 	_description = "Constant RGBA value.";
 	_outputNames = { "R", "G", "B", "A" };
 	_attributes = { {"##Val", Attribute::Type::COLOR} };
+	_attributes[0].clr = glm::vec4(1.0f);
 	finalize();
 }
 
@@ -45,6 +47,8 @@ UniformRandomNode::UniformRandomNode(){
 	_description = "Random value in [min, max[";
 	_outputNames = { "X" };
 	_attributes = { {"Min", Attribute::Type::FLOAT}, {"Max", Attribute::Type::FLOAT} };
+	_attributes[0].flt = 0.f;
+	_attributes[1].flt = 1.f;
 	finalize();
 }
 
