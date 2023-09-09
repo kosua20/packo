@@ -1138,7 +1138,8 @@ int main(int argc, char** argv){
 				}
 				ImGui::SameLine();
 				if(ImGui::SmallButton("Show...##output")){
-					sr_gui_open_in_explorer(outputDirectory.c_str());
+					const std::string str = outputDirectory.string();
+					sr_gui_open_in_explorer(str.c_str());
 				}
 				const std::string outputDirStr = outputDirectory.string();
 				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
