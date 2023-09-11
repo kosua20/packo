@@ -227,7 +227,7 @@ struct InputFile {
 };
 
 bool refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
-	static const std::vector<std::string> validExts = {"png", "bmp", "tga", "jpeg"};
+	static const std::vector<std::string> validExts = {"png", "bmp", "tga", "jpeg", "exr"};
 	if(!fs::exists(dir)){
 		paths.clear();
 		return false;

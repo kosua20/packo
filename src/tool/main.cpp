@@ -77,7 +77,7 @@ public:
 };
 
 std::vector<fs::path> listFiles(const fs::path& dir){
-	static const std::vector<std::string> validExts = {"png", "bmp", "tga", "jpeg"};
+	static const std::vector<std::string> validExts = {"png", "bmp", "tga", "jpeg", "exr"};
 	if(!fs::exists(dir)){
 		return {};
 	}

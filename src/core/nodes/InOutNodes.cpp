@@ -36,7 +36,7 @@ OutputNode::OutputNode() {
 	_name = "Output " + std::to_string(_index);
 	_description = "Output an image to the disk.";
 	_inputNames = { "R", "G", "B", "A" };
-	_attributes = { {"Format", {"PNG", "BMP", "JPEG", "TGA"}}, {"Prefix", Attribute::Type::STRING}, {"Suffix", Attribute::Type::STRING} };
+	_attributes = { {"Format", {"PNG", "BMP", "JPEG", "TGA", "EXR"}}, {"Prefix", Attribute::Type::STRING}, {"Suffix", Attribute::Type::STRING} };
 	finalize();
 }
 
@@ -62,7 +62,7 @@ std::string OutputNode::generateFileName(uint batch, Image::Format& format) cons
 	std::string prefix(_attributes[1].str);
 	std::string suffix(_attributes[2].str);
 
-	static const std::vector<Image::Format> formats = { Image::Format::PNG, Image::Format::BMP, Image::Format::JPEG, Image::Format::TGA };
+	static const std::vector<Image::Format> formats = { Image::Format::PNG, Image::Format::BMP, Image::Format::JPEG, Image::Format::TGA, Image::Format::EXR };
 	const int fmtIndex = glm::clamp(_attributes[0].cmb, 0, int(formats.size()) - 1);
 	format = formats[fmtIndex];
 
