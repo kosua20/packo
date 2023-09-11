@@ -69,7 +69,7 @@ project("PackoTool")
 	externalincludedirs({ "libs/", "src/libs" })
 
 	-- common files
-	files({"src/core/**", "src/libs/ghc/*.hpp", "src/libs/json/*.hpp", "src/libs/stb_image/*.h", "src/libs/glm/*/*.cpp", "src/libs/glm/*/*.hpp", "src/libs/glm/*/*.c", "src/tool/**", "premake5.lua"})
+	files({"src/core/**", "src/libs/ghc/*.hpp", "src/libs/json/*.hpp", "src/libs/stb_image/*.h", "src/libs/tinyexr/*.h", "src/libs/glm/*/*.cpp", "src/libs/glm/*/*.hpp", "src/libs/glm/*/*.c", "src/tool/**", "premake5.lua"})
 
 	removefiles({"**.DS_STORE", "**.thumbs"})
 
