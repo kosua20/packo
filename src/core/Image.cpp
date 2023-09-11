@@ -11,6 +11,11 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include <stb_image/stb_image_resize.h>
 
+#define TINYEXR_IMPLEMENTATION
+#define TINYEXR_USE_MINIZ 0
+#define TINYEXR_USE_STB_ZLIB 1
+#include <tinyexr/tinyexr.h>
+
 #include <unordered_map>
 
 Image::Image(uint w, uint h, const glm::vec4& defaultColor) {
@@ -22,6 +27,31 @@ Image::Image(uint w, uint h, const glm::vec4& defaultColor) {
 bool Image::load(const fs::path& path){
 
 	const auto dstPathStr = path.u8string();
+
+	if(path.extension() == "exr"){
+		float* data = nullptr;
+		int wi = 0;
+		int hi = 0;
+		const char* error = nullptr;
+		const int res = LoadEXR(&data, &wi, &hi, dstPathStr.c_str(), &error);
+		if(res != TINYEXR_SUCCESS){
+			// Should we free the error? doc is unclear.
+			return false;
+		}
+		if(data == nullptr || wi == 0 || hi == 0){
+			if(data){
+				free(data);
+			}
+			return false;
+		}
+		_w = (uint)wi;
+		_h = (uint)hi;
+		_pixels.resize(_w * _h);
+		std::memcpy(_pixels.data(), data, sizeof(glm::vec4) * _w * _h);
+		free(data);
+		return true;
+	}
+
 	// Load image.
 	int wi = 0;
 	int hi = 0;
@@ -55,11 +85,20 @@ bool Image::save(const fs::path& path, Format format) const {
 		{Format::BMP, "bmp"},
 		{Format::TGA, "tga"},
 		{Format::JPEG, "jpg"},
+		{Format::EXR, "exr"},
 	};
 
 	fs::path dstPath = path;
 	dstPath.replace_extension( extensions.at( format ) );
+	const auto dstPathStr = dstPath.u8string();
 
+	if(format == Format::EXR){
+		const char* err = nullptr;
+		const int res = SaveEXR((float*)_pixels.data(), _w, _h, 4, false, dstPathStr.c_str(), &err);
+		// Should we free err?
+		return res == TINYEXR_SUCCESS;
+
+	}
 	// Convert data to LDR
 	std::vector<unsigned char> data(_w * _h * 4);
 	for (uint y = 0; y < _h; ++y) {
@@ -70,7 +109,6 @@ bool Image::save(const fs::path& path, Format format) const {
 		}
 	}
 	int res = -1;
-	const auto dstPathStr = dstPath.u8string();
 	switch (format) {
 		case Format::PNG:
 			res = stbi_write_png( dstPathStr.c_str(), _w, _h, 4, data.data(), 4 * _w);

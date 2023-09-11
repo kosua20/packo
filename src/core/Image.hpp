@@ -6,7 +6,7 @@ struct Image {
 public:
 
 	enum class Format {
-		PNG, JPEG, BMP, TGA,
+		PNG, JPEG, BMP, TGA, EXR
 	};
 
 	Image() = default;
