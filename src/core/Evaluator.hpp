@@ -20,7 +20,7 @@ public:
 
 	bool contains( const Node* const node ) const;
 	
-	uint errorCount() const { return _errors.size(); }
+	uint errorCount() const { return ( uint )_errors.size(); }
 
 	void getError( uint i, const char*& message, const Node*& node, int& slot ) const;
 

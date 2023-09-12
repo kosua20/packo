@@ -77,29 +77,29 @@ bool ImGui::InputTextWithHint(const char* label, const char* hint, std::string* 
 }
 
 float TextIndexSize(const std::string& str, bool multiChannel, float fontRatio){
-	const int size = str.size();
-	if(size == 0){
+	const uint size = ( uint )str.size();
+	if(size == 0u){
 		return 0.f;
 	}
 	if(!multiChannel){
 		return ImGui::CalcTextSize(str.c_str()).x;
 	}
-	const int lastCharIndex = size - 1;
+	const uint lastCharIndex = size - 1u;
 	float baseSize = ImGui::CalcTextSize(str.c_str(), str.c_str() + lastCharIndex).x;
 	float indexSize = ImGui::CalcTextSize(str.c_str() + lastCharIndex).x;
 	return baseSize + fontRatio * indexSize;
 }
 
 void TextIndex(const std::string& str, bool multiChannel, ImFont* font){
-	const int size = str.size();
-	if(size == 0){
+	const uint size = ( uint )str.size();
+	if(size == 0u){
 		return;
 	}
 	if(!multiChannel){
 		ImGui::TextUnformatted(str.c_str());
 		return;
 	}
-	const int lastCharIndex = size - 1;
+	const uint lastCharIndex = size - 1u;
 	ImGui::TextUnformatted(str.c_str(), str.c_str() + lastCharIndex);
 	ImGui::SameLine(0,0);
 	ImGui::PushFont(font);

@@ -33,8 +33,8 @@ public:
 
 	Node* node(uint node) { return _nodes[node]; }
 
-	uint getLinkCount() const { return _links.size(); }
-	uint getNodeCountUpperBound() const { return _nodes.size(); }
+	uint getLinkCount() const { return (uint)_links.size(); }
+	uint getNodeCountUpperBound() const { return ( uint )_nodes.size(); }
 
 	const Link& link(uint link) const { return _links[link]; }
 
@@ -104,7 +104,7 @@ public:
 	public:
 		explicit iterator(const Graph& graph, uint index) : _graph(graph), _index(index) {
 			// Find the next valid index
-			while(_index < _graph._nodes.size() && _graph._nodes[_index] == nullptr){
+			while(_index < ( uint )_graph._nodes.size() && _graph._nodes[_index] == nullptr){
 				++_index;
 			}
 		};
@@ -112,7 +112,7 @@ public:
 		iterator& operator++(){
 			do {
 				++_index;
-			} while(_index < _graph._nodes.size() && _graph._nodes[_index] == nullptr);
+			} while(_index < ( uint )_graph._nodes.size() && _graph._nodes[_index] == nullptr);
 			return *this;
 		}
 
@@ -134,7 +134,7 @@ public:
 	};
 
 	iterator begin() { return iterator(_graph, 0); }
-	iterator end() { return iterator(_graph, _graph._nodes.size()); }
+	iterator end() { return iterator(_graph, ( uint )_graph._nodes.size()); }
 
 private:
 

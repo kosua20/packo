@@ -248,8 +248,8 @@ bool refreshFiles(const fs::path& dir, std::vector<InputFile>& paths){
 	});
 
 	// Transfer existing active status.
-	const uint newCount = newPaths.size();
-	const uint oldCount = paths.size();
+	const uint newCount = ( uint )newPaths.size();
+	const uint oldCount = ( uint )paths.size();
 	uint reusedCount = 0u;
 	uint currentOld = 0u;
 	for(uint currentNew = 0u; currentNew < newCount; ++currentNew){
@@ -492,7 +492,7 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 					editedGraph |= ImGui::InputText( attribute.name.c_str(), &(attribute.str) );
 					break;
 				case Node::Attribute::Type::COMBO:
-					editedGraph |= ImGui::Combo( attribute.name.c_str(), &attribute.cmb, &getAttributeComboItemCallback, &attribute, attribute.values.size() );
+					editedGraph |= ImGui::Combo( attribute.name.c_str(), &attribute.cmb, &getAttributeComboItemCallback, &attribute, ( uint )attribute.values.size() );
 					break;
 				case Node::Attribute::Type::BOOL:
 					editedGraph |= ImGui::Checkbox( attribute.name.c_str(), &attribute.bln );
@@ -573,7 +573,7 @@ void showCreationPopup(std::unordered_map<NodeClass, uint>& nodesToCreate, std::
 		}
 	}
 
-	ImGui::PushItemWidth(columnWidth * columnCount);
+	ImGui::PushItemWidth(float(columnWidth * columnCount));
 
 	if(focusTextField){
 		ImGui::SetKeyboardFocusHere();
@@ -593,7 +593,7 @@ void showCreationPopup(std::unordered_map<NodeClass, uint>& nodesToCreate, std::
 			visibleNodeTypes.push_back(type);
 		}
 		selectedNodeType = 0;
-		visibleTypesCount = visibleNodeTypes.size();
+		visibleTypesCount = ( uint )visibleNodeTypes.size();
 	}
 	ImGui::PopItemWidth();
 
@@ -611,7 +611,7 @@ void showCreationPopup(std::unordered_map<NodeClass, uint>& nodesToCreate, std::
 				nodesToCreate[type] += 1;
 			}
 			if((c < columnCount - 1) && (index + columnItemsHeight) < visibleTypesCount){
-				ImGui::SameLine((c + 1) * columnWidth);
+				ImGui::SameLine(float((c + 1) * columnWidth));
 			}
 		}
 	}
@@ -643,8 +643,8 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 	GraphEditor editor(*graph);
 	if(nodeToPurgeLinks >= 0){
 		const Node* node = graph->node(nodeToPurgeLinks);
-		const uint newInputCount = node->inputs().size();
-		const uint newOutputCount = node->outputs().size();
+		const uint newInputCount = ( uint )node->inputs().size();
+		const uint newOutputCount = ( uint )node->outputs().size();
 		for(uint i = 0; i < graph->getLinkCount(); ++i){
 			const Graph::Link& link = graph->link(i);
 			if(int(link.from.node) == nodeToPurgeLinks && link.from.slot >= newOutputCount){
@@ -676,7 +676,7 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 			if(shftModifierHeld){
 				// Autolink four channels if possible.
 				const Node* const toNode = graph->node( pin.node );
-				const uint toCount = toNode->inputs().size();
+				const uint toCount = ( uint )toNode->inputs().size();
 				const uint maxCommonSlots = (std::min)( 4u, toCount - pin.slot );
 				for(uint i = 1; i < maxCommonSlots; ++i){
 					editor.addLink(newNodeId, i, pin.node, pin.slot + i);
@@ -699,8 +699,8 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 		if(shftModifierHeld){
 			const Node* const fromNode = graph->node(from.node);
 			const Node* const toNode = graph->node( to.node );
-			const uint fromCount = fromNode->outputs().size();
-			const uint toCount = toNode->inputs().size();
+			const uint fromCount = ( uint )fromNode->outputs().size();
+			const uint toCount = ( uint )toNode->inputs().size();
 			const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
 			for(uint i = 1; i < maxCommonSlots; ++i){
 				editor.addLink(from.node, from.slot + i, to.node, to.slot + i);
@@ -719,8 +719,8 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 			// Find other links between the two nodes, matching channels.
 			const Node* const fromNode = graph->node( from.node );
 			const Node* const toNode = graph->node( to.node );
-			const uint fromCount = fromNode->outputs().size();
-			const uint toCount = toNode->inputs().size();
+			const uint fromCount = ( uint )fromNode->outputs().size();
+			const uint toCount = ( uint )toNode->inputs().size();
 			const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
 			for( uint i = 1; i < maxCommonSlots; ++i )
 			{
@@ -787,7 +787,7 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 	}
 	
 	// TODO: when errors or unused nodes, do something to give feedback to the user.
-	const uint inputCount = compiledGraph.inputs.size();
+	const uint inputCount = ( uint )compiledGraph.inputs.size();
 	// Count selected input files.
 	uint inputFileCount = 0u;
 	for(const InputFile& input : inputFiles){
@@ -848,7 +848,7 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 			const bool useInputs = node.outputs.empty();
 			const std::vector<int>& registers = useInputs ? node.inputs : node.outputs;
 			const std::vector<Image>& images = useInputs ? sharedContext.tmpImagesRead : sharedContext.tmpImagesWrite;
-			const uint channelCount = registers.size();
+			const uint channelCount = ( uint )registers.size();
 			// Populate image with available channels from registers.
 			for(uint c = 0; c < channelCount; ++c){
 				const uint reg = registers[c];
@@ -874,7 +874,7 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 				for(uint y = 0; y < outputImg.h(); ++y){
 					for(uint x = 0; x < outputImg.w(); ++x){
 						const float gridLevel = float(((x / 8) % 2) ^ ((y / 8) % 2));
-						const glm::vec4 gridColor(gridLevel * 0.5 + 0.25f);
+						const glm::vec4 gridColor(gridLevel * 0.5f + 0.25f);
 						const float alpha = (outputImg.pixel(x,y)[3]);
 						outputImg.pixel(x, y) = glm::mix(gridColor, outputImg.pixel(x, y), alpha);
 						outputImg.pixel(x, y)[3] = 1.0f;
@@ -1138,10 +1138,10 @@ int main(int argc, char** argv){
 				}
 				ImGui::SameLine();
 				if(ImGui::SmallButton("Show...##output")){
-					const std::string str = outputDirectory.string();
-					sr_gui_open_in_explorer(str.c_str());
+					const std::string str = outputDirectory.u8string();
+					sr_gui_open_in_default_app(str.c_str());
 				}
-				const std::string outputDirStr = outputDirectory.string();
+				const std::string outputDirStr = outputDirectory.u8string();
 				ImGui::TextWrapped( "%s", outputDirStr.c_str() );
 
 				editedInputList |= ImGui::Checkbox("Custom resolution", &forceCustomResolution);

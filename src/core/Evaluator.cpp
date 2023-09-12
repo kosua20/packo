@@ -155,9 +155,9 @@ public:
 	bool validateInputs(){
 		bool incompleteNodes = false;
 		// Check that all nodes have their inputs filled.
-		for(uint nid = 0; nid < nodes.size();){
+		for(uint nid = 0; nid < ( uint )nodes.size();){
 			const Vertex* node = nodes[nid];
-			const uint tgtSlotCount = node->node->inputs().size();
+			const uint tgtSlotCount = ( uint )node->node->inputs().size();
 
 			// Check that each slot is assigned to one of the parents.
 			for(uint sid = 0; sid < tgtSlotCount; ++sid){
@@ -342,7 +342,7 @@ public:
 		nodes = orderedNodes;
 		purgeTmpData();
 
-		const uint nodeCount = nodes.size();
+		const uint nodeCount = ( uint )nodes.size();
 		std::vector<std::vector<uint>> registersRefCount(nodeCount);
 
 		std::vector<CompiledNode>& compiledNodes = compiledGraph.nodes;
@@ -354,8 +354,8 @@ public:
 			vert->tmpData = nId;
 			compiledNodes[nId].node = vert->node;
 			// Initialize registers
-			const uint inputCount = vert->node->inputs().size();
-			const uint outputCount = vert->node->outputs().size();
+			const uint inputCount = ( uint )vert->node->inputs().size();
+			const uint outputCount = ( uint )vert->node->outputs().size();
 			compiledNodes[nId].inputs.resize(inputCount, -1);
 			compiledNodes[nId].outputs.resize(outputCount, -1);
 			// Initialize ref count based on childrens using each output slot.
@@ -499,7 +499,7 @@ void CompiledGraph::ensureGlobalNodesConsistency(){
 				}
 			}
 			// Move each register to an image channel, in order.
-			const uint backupInputCount = backup.inputs.size();
+			const uint backupInputCount = ( uint )backup.inputs.size();
 			backup.outputs.resize(backupInputCount);
 			for(uint i = 0; i < backupInputCount; ++i){
 				backup.outputs[i] = i;
@@ -508,7 +508,7 @@ void CompiledGraph::ensureGlobalNodesConsistency(){
 		// Global node adjustments
 		{
 			// The global node will have access to all the backed up images.
-			const uint nodeInputCount = global.inputs.size();
+			const uint nodeInputCount = ( uint )global.inputs.size();
 			for(uint i = 0; i < nodeInputCount; ++i){
 				global.inputs[i] = i;
 			}
@@ -599,9 +599,9 @@ CompiledGraph::~CompiledGraph(){
 bool generateBatches(const std::vector<const Node*>& inputs, const std::vector<const Node*>& outputs, const std::vector<fs::path>& inputPaths, const fs::path& outputPath, std::vector<Batch>& batches){
 
 	// Generate batches based on the number of file nodes and paths given.
-	const uint inputCount = inputs.size();
-	const uint outputCount = outputs.size();
-	const uint pathCount = inputPaths.size();
+	const uint inputCount = ( uint )inputs.size();
+	const uint outputCount = ( uint )outputs.size();
+	const uint pathCount = ( uint )inputPaths.size();
 	const uint batchCount = (inputCount == 0u && pathCount == 0u) ? 1u : (pathCount / std::max(inputCount, 1u));
 	if(batchCount == 0u){
 		return false;
@@ -693,8 +693,8 @@ bool compile( const Graph& editGraph, bool optimize, ErrorContext& errors, Compi
 
 void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, bool forceRes, SharedContext& sharedContext, const glm::ivec2& maxRes){
 
-	const uint inputCountInBatch  = batch.inputs.size();
-	const uint outputCountInBatch = batch.outputs.size();
+	const uint inputCountInBatch  = ( uint )batch.inputs.size();
+	const uint outputCountInBatch = ( uint )batch.outputs.size();
 
 	sharedContext.inputImages.resize(inputCountInBatch);
 	for(uint i = 0u; i < inputCountInBatch; ++i){
@@ -764,7 +764,7 @@ void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize,
 }
 
 void evaluateGraphForBatchLockstep(const CompiledGraph& compiledGraph, SharedContext& sharedContext){
-	const uint nodeCount = compiledGraph.nodes.size();
+	const uint nodeCount = ( uint )compiledGraph.nodes.size();
 	for(uint nodeId = 0u; nodeId < nodeCount; ++nodeId){
 		evaluateGraphStepForBatch(compiledGraph.nodes[nodeId], compiledGraph.stackSize, sharedContext);
 		std::swap(sharedContext.tmpImagesRead, sharedContext.tmpImagesWrite);
@@ -772,7 +772,7 @@ void evaluateGraphForBatchLockstep(const CompiledGraph& compiledGraph, SharedCon
 }
 
 void evaluateGraphForBatchOptimized(const CompiledGraph& compiledGraph, SharedContext& sharedContext){
-	const uint compiledNodeCount = compiledGraph.nodes.size();
+	const uint compiledNodeCount = ( uint )compiledGraph.nodes.size();
 	const uint w = sharedContext.dims.x;
 	const uint h = sharedContext.dims.y;
 	uint currentStartNodeId = 0u;
@@ -881,8 +881,8 @@ bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const st
 
 	// Pass local objects by copy.
 	std::thread thread([&progress, compiledGraph, batches, outputRes, forceOutputRes ](){
-		progress = 0.f;
-		const int batchCost = std::floor(1.f / float(batches.size()) * kProgressCostGranularity);
+		progress = 0;
+		const int batchCost = (int)std::floor(1.f / float(batches.size()) * kProgressCostGranularity);
 		for(const Batch& batch : batches){
 			if(progress >= kProgressImmediateStop){
 				break;
@@ -895,7 +895,7 @@ bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const st
 			saveContextForBatch(batch, sharedContext);
 			progress += batchCost;
 		}
-		progress = -1.f;
+		progress = -1;
 	});
 	thread.detach();
 
