@@ -267,8 +267,9 @@ void FilterNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 			}
 		}
 	}
-
-	const float denom = m[0][0] + m[0][1] + m[0][2] + m[1][0] + m[1][1] + m[1][2] + m[2][0] + m[2][1] + m[2][2];
+	const float denom = glm::abs(m[0][0]) + glm::abs(m[0][1]) + glm::abs(m[0][2])
+					+ glm::abs(m[1][0]) + glm::abs(m[1][1]) + glm::abs(m[1][2])
+					+ glm::abs(m[2][0]) + glm::abs(m[2][1]) + glm::abs(m[2][2]);
 	accum /= std::max(denom, 1e-4f);
 
 	for(uint i = 0u; i < _channelCount; ++i){
