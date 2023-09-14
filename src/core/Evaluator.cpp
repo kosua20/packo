@@ -738,6 +738,10 @@ void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize,
 	const uint w = sharedContext.dims.x;
 	const uint h = sharedContext.dims.y;
 
+	if(compiledNode.node->global()){
+		compiledNode.node->prepare(sharedContext, compiledNode.inputs);
+	}
+
 #ifdef PARALLEL_FOR
 	System::forParallel(0, h, [&sharedContext, w, &compiledNode, stackSize](size_t y){
 #else
@@ -787,6 +791,15 @@ void evaluateGraphForBatchOptimized(const CompiledGraph& compiledGraph, SharedCo
 				break;
 		}
 		// Now we have a range [currentStartNode, nextGlobalNodeId[ to execute per-pixel.
+		// The only potential global node is the first one.
+		// TODO: improve this special case that allows global effects such as floodfill.
+		{
+			const CompiledNode& compiledNode = compiledGraph.nodes[currentStartNodeId];
+			if(compiledNode.node->global()){
+				compiledNode.node->prepare(sharedContext, compiledNode.inputs);
+			}
+
+		}
 #ifdef PARALLEL_FOR
 		System::forParallel(0, h, [&sharedContext, currentStartNodeId, nextGlobalNodeId, w, &compiledGraph](size_t y){
 #else

@@ -48,8 +48,11 @@ public:
 
 		~Attribute();
 	};
+	
+	virtual void prepare( SharedContext& context, const std::vector<int>& inputs) const { (void)context; (void)inputs; assert(global());};
 
 	virtual void evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const = 0;
+
 	virtual ~Node() = default;
 
 	virtual void serialize(json& data) const;
