@@ -536,7 +536,7 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 	return editedGraph;
 }
 
-void showCreationPopup(std::unordered_map<NodeClass, uint>& nodesToCreate, std::string& searchStr, int& selectedNodeType, std::vector<NodeClass>& visibleNodeTypes, bool focusTextField) {
+bool showCreationPopup(std::unordered_map<NodeClass, uint>& nodesToCreate, std::string& searchStr, int& selectedNodeType, std::vector<NodeClass>& visibleNodeTypes, bool focusTextField) {
 
 	int visibleTypesCount = int(visibleNodeTypes.size());
 	const int columnWidth = 160;
@@ -625,10 +625,18 @@ void showCreationPopup(std::unordered_map<NodeClass, uint>& nodesToCreate, std::
 
 	if(ImGui::IsKeyReleased(ImGuiKey_Escape)){
 		ImGui::CloseCurrentPopup();
+		return false;
 	}
+	return true;
 }
 
-bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<NodeClass, uint>& nodesToCreate, int nodeToPurgeLinks, const Styling& style, ImVec2& mouseRightClick, std::vector<Node *>& createdNodes) {
+struct DeferredNodeToCreate {
+	Graph::Slot existingSlot{0,0};
+	bool newNodeIsDest{false};
+	bool requested{false};
+};
+
+bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<NodeClass, uint>& nodesToCreate, int nodeToPurgeLinks, const Styling& style, ImVec2& mouseRightClick, std::vector<Node *>& createdNodes, DeferredNodeToCreate& nodeRequestFromLink) {
 
 	const bool shftModifierHeld = ImGui::GetIO().KeyShift;
 	const bool altModifierHeld  = ImGui::GetIO().KeyAlt;
@@ -658,10 +666,11 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 	}
 
 	int dropId;
-	if(ImNodes::IsLinkDropped(&dropId, false) && altModifierHeld){
+	DeferredNodeToCreate newNodeRequestFromLink;
+	if(ImNodes::IsLinkDropped(&dropId, false)){
 		bool isInput = false;
 		const Graph::Slot pin = fromLinkToSlot(dropId, isInput);
-		if(isInput){
+		if(isInput && altModifierHeld){
 			// Create a constant node and link it.
 			Node* createdNode = createNode( shftModifierHeld ? NodeClass::CONST_COLOR : NodeClass::CONST_FLOAT );
 			const uint newNodeId = editor.addNode( createdNode );
@@ -683,6 +692,10 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 				}
 			}
 			editedGraph = true;
+		} else {
+			newNodeRequestFromLink.requested = true;
+			newNodeRequestFromLink.existingSlot = pin;
+			newNodeRequestFromLink.newNodeIsDest = !isInput;
 		}
 	}
 
@@ -760,20 +773,37 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 	}
 
 	// Create queued nodes.
+	const uint kNoNodeCreated = 0xFFFFFFFF;
+	uint lastCreatedNodeIndex = kNoNodeCreated;
 	for(const auto& nodeTypeToCreate : nodesToCreate){
 		if(nodeTypeToCreate.first >= NodeClass::COUNT_EXPOSED){
 			continue;
 		}
 		for(uint i = 0u; i < nodeTypeToCreate.second; ++i){
 			Node* createdNode = createNode(nodeTypeToCreate.first);
-			editor.addNode( createdNode );
+			lastCreatedNodeIndex = editor.addNode( createdNode );
 			// Register for placement at next frame.
 			createdNodes.push_back(createdNode);
 		}
 		editedGraph = true;
 	}
+	// If we have dropped a link, selected a node in the palette, and validated it, create the link.
+	// Assume in that case we had at most one node created.
+	if(nodeRequestFromLink.requested && (lastCreatedNodeIndex != kNoNodeCreated)){
+		if(nodeRequestFromLink.newNodeIsDest){
+			editor.addLink(nodeRequestFromLink.existingSlot.node, nodeRequestFromLink.existingSlot.slot, lastCreatedNodeIndex, 0);
+		} else {
+			editor.addLink(lastCreatedNodeIndex, 0, nodeRequestFromLink.existingSlot.node, nodeRequestFromLink.existingSlot.slot);
+		}
+		nodeRequestFromLink.requested = false;
+	}
 
 	editor.commit();
+
+	// If we just dropped a link, ask for the palette to be shown.
+	if(newNodeRequestFromLink.requested){
+		nodeRequestFromLink = newNodeRequestFromLink;
+	}
 	return editedGraph;
 }
 
@@ -950,6 +980,7 @@ int main(int argc, char** argv){
 	std::vector<Node*> createdNodes;
 	std::unordered_map<const Node*, GLuint> textures;
 	std::unordered_map<const Node*, GLuint> texturesToPurge;
+	DeferredNodeToCreate nodeRequestFromLink;
 	ImVec2 mouseRightClick( 0.f, 0.f );
 	glm::ivec2 customResolution = {64, 64};
 	float inputsWindowWidth = (std::min)(300.0f, 0.25f * float(winW));
@@ -1278,7 +1309,8 @@ int main(int argc, char** argv){
 					const bool canOpenPopup = !ImGui::IsPopupOpen( "Create node" );
 					const bool clickedForPopup = ImGui::IsMouseClicked( ImGuiMouseButton_Right );
 					const bool typedForPopup = !editingTextField && ImGui::IsKeyReleased( ImGuiKey_Space );
-					if(canOpenPopup && (clickedForPopup || typedForPopup))
+					const bool requestedFromLink = nodeRequestFromLink.requested;
+					if(canOpenPopup && (clickedForPopup || typedForPopup || requestedFromLink))
 					{
 						ImGui::OpenPopup("Create node");
 						// Save position for placing the new node on screen.
@@ -1295,7 +1327,11 @@ int main(int argc, char** argv){
 
 					if(ImGui::BeginPopup("Create node")){
 						anyPopupOpen = true;
-						showCreationPopup(nodesToCreate, searchStr, selectedNodeType, visibleNodeTypes, focusTextField);
+						const bool valid = showCreationPopup(nodesToCreate, searchStr, selectedNodeType, visibleNodeTypes, focusTextField);
+						if(!valid){
+							// Cancel the current node request.
+							nodeRequestFromLink.requested = false;
+						}
 						ImGui::EndPopup();
 					}
 				}
@@ -1335,7 +1371,7 @@ int main(int argc, char** argv){
 				}
 
 				// Graph edition based on nodes to create and editor actions.
-				editedGraph |= editGraph(graph, nodesToCreate, nodeToPurgeLinks, style, mouseRightClick, createdNodes);
+				editedGraph |= editGraph(graph, nodesToCreate, nodeToPurgeLinks, style, mouseRightClick, createdNodes, nodeRequestFromLink);
 
 				ImGui::EndChild();
 			}
