@@ -64,3 +64,15 @@ public:
 
 	bool global() const override { return true; }
 };
+
+class FloodFillNode : public Node {
+public:
+
+	FloodFillNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+
+	void prepare( SharedContext& context, const std::vector<int>& inputs) const override;
+
+	bool global() const override { return true; }
+};

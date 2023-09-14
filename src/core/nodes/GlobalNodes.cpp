@@ -276,3 +276,91 @@ void FilterNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 		context.stack[outputs[i]] = accum[i];
 	}
 }
+
+
+FloodFillNode::FloodFillNode(){
+	_name = "Flood fill";
+	_description = "Propagate non empty pixels";
+	_inputNames = {"X"};
+	_outputNames = {"Y"};
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION(FloodFillNode, NodeClass::FLOOD_FILL, true, true, 1)
+
+void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inputs) const {
+	assert(outputs.size() == _channelCount);
+
+	const uint w = context.dims.x;
+	const uint h = context.dims.y;
+	// TODO: Preload images infos?
+
+	// Do stuff
+	std::vector<unsigned char> flags(w * h);
+	std::vector<int> seeds(w * h);
+	std::vector<int> indices0; indices0.reserve(w * h); // Worst case.
+	std::vector<int> indices1; indices1.reserve(w * h); // Worst case.
+
+	const glm::ivec2 deltas[] = {{-1,-1}, {0,-1}, { 1,-1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}};
+	for(uint y = 0; y < h; ++y){
+		for(uint x = 0; x < w; ++x){
+			for(uint i = 0; i < _channelCount; ++i){
+				float c = context.tmpImagesRead[inputs[i]/4u].pixel(x,y)[inputs[i]%4u];
+				if(c == 0.f)
+					continue;
+				const int id = (int)y * (int)w + (int)x;
+				flags[id] = 1u;
+				seeds[id] = id;
+				indices0.push_back(id);
+				break;
+			}
+		}
+	}
+	while(!indices0.empty()){
+		indices1.clear();
+		for(int id : indices0){
+			// We are on the border.
+			// Look at the 9 neighbors
+			flags[id] = 2u;
+			for(int n = 0; n < 8; ++n){
+				const glm::ivec2 coords = glm::ivec2(id % w, id / w) + deltas[n];
+				if(coords.x < 0 || coords.y < 0 || coords.x >= (int)w || coords.y >= (int)h){
+					continue;
+				}
+				const int nid = coords.y * w + coords.x;
+				if(flags[nid] < 1u){
+					flags[nid] = 1u;
+					indices1.push_back(nid);
+					seeds[nid] = seeds[id];
+				}
+			}
+		}
+		std::swap(indices0, indices1);
+	}
+
+	// Write to write images.
+	for(uint i = 0u; i < _channelCount; ++i){
+		const uint srcId = inputs[i];
+		const uint imageId = srcId / 4u;
+		const uint channelId = srcId % 4u;
+		for(uint y = 0; y < h; ++y){
+			for(uint x = 0; x < w; ++x){
+				const int id = seeds[y * w + x];
+				context.tmpImagesWrite[imageId].pixel(x,y)[channelId] = context.tmpImagesRead[imageId].pixel(id %w, id / w)[channelId];
+			}
+		}
+	}
+}
+
+void FloodFillNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
+	assert(outputs.size() == _channelCount);
+	assert(inputs.size() == _channelCount);
+	// Just transfer from the write inputs (used as temp storage).
+	for(uint i = 0u; i < _channelCount; ++i){
+		const uint srcId = inputs[i];
+		const uint dstId = outputs[i];
+		const uint imgId = srcId / 4u;
+		const uint channelId = srcId % 4u;
+		context.stack[dstId] = context.shared->tmpImagesWrite[imgId].pixel(context.coords)[channelId];
+	}
+}
