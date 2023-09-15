@@ -161,7 +161,7 @@ void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& i
 	const float radiusFrac = _attributes[0].flt * (context.shared->scale.x + context.shared->scale.y) * 0.5f;
 	const float sigma = radiusFrac / 3.f;
 	const float sigma2 = sigma * sigma;
-	const int radius = std::ceil(radiusFrac);
+	const int radius = (int)std::ceil(radiusFrac) + 1;
 	const float normalization = 1.f / (glm::two_pi<float>() * sigma2);
 
 	glm::uvec4 channelIds;
@@ -362,5 +362,110 @@ void FloodFillNode::evaluate(LocalContext& context, const std::vector<int>& inpu
 		const uint imgId = srcId / 4u;
 		const uint channelId = srcId % 4u;
 		context.stack[dstId] = context.shared->tmpImagesWrite[imgId].pixel(context.coords)[channelId];
+	}
+}
+
+MedianFilterNode::MedianFilterNode()
+{
+	_name = "Median filter";
+	_description = "Apply a median filter to each pixel image, using its 3x3 neihborhood";
+	_inputNames = { "X" };
+	_outputNames = { "Y" };
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION( MedianFilterNode, NodeClass::MEDIAN_FILTER, true, true, 1 )
+
+void MedianFilterNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
+{
+	assert( outputs.size() == _channelCount );
+	assert( inputs.size() == _channelCount );
+
+	// Preload images infos.
+	glm::uvec4 channelIds;
+	const Image* images[ 4 ];
+	for( uint i = 0u; i < _channelCount; ++i )
+	{
+		const uint srcId = inputs[ i ];
+		const uint imageId = srcId / 4u;
+		images[ i ] = &context.shared->tmpImagesRead[ imageId ];
+		channelIds[ i ] = srcId % 4u;
+	}
+
+	constexpr int kRadius = 1;
+	constexpr int kSampleCount = ( 2 * kRadius + 1 ) * ( 2 * kRadius + 1 );
+
+	glm::vec4 values[ kSampleCount ];
+	float norms2[ kSampleCount ];
+	uint valuesCount = 0u;
+
+	for( int dy = -kRadius; dy <= kRadius; ++dy ){
+		for( int dx = -kRadius; dx <= kRadius; ++dx ){
+			glm::ivec2 dcoords{ context.coords.x + dx, context.coords.y + dy };
+			if( dcoords.x < 0 || dcoords.y < 0 || dcoords.x >= context.shared->dims.x || dcoords.y >= context.shared->dims.y )
+				continue;
+
+			glm::vec4 accum(0.f);
+			for( uint i = 0; i < _channelCount; ++i ){
+				accum[ i ] = images[ i ]->pixel( dcoords )[ channelIds[ i ] ];
+			}
+
+			const float norm2 = glm::dot( accum, accum );
+
+			uint insertIndex = 0;
+			for( ; insertIndex < valuesCount; ++insertIndex ){
+				if( norm2 < norms2[ insertIndex ] ){
+					break;
+				}
+			}
+			assert( insertIndex < kSampleCount );
+			assert( valuesCount < kSampleCount );
+			for(uint nextIndex = valuesCount; nextIndex > insertIndex; --nextIndex ){
+				norms2[ nextIndex ] = norms2[ nextIndex - 1 ];
+				values[ nextIndex ] = values[ nextIndex - 1 ];
+			}
+			norms2[ insertIndex ] = norm2;
+			values[ insertIndex ] = accum;
+			++valuesCount;
+		}
+	}
+	assert( valuesCount > 0 );
+	const glm::vec4 medianValue = values[ valuesCount / 2 ];
+	for( uint i = 0u; i < _channelCount; ++i ){
+		context.stack[ outputs[ i ] ] = medianValue[i];
+	}
+}
+
+
+DownscaleNode::DownscaleNode()
+{
+	_name = "Downscale";
+	_description = "Downscale an image and replicate its pixels";
+	_inputNames = { "X" };
+	_outputNames = { "Y" };
+	_attributes = { {"Factor", Attribute::Type::FLOAT} };
+	_attributes[ 0 ].flt = 2.f;
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION( DownscaleNode, NodeClass::DOWNSCALE, true, true, 1 )
+
+void DownscaleNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
+{
+	assert( outputs.size() == _channelCount );
+	assert( inputs.size() == _channelCount );
+
+	const int scale = glm::max(1, int( _attributes[ 0 ].flt ));
+	const int sx = ( context.coords.x / scale) * scale;
+	const int sy = ( context.coords.y / scale) * scale;
+
+	for( uint i = 0u; i < _channelCount; ++i )
+	{
+		const uint srcId = inputs[ i ];
+		const uint imageId = srcId / 4u;
+		const uint channelId = srcId % 4u;
+
+		const float value = context.shared->tmpImagesRead[ imageId ].pixel(sx, sy)[i];
+		context.stack[ outputs[ i ] ] = value;
 	}
 }

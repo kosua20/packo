@@ -115,6 +115,10 @@ Node* createNode(NodeClass type){
 			return new BroadcastNode();
 		case FLOOD_FILL:
 			return new FloodFillNode();
+		case MEDIAN_FILTER:
+			return new MedianFilterNode();
+		case DOWNSCALE:
+			return new DownscaleNode();
 		default:
 			assert(false);
 			break;
@@ -130,7 +134,7 @@ const std::string& getNodeName(NodeClass type){
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
 		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product", "Filter", "Absolute value",
 		"Fract", "Modulo", "Floor", "Ceiling", "Step", "Smoothstep", "Sign", "Resolution", "Constant Math", "Coordinates",
-		"Length", "Normalize", "Scale & Offset", "Broadcast", "Flood fill",
+		"Length", "Normalize", "Scale & Offset", "Broadcast", "Flood fill", "Median", "Downscale",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -157,7 +161,7 @@ NodeClass getOrderedType(uint i){
 		// Comparisons
 		SELECT, EQUAL, DIFFERENT, NOT, GREATER, LESSER,
 		// Global
-		FLIP, TILE, ROTATE, GAUSSIAN_BLUR, FILTER, FLOOD_FILL,
+		FLIP, TILE, ROTATE, GAUSSIAN_BLUR, FILTER, FLOOD_FILL, MEDIAN_FILTER, DOWNSCALE,
 		// Helpers
 		BROADCAST, COORDINATES, RESOLUTION, COMMENT, LOG
 	};

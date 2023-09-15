@@ -76,3 +76,26 @@ public:
 
 	bool global() const override { return true; }
 };
+
+
+class MedianFilterNode : public Node
+{
+public:
+
+	MedianFilterNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+
+	bool global() const override { return true; }
+};
+
+class DownscaleNode : public Node
+{
+public:
+
+	DownscaleNode();
+
+	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+
+	bool global() const override { return true; }
+};
