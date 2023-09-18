@@ -721,9 +721,18 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 			const Node* const toNode = graph->node( to.node );
 			const uint fromCount = ( uint )fromNode->outputs().size();
 			const uint toCount = ( uint )toNode->inputs().size();
-			const uint maxCommonSlots = (std::min)( fromCount - from.slot, toCount - to.slot );
-			for(uint i = 1; i < maxCommonSlots; ++i){
+			const uint commonSlotsCount  = ( std::min )( fromCount - from.slot, toCount - to.slot );
+			const uint totalSlotsCount = ( std::max )( fromCount - from.slot, toCount - to.slot );
+			for(uint i = 1; i < commonSlotsCount; ++i){
 				editor.addLink(from.node, from.slot + i, to.node, to.slot + i);
+			}
+			if(ctrlModifierHeld){
+				// Link all following slots to the last one.
+				for(uint i = commonSlotsCount; i < totalSlotsCount; ++i){
+					const uint fromSlot = std::min(fromCount - 1u, from.slot + i);
+					const uint toSlot   = std::min(  toCount - 1u,   to.slot + i);
+					editor.addLink(from.node, fromSlot, to.node, toSlot );
+				}
 			}
 		}
 		editedGraph = true;
