@@ -88,7 +88,7 @@ protected:
 	std::vector<std::string> _currentOutputs;
 	std::vector<Attribute> _attributes;
 	uint _channelCount = 1;
-
+	// TODO: support per-input/output channeling.
 };
 
 #define NODE_DECLARE_EVAL_TYPE_AND_VERSION() \

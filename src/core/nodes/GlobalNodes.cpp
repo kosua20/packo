@@ -486,3 +486,46 @@ void QuantizeNode::evaluate( LocalContext& context, const std::vector<int>& inpu
 	}
 
 }
+
+
+SampleNode::SampleNode()
+{
+	_name = "Sample";
+	_description = "Sample an image at the given UV";
+	_inputNames = { "X", "U", "V"};
+	_outputNames = { "Y" };
+	_attributes = { {"Bilinear", Attribute::Type::BOOL} };
+	_attributes[ 0 ].bln = false;
+	finalize();
+}
+
+NODE_DEFINE_TYPE_AND_VERSION( QuantizeNode, NodeClass::SAMPLING, false, false, 1 )
+
+void SampleNode::prepare( SharedContext& context, const std::vector<int>& inputs ) const
+{
+	assert( inputs.size() == 3 );
+	assert( inputs.size() <= 4 );
+
+	copyInputsToImage( context.tmpImagesRead, inputs, context.tmpImagesGlobal[ 0 ] );
+}
+
+void SampleNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
+{
+	assert( outputs.size() == 1 );
+	assert( inputs.size() == 3 );
+
+	const bool bilinear = _attributes[ 0 ].bln;
+	const int scale = glm::max( 1, int( _attributes[ 0 ].flt ) );
+
+	const Image& src = context.shared->tmpImagesGlobal[ 0 ];
+
+	glm::vec4 basePixel;
+	// TODO: sample at uvs (do we take coordinates as input ? UVs with guarantee of stability ?)
+	// TODO: combine with distance field node to replace FloodFill node.
+
+	for( uint i = 0u; i < _channelCount; ++i )
+	{
+		context.stack[ outputs[ i ] ] = basePixel[ i ];
+	}
+
+}
