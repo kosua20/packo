@@ -1,6 +1,31 @@
 #include "core/nodes/GlobalNodes.hpp"
 #include "core/nodes/Nodes.hpp"
 
+
+void copyInputsToImage(const std::vector<Image>& srcs, const std::vector<int>& inputs, Image& dst){
+	const uint channelCount = inputs.size();
+	for(uint i = 0u; i < channelCount; ++i){
+		const uint srcId = inputs[i];
+		const uint imageId = srcId / 4u;
+		const uint channelId = srcId % 4u;
+		const Image& src = srcs[imageId];
+		for(uint y = 0; y < dst.h(); ++y){
+			for(uint x = 0; x < dst.w(); ++x){
+				dst.pixel(x, y)[i] = src.pixel(x,y)[channelId];
+			}
+		}
+	}
+	for(uint i = channelCount; i < 4; ++i){
+		for(uint y = 0; y < dst.h(); ++y){
+			for(uint x = 0; x < dst.w(); ++x){
+				dst.pixel(x, y)[i] = 0.f;
+			}
+		}
+	}
+}
+
+// TODO: some filters will require a mask. Use the last channel ? extra input (but then multi-channel...)
+
 FlipNode::FlipNode(){
 	_name = "Flip";
 	_description = "Flip an image content along the horizontal/vertical axis";
@@ -154,6 +179,13 @@ GaussianBlurNode::GaussianBlurNode(){
 
 NODE_DEFINE_TYPE_AND_VERSION(GaussianBlurNode, NodeClass::GAUSSIAN_BLUR, true, true, 1)
 
+void GaussianBlurNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
+	assert(inputs.size() == _channelCount);
+	assert(inputs.size() <= 4);
+
+	copyInputsToImage(context.tmpImagesRead, inputs, context.tmpImagesGlobal[0]);
+}
+
 void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
 	assert(inputs.size() == _channelCount);
@@ -164,15 +196,7 @@ void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& i
 	const int radius = (int)std::ceil(radiusFrac) + 1;
 	const float normalization = 1.f / (glm::two_pi<float>() * sigma2);
 
-	glm::uvec4 channelIds;
-	const Image* images[4];
-	for(uint i = 0u; i < _channelCount; ++i){
-		const uint srcId = inputs[i];
-		const uint imageId = srcId / 4u;
-		images[i] = &context.shared->tmpImagesRead[imageId];
-		channelIds[i] = srcId % 4u;
-	}
-
+	const Image& src = context.shared->tmpImagesGlobal[0];
 	glm::vec4 accum { 0.0f};
 	float denom = 0.f;
 	// No axis separation for now.
@@ -182,9 +206,7 @@ void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& i
 			dcoords = glm::clamp(dcoords, {0.0f, 0.0f}, context.shared->dims - 1);
 			const float weight = normalization * exp(-0.5f/sigma2 * (dx*dx+dy*dy));
 			denom += weight;
-			for(uint i = 0; i < _channelCount; ++i){
-				accum[i] += weight * images[i]->pixel(dcoords)[channelIds[i]];
-			}
+			accum += weight * src.pixel(dcoords);
 		}
 	}
 	accum /= std::max(denom, 1e-4f);
@@ -238,20 +260,17 @@ FilterNode::FilterNode(){
 
 NODE_DEFINE_TYPE_AND_VERSION(FilterNode, NodeClass::FILTER, true, true, 1)
 
+void FilterNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
+	assert(inputs.size() == _channelCount);
+	assert(inputs.size() <= 4);
+
+	copyInputsToImage(context.tmpImagesRead, inputs, context.tmpImagesGlobal[0]);
+}
+
 void FilterNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
 	assert(inputs.size() == _channelCount);
-
-
-	// Preload images infos.
-	glm::uvec4 channelIds;
-	const Image* images[4];
-	for(uint i = 0u; i < _channelCount; ++i){
-		const uint srcId = inputs[i];
-		const uint imageId = srcId / 4u;
-		images[i] = &context.shared->tmpImagesRead[imageId];
-		channelIds[i] = srcId % 4u;
-	}
+	const Image& src = context.shared->tmpImagesGlobal[0];
 
 	const glm::mat3 m{ glm::vec3(_attributes[0].clr), glm::vec3(_attributes[1].clr), glm::vec3(_attributes[2].clr)};
 	glm::vec4 accum{ 0.0f};
@@ -262,9 +281,7 @@ void FilterNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 			glm::ivec2 dcoords{context.coords.x + dx, context.coords.y + dy};
 			dcoords = glm::clamp(dcoords, {0.0f, 0.0f}, context.shared->dims - 1);
 			const float weight = m[dy + 1][dx + 1];
-			for(uint i = 0; i < _channelCount; ++i){
-				accum[i] += weight * images[i]->pixel(dcoords)[channelIds[i]];
-			}
+			accum += weight * src.pixel(dcoords);
 		}
 	}
 	const float denom = glm::abs(m[0][0]) + glm::abs(m[0][1]) + glm::abs(m[0][2])
@@ -289,11 +306,10 @@ FloodFillNode::FloodFillNode(){
 NODE_DEFINE_TYPE_AND_VERSION(FloodFillNode, NodeClass::FLOOD_FILL, true, true, 1)
 
 void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inputs) const {
-	assert(outputs.size() == _channelCount);
+	assert(inputs.size() == _channelCount);
 
 	const uint w = context.dims.x;
 	const uint h = context.dims.y;
-	// TODO: Preload images infos?
 
 	// Do stuff
 	std::vector<unsigned char> flags(w * h);
@@ -301,21 +317,23 @@ void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inp
 	std::vector<int> indices0; indices0.reserve(w * h); // Worst case.
 	std::vector<int> indices1; indices1.reserve(w * h); // Worst case.
 
-	const glm::ivec2 deltas[] = {{-1,-1}, {0,-1}, { 1,-1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}};
+	Image tmp(w, h);
+	copyInputsToImage(context.tmpImagesRead, inputs, tmp);
+
+	// Collect seeds.
 	for(uint y = 0; y < h; ++y){
 		for(uint x = 0; x < w; ++x){
-			for(uint i = 0; i < _channelCount; ++i){
-				float c = context.tmpImagesRead[inputs[i]/4u].pixel(x,y)[inputs[i]%4u];
-				if(c == 0.f)
-					continue;
-				const int id = (int)y * (int)w + (int)x;
-				flags[id] = 1u;
-				seeds[id] = id;
-				indices0.push_back(id);
-				break;
-			}
+			// Use latest channel as mask.
+			if(tmp.pixel(x,y)[_channelCount-1] == 0.f)
+				continue;
+			const int id = (int)y * (int)w + (int)x;
+			flags[id] = 1u;
+			seeds[id] = id;
+			indices0.push_back(id);
 		}
 	}
+
+	const glm::ivec2 deltas[] = {{-1,-1}, {0,-1}, { 1,-1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}};
 	while(!indices0.empty()){
 		indices1.clear();
 		for(int id : indices0){
@@ -338,16 +356,12 @@ void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inp
 		std::swap(indices0, indices1);
 	}
 
-	// Write to write images.
-	for(uint i = 0u; i < _channelCount; ++i){
-		const uint srcId = inputs[i];
-		const uint imageId = srcId / 4u;
-		const uint channelId = srcId % 4u;
-		for(uint y = 0; y < h; ++y){
-			for(uint x = 0; x < w; ++x){
-				const int id = seeds[y * w + x];
-				context.tmpImagesWrite[imageId].pixel(x,y)[channelId] = context.tmpImagesRead[imageId].pixel(id %w, id / w)[channelId];
-			}
+	// Write to tmp storage for global nodes.
+	Image& dst = context.tmpImagesGlobal[0];
+	for(uint y = 0; y < h; ++y){
+		for(uint x = 0; x < w; ++x){
+			const int id = seeds[y * w + x];
+			dst.pixel(x, y) = tmp.pixel(id % w, id / w);
 		}
 	}
 }
@@ -355,18 +369,12 @@ void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inp
 void FloodFillNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
 	assert(inputs.size() == _channelCount);
-	// Just transfer from the write inputs (used as temp storage).
 	for(uint i = 0u; i < _channelCount; ++i){
-		const uint srcId = inputs[i];
-		const uint dstId = outputs[i];
-		const uint imgId = srcId / 4u;
-		const uint channelId = srcId % 4u;
-		context.stack[dstId] = context.shared->tmpImagesWrite[imgId].pixel(context.coords)[channelId];
+		context.stack[outputs[i]] = context.shared->tmpImagesGlobal[0].pixel(context.coords)[i];
 	}
 }
 
-MedianFilterNode::MedianFilterNode()
-{
+MedianFilterNode::MedianFilterNode(){
 	_name = "Median filter";
 	_description = "Apply a median filter to each pixel image, using its 3x3 neihborhood";
 	_inputNames = { "X" };
@@ -376,96 +384,108 @@ MedianFilterNode::MedianFilterNode()
 
 NODE_DEFINE_TYPE_AND_VERSION( MedianFilterNode, NodeClass::MEDIAN_FILTER, true, true, 1 )
 
+
+void MedianFilterNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
+	assert(inputs.size() == 2);
+	assert(inputs.size() <= 4);
+	// Second channel is used as mask.
+	copyInputsToImage(context.tmpImagesRead, inputs, context.tmpImagesGlobal[0]);
+}
+
 void MedianFilterNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
 {
-	assert( outputs.size() == _channelCount );
-	assert( inputs.size() == _channelCount );
-
-	// Preload images infos.
-	glm::uvec4 channelIds;
-	const Image* images[ 4 ];
-	for( uint i = 0u; i < _channelCount; ++i )
-	{
-		const uint srcId = inputs[ i ];
-		const uint imageId = srcId / 4u;
-		images[ i ] = &context.shared->tmpImagesRead[ imageId ];
-		channelIds[ i ] = srcId % 4u;
-	}
+	assert( outputs.size() == 1 );
+	assert( inputs.size() == 2 );
 
 	constexpr int kRadius = 1;
 	constexpr int kSampleCount = ( 2 * kRadius + 1 ) * ( 2 * kRadius + 1 );
 
-	glm::vec4 values[ kSampleCount ];
-	float norms2[ kSampleCount ];
+	float values[ kSampleCount ];
 	uint valuesCount = 0u;
 
-	for( int dy = -kRadius; dy <= kRadius; ++dy ){
-		for( int dx = -kRadius; dx <= kRadius; ++dx ){
+	const Image& src = context.shared->tmpImagesGlobal[0];
+	for(int dy = -kRadius; dy <= kRadius; ++dy){
+		for(int dx = -kRadius; dx <= kRadius; ++dx){
 			glm::ivec2 dcoords{ context.coords.x + dx, context.coords.y + dy };
-			if( dcoords.x < 0 || dcoords.y < 0 || dcoords.x >= context.shared->dims.x || dcoords.y >= context.shared->dims.y )
+			if(dcoords.x < 0 || dcoords.y < 0 || dcoords.x >= context.shared->dims.x || dcoords.y >= context.shared->dims.y)
 				continue;
 
-			glm::vec4 accum(0.f);
-			for( uint i = 0; i < _channelCount; ++i ){
-				accum[ i ] = images[ i ]->pixel( dcoords )[ channelIds[ i ] ];
-			}
+			glm::vec2 accum = glm::vec2(src.pixel(dcoords));
 
-			const float norm2 = glm::dot( accum, accum );
-
+			if(accum.y < 1e-3f)
+				continue;
 			uint insertIndex = 0;
-			for( ; insertIndex < valuesCount; ++insertIndex ){
-				if( norm2 < norms2[ insertIndex ] ){
+			for( ; insertIndex < valuesCount; ++insertIndex){
+				if(norm2 < norms2[insertIndex]){
 					break;
 				}
 			}
-			assert( insertIndex < kSampleCount );
-			assert( valuesCount < kSampleCount );
-			for(uint nextIndex = valuesCount; nextIndex > insertIndex; --nextIndex ){
-				norms2[ nextIndex ] = norms2[ nextIndex - 1 ];
-				values[ nextIndex ] = values[ nextIndex - 1 ];
+			assert(insertIndex < kSampleCount);
+			assert(valuesCount < kSampleCount);
+			for(uint nextIndex = valuesCount; nextIndex > insertIndex; --nextIndex){
+				norms2[nextIndex] = norms2[nextIndex - 1];
+				values[nextIndex] = values[nextIndex - 1];
 			}
-			norms2[ insertIndex ] = norm2;
-			values[ insertIndex ] = accum;
+			norms2[insertIndex] = norm2;
+			values[insertIndex] = accum;
 			++valuesCount;
 		}
 	}
-	assert( valuesCount > 0 );
-	const glm::vec4 medianValue = values[ valuesCount / 2 ];
+	const glm::vec4 medianValue = (valuesCount == 0) ? src.pixel(context.coords) : values[ valuesCount / 2 ];
 	for( uint i = 0u; i < _channelCount; ++i ){
 		context.stack[ outputs[ i ] ] = medianValue[i];
 	}
 }
 
 
-DownscaleNode::DownscaleNode()
-{
-	_name = "Downscale";
-	_description = "Downscale an image and replicate its pixels";
+QuantizeNode::QuantizeNode(){
+	_name = "Quantize";
+	_description = "Quantize an image at a given pixel scale";
 	_inputNames = { "X" };
 	_outputNames = { "Y" };
-	_attributes = { {"Factor", Attribute::Type::FLOAT} };
-	_attributes[ 0 ].flt = 2.f;
+	_attributes = { {"Factor", Attribute::Type::FLOAT}, {"Bilinear", Attribute::Type::BOOL} };
+	_attributes[0].flt = 2.f;
+	_attributes[1].bln = false;
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( DownscaleNode, NodeClass::DOWNSCALE, true, true, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( QuantizeNode, NodeClass::QUANTIZE, true, true, 1 )
 
-void DownscaleNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
+void QuantizeNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
+	assert(inputs.size() == _channelCount);
+	assert(inputs.size() <= 4);
+
+	copyInputsToImage(context.tmpImagesRead, inputs, context.tmpImagesGlobal[0]);
+}
+
+void QuantizeNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
 {
 	assert( outputs.size() == _channelCount );
 	assert( inputs.size() == _channelCount );
 
+	const bool bilinearUpscale = _attributes[1].bln;
 	const int scale = glm::max(1, int( _attributes[ 0 ].flt ));
+	// /!\ Two consecutive downscales won't compose, because we re-upscale each time
+	// (we duplicate the value in all pixels that project to the same downscaled pixel)
 	const int sx = ( context.coords.x / scale) * scale;
 	const int sy = ( context.coords.y / scale) * scale;
 
-	for( uint i = 0u; i < _channelCount; ++i )
-	{
-		const uint srcId = inputs[ i ];
-		const uint imageId = srcId / 4u;
-		const uint channelId = srcId % 4u;
+	const Image& src = context.shared->tmpImagesGlobal[0];
 
-		const float value = context.shared->tmpImagesRead[ imageId ].pixel(sx, sy)[i];
-		context.stack[ outputs[ i ] ] = value;
+	glm::vec4 basePixel = src.pixel(sx, sy);
+	if(bilinearUpscale){
+		const glm::vec4 c00 = basePixel;
+		const int sx1 = (sx + scale) < context.shared->dims.x ? (sx + scale) : sx;
+		const int sy1 = (sy + scale) < context.shared->dims.y ? (sy + scale) : sy;
+		const glm::vec4& c10 = src.pixel(sx1,  sy);
+		const glm::vec4& c01 = src.pixel( sx, sy1);
+		const glm::vec4& c11 = src.pixel(sx1, sy1);
+		const glm::vec2 frac = glm::vec2(context.coords - glm::ivec2(sx, sy)) / (float)scale;
+		basePixel = (1.f - frac.x) * (1.f - frac.y) * c00 + (1.f - frac.x) * frac.y * c01 + frac.x * (1.f - frac.y) * c10 + frac.x * frac.y * c11;
 	}
+
+	for(uint i = 0u; i < _channelCount; ++i){
+		context.stack[outputs[i]] = basePixel[i];
+	}
+
 }

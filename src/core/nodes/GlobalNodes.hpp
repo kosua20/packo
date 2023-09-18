@@ -42,6 +42,8 @@ public:
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 
+	void prepare( SharedContext& context, const std::vector<int>& inputs) const override;
+
 	bool global() const override { return true; }
 };
 
@@ -61,6 +63,8 @@ public:
 	FilterNode();
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+
+	void prepare( SharedContext& context, const std::vector<int>& inputs) const override;
 
 	bool global() const override { return true; }
 };
@@ -86,16 +90,20 @@ public:
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
 
+	void prepare( SharedContext& context, const std::vector<int>& inputs) const override;
+
 	bool global() const override { return true; }
 };
 
-class DownscaleNode : public Node
+class QuantizeNode : public Node
 {
 public:
 
-	DownscaleNode();
+	QuantizeNode();
 
 	NODE_DECLARE_EVAL_TYPE_AND_VERSION()
+
+	void prepare( SharedContext& context, const std::vector<int>& inputs) const override;
 
 	bool global() const override { return true; }
 };
