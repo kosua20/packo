@@ -119,6 +119,8 @@ Node* createNode(NodeClass type){
 			return new MedianFilterNode();
 		case QUANTIZE:
 			return new QuantizeNode();
+		case SAMPLING:
+			return new SampleNode();
 		default:
 			assert(false);
 			break;
@@ -134,7 +136,7 @@ const std::string& getNodeName(NodeClass type){
 		"Select", "Equal", "Different", "Not", "Greater", "Less", "Interpolate", "Comment", "Log Color", "Pick Color", "Gradient",
 		"Sine", "Cosine", "Tangent", "Arc Sine", "Arc Cosine", "Arc Tangent", "Dot product", "Filter", "Absolute value",
 		"Fract", "Modulo", "Floor", "Ceiling", "Step", "Smoothstep", "Sign", "Resolution", "Constant Math", "Coordinates",
-		"Length", "Normalize", "Scale & Offset", "Broadcast", "Flood fill", "Median", "Quantize",
+		"Length", "Normalize", "Scale & Offset", "Broadcast", "Flood fill", "Median", "Quantize", "Sampling",
 		"Internal", "Backup", "Restore",
 		"Unknown"
 	};
@@ -161,7 +163,7 @@ NodeClass getOrderedType(uint i){
 		// Comparisons
 		SELECT, EQUAL, DIFFERENT, NOT, GREATER, LESSER,
 		// Global
-		FLIP, TILE, ROTATE, GAUSSIAN_BLUR, FILTER, FLOOD_FILL, MEDIAN_FILTER, QUANTIZE,
+		FLIP, TILE, ROTATE, SAMPLING, FLOOD_FILL, GAUSSIAN_BLUR, FILTER, MEDIAN_FILTER, QUANTIZE,
 		// Helpers
 		BROADCAST, COORDINATES, RESOLUTION, COMMENT, LOG
 	};

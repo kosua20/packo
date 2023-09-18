@@ -389,17 +389,15 @@ NODE_DEFINE_TYPE_AND_VERSION( MedianFilterNode, NodeClass::MEDIAN_FILTER, false,
 
 void MedianFilterNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
 	assert(inputs.size() == 2);
-	assert(inputs.size() <= 4);
 	// Second channel is used as mask.
 	copyInputsToImage(context.tmpImagesRead, inputs, context.tmpImagesGlobal[0]);
 }
 
-void MedianFilterNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
-{
-	assert( outputs.size() == 1 );
-	assert( inputs.size() == 2 );
+void MedianFilterNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const {
+	assert(outputs.size() == 1);
+	assert(inputs.size() == 2);
 
-	const int kRadius = int(_attributes[ 0 ].flt);
+	const int kRadius = uint(std::max(0.f, _attributes[ 0 ].flt));
 	const int kSampleCount = ( 2 * kRadius + 1 ) * ( 2 * kRadius + 1 );
 
 	std::vector<float> values; 
@@ -425,8 +423,8 @@ void MedianFilterNode::evaluate( LocalContext& context, const std::vector<int>& 
 				}
 			}
 
-			assert(insertIndex < kSampleCount);
-			assert(valuesCount < kSampleCount);
+			assert(insertIndex < (uint)kSampleCount);
+			assert(valuesCount < (uint)kSampleCount);
 			values.insert( values.begin() + insertIndex, value.x );
 		}
 	}
@@ -487,9 +485,7 @@ void QuantizeNode::evaluate( LocalContext& context, const std::vector<int>& inpu
 
 }
 
-
-SampleNode::SampleNode()
-{
+SampleNode::SampleNode(){
 	_name = "Sample";
 	_description = "Sample an image at the given UV";
 	_inputNames = { "X", "U", "V"};
@@ -499,33 +495,43 @@ SampleNode::SampleNode()
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( QuantizeNode, NodeClass::SAMPLING, false, false, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( SampleNode, NodeClass::SAMPLING, false, false, 1 )
 
-void SampleNode::prepare( SharedContext& context, const std::vector<int>& inputs ) const
-{
-	assert( inputs.size() == 3 );
-	assert( inputs.size() <= 4 );
+void SampleNode::prepare( SharedContext& context, const std::vector<int>& inputs ) const {
+	assert(inputs.size() == 3);
+	assert(inputs.size() <= 4);
 
-	copyInputsToImage( context.tmpImagesRead, inputs, context.tmpImagesGlobal[ 0 ] );
+	copyInputsToImage(context.tmpImagesRead, inputs, context.tmpImagesGlobal[ 0 ]);
 }
 
-void SampleNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
-{
+void SampleNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const {
 	assert( outputs.size() == 1 );
 	assert( inputs.size() == 3 );
 
-	const bool bilinear = _attributes[ 0 ].bln;
-	const int scale = glm::max( 1, int( _attributes[ 0 ].flt ) );
-
 	const Image& src = context.shared->tmpImagesGlobal[ 0 ];
 
-	glm::vec4 basePixel;
-	// TODO: sample at uvs (do we take coordinates as input ? UVs with guarantee of stability ?)
-	// TODO: combine with distance field node to replace FloodFill node.
+	// Retrieve UVs.
+	const glm::vec4& pixelInfo = src.pixel(context.coords);
+	const glm::vec2 coords = glm::fract(glm::vec2(pixelInfo.y, pixelInfo.z));
+	// Convert to texel coordinates (for now, naive, don't take into account half pixel offset)
+	const glm::vec2 imageSize = glm::vec2(context.shared->dims);
+	const glm::ivec2 safeSize = context.shared->dims - glm::ivec2(1, 1);
+	const glm::vec2 pixCoords = coords * (imageSize - 1.f);
+	// We already wrapped above, clamp.
+	glm::ivec2 coords00 = glm::ivec2(glm::floor(pixCoords));
+	coords00 = glm::clamp(coords00, {0, 0}, safeSize);
 
-	for( uint i = 0u; i < _channelCount; ++i )
-	{
-		context.stack[ outputs[ i ] ] = basePixel[ i ];
+	float basePixel = src.pixel(coords00)[0];
+	const bool bilinear = _attributes[ 0 ].bln;
+	if(bilinear){
+		const float c00 = basePixel;
+		const glm::ivec2 coords11 = glm::min(coords00 + 1, safeSize);
+		const float c10 = src.pixel(coords11.x, coords00.y)[0];
+		const float c01 = src.pixel(coords00.x, coords11.y)[0];
+		const float c11 = src.pixel(coords11.x, coords11.y)[0];
+		const glm::vec2 frac = pixCoords - glm::vec2(coords00);
+		basePixel = (1.f - frac.x) * (1.f - frac.y) * c00 + (1.f - frac.x) * frac.y * c01 + frac.x * (1.f - frac.y) * c10 + frac.x * frac.y * c11;
 	}
 
+	context.stack[ outputs[ 0 ] ] = basePixel;
 }
