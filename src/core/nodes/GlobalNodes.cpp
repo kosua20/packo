@@ -376,13 +376,15 @@ void FloodFillNode::evaluate(LocalContext& context, const std::vector<int>& inpu
 
 MedianFilterNode::MedianFilterNode(){
 	_name = "Median filter";
-	_description = "Apply a median filter to each pixel image, using its 3x3 neihborhood";
-	_inputNames = { "X" };
+	_description = "Apply a median filter to each pixel of X, only for pixels in mask M";
+	_inputNames = { "X", "M"};
 	_outputNames = { "Y" };
+	_attributes = { {"Radius", Attribute::Type::FLOAT} };
+	_attributes[ 0 ].flt = 1.f;
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( MedianFilterNode, NodeClass::MEDIAN_FILTER, true, true, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( MedianFilterNode, NodeClass::MEDIAN_FILTER, false, false, 1 )
 
 
 void MedianFilterNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
@@ -397,11 +399,11 @@ void MedianFilterNode::evaluate( LocalContext& context, const std::vector<int>& 
 	assert( outputs.size() == 1 );
 	assert( inputs.size() == 2 );
 
-	constexpr int kRadius = 1;
-	constexpr int kSampleCount = ( 2 * kRadius + 1 ) * ( 2 * kRadius + 1 );
+	const int kRadius = int(_attributes[ 0 ].flt);
+	const int kSampleCount = ( 2 * kRadius + 1 ) * ( 2 * kRadius + 1 );
 
-	float values[ kSampleCount ];
-	uint valuesCount = 0u;
+	std::vector<float> values; 
+	values.reserve( kSampleCount );
 
 	const Image& src = context.shared->tmpImagesGlobal[0];
 	for(int dy = -kRadius; dy <= kRadius; ++dy){
@@ -410,31 +412,26 @@ void MedianFilterNode::evaluate( LocalContext& context, const std::vector<int>& 
 			if(dcoords.x < 0 || dcoords.y < 0 || dcoords.x >= context.shared->dims.x || dcoords.y >= context.shared->dims.y)
 				continue;
 
-			glm::vec2 accum = glm::vec2(src.pixel(dcoords));
+			glm::vec2 value = glm::vec2(src.pixel(dcoords));
 
-			if(accum.y < 1e-3f)
+			if(std::abs(value.y) < 1e-3f)
 				continue;
-			uint insertIndex = 0;
-			for( ; insertIndex < valuesCount; ++insertIndex){
-				if(norm2 < norms2[insertIndex]){
+
+			const uint valuesCount = (uint)values.size();
+			uint insertIndex = 0u;
+			for( ; insertIndex < valuesCount; ++insertIndex ){
+				if(value.x < values[insertIndex]){
 					break;
 				}
 			}
+
 			assert(insertIndex < kSampleCount);
 			assert(valuesCount < kSampleCount);
-			for(uint nextIndex = valuesCount; nextIndex > insertIndex; --nextIndex){
-				norms2[nextIndex] = norms2[nextIndex - 1];
-				values[nextIndex] = values[nextIndex - 1];
-			}
-			norms2[insertIndex] = norm2;
-			values[insertIndex] = accum;
-			++valuesCount;
+			values.insert( values.begin() + insertIndex, value.x );
 		}
 	}
-	const glm::vec4 medianValue = (valuesCount == 0) ? src.pixel(context.coords) : values[ valuesCount / 2 ];
-	for( uint i = 0u; i < _channelCount; ++i ){
-		context.stack[ outputs[ i ] ] = medianValue[i];
-	}
+	float medianValue = values.empty() ? src.pixel(context.coords).x : values[ values.size() / 2 ];
+	context.stack[ outputs[ 0 ] ] = medianValue;
 }
 
 
