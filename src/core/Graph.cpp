@@ -229,7 +229,7 @@ void GraphEditor::commit(){
 		_graph._links[linkToDelete].from.node = kSentinel;
 	}
 	// Erase them.
-	auto itg = std::remove_if(_graph._links.begin(), _graph._links.end(), [kSentinel](const Graph::Link& link){
+	auto itg = std::remove_if(_graph._links.begin(), _graph._links.end(), [](const Graph::Link& link){
 		return link.from.node == kSentinel;
 	});
 	_graph._links.erase(itg, _graph._links.end());
