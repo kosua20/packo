@@ -408,6 +408,7 @@ public:
 		compiledGraph.stackSize = stackSize + countDummyRegister;
 		compiledGraph.firstDummyRegister = stackSize;
 
+		bool hasGlobalNodes = false;
 		for (CompiledNode& node : compiledGraph.nodes) {
 			// Safety check.
 			uint slotId = 0u;
@@ -424,10 +425,14 @@ public:
 					currentDummyRegister = (std::min)(currentDummyRegister + 1u, compiledGraph.stackSize - 1);
 				}
 			}
+			if(node.node->global()){
+				hasGlobalNodes = true;
+			}
 		}
 
 		// By default, assume we'll want to store all registers in image channels.
 		compiledGraph.tmpImageCount = (compiledGraph.stackSize + 3u)/4u;
+		compiledGraph.tmpGlobalImageCount = hasGlobalNodes ? 1u : 0u;
 		// Refresh in/out nodes.
 		compiledGraph.collectInputsAndOutputs();
 	}
@@ -571,6 +576,7 @@ CompiledGraph::CompiledGraph(const CompiledGraph& other){
 	outputs = other.outputs;
 	stackSize = other.stackSize;
 	tmpImageCount = other.tmpImageCount;
+	tmpGlobalImageCount = other.tmpGlobalImageCount;
 	firstDummyRegister = other.firstDummyRegister;
 	// We need to clone internal nodes.
 	std::unordered_map<const Node*, const Node*> newNodes;
@@ -731,6 +737,9 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 		sharedContext.tmpImagesRead.emplace_back(w, h);
 		sharedContext.tmpImagesWrite.emplace_back(w, h);
 	}
+	for(uint i = 0u; i < compiledGraph.tmpGlobalImageCount; ++i){
+		sharedContext.tmpImagesGlobal.emplace_back(w, h);
+	}
 }
 
 void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize, SharedContext& sharedContext){
@@ -792,7 +801,13 @@ void evaluateGraphForBatchOptimized(const CompiledGraph& compiledGraph, SharedCo
 		}
 		// Now we have a range [currentStartNode, nextGlobalNodeId[ to execute per-pixel.
 		// The only potential global node is the first one.
-		// TODO: improve this special case that allows global effects such as floodfill.
+		// These nodes can work on the whole image at once, in a non-trivially-parallelizable way.
+		// They require some internal storage (from their prepare call to their evaluate call)
+		// We can't use tmpImagesWrite because another thread might have overwritten the value of a neighboring pixel in it
+		// before the current thread read its neighbors pixels.
+		// We could
+		// * allocate the storage in the prepare call: this puts large data on the node
+		// * have the caller setup an image outside the external loop. In each loop, we only have one global node.
 		{
 			const CompiledNode& compiledNode = compiledGraph.nodes[currentStartNodeId];
 			if(compiledNode.node->global()){

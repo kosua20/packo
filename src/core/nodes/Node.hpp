@@ -9,6 +9,7 @@ struct SharedContext {
 	std::vector<Image> outputImages;
 	std::vector<Image> tmpImagesRead;
 	std::vector<Image> tmpImagesWrite;
+	std::vector<Image> tmpImagesGlobal;
 	glm::ivec2 dims;
 	glm::vec2 scale;
 };
