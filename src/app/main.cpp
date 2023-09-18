@@ -869,7 +869,7 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 	}
 
 	SharedContext sharedContext;
-	allocateContextForBatch(batch, compiledGraph, customResolution, forceCustomResolution, sharedContext, previewRes);
+	allocateContextForBatch(batch, compiledGraph, customResolution, Image::Filter::NEAREST, forceCustomResolution, sharedContext, previewRes);
 	for(const CompiledNode& node : compiledGraph.nodes){
 		evaluateGraphStepForBatch(node, compiledGraph.stackSize, sharedContext);
 
@@ -988,6 +988,7 @@ int main(int argc, char** argv){
 	DeferredNodeToCreate nodeRequestFromLink;
 	ImVec2 mouseRightClick( 0.f, 0.f );
 	glm::ivec2 customResolution = {64, 64};
+	Image::Filter filterCustomResolution = Image::Filter::SMOOTH;
 	float inputsWindowWidth = (std::min)(300.0f, 0.25f * float(winW));
 	float previewScale = 1.0f;
 	int selectedNodeType = 0;
@@ -1113,7 +1114,7 @@ int main(int argc, char** argv){
 					
 					if(ImGui::MenuItem( "Run graph" )){
 						const std::vector<fs::path> inputPaths = filterInputFiles(inputFiles);
-						evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, customResolution, forceCustomResolution, showProgress);
+						evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, customResolution, filterCustomResolution, forceCustomResolution, showProgress);
 					}
 
 					ImGui::Separator();
@@ -1160,7 +1161,7 @@ int main(int argc, char** argv){
 
 				if(ImGui::Button("Run")){
 					const std::vector<fs::path> inputPaths = filterInputFiles(inputFiles);
-					evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, customResolution, forceCustomResolution, showProgress);
+					evaluateInBackground(*graph, errorContext, inputPaths, outputDirectory, customResolution, filterCustomResolution, forceCustomResolution, showProgress);
 				}
 
 				ImGui::SameLine(inputsWindowWidth - 30.f);
@@ -1190,6 +1191,9 @@ int main(int argc, char** argv){
 				if(forceCustomResolution){
 					if(ImGui::InputInt2("##res", &customResolution[0])){
 						customResolution = glm::max(customResolution, {4, 4});
+						editedInputList = true;
+					}
+					if(ImGui::Combo("Filter", (int*)&filterCustomResolution, "Nearest\0Smooth\0")){
 						editedInputList = true;
 					}
 				}

@@ -86,10 +86,10 @@ bool validate(const Graph& editGraph, ErrorContext& context );
 
 bool compile( const Graph& editGraph, bool optimize, ErrorContext& context, CompiledGraph& compiledGraph );
 
-void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, bool forceRes, SharedContext& sharedContext, const glm::ivec2& maxRes = {INT_MAX, INT_MAX});
+void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, Image::Filter filter, bool forceRes, SharedContext& sharedContext, const glm::ivec2& maxRes = {INT_MAX, INT_MAX});
 
 void evaluateGraphStepForBatch(const CompiledNode& compiledNode, uint stackSize, SharedContext& sharedContext);
 
-bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes);
+bool evaluate(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, Image::Filter filterOutputRes, bool forceOutputRes);
 
-bool evaluateInBackground(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes, std::atomic<int>& progress);
+bool evaluateInBackground(const Graph& editGraph, ErrorContext& context, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, Image::Filter filterOutputRes, bool forceOutputRes, std::atomic<int>& progress);

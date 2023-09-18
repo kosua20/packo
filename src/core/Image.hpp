@@ -9,6 +9,10 @@ public:
 		PNG, JPEG, BMP, TGA, EXR
 	};
 
+	enum class Filter {
+		NEAREST, SMOOTH
+	};
+
 	Image() = default;
 
 	Image(uint w, uint h, const glm::vec4 & defaultColor = glm::vec4(0.0f));
@@ -23,7 +27,7 @@ public:
 
 	bool save(const fs::path& path, Format format) const;
 
-	void resize(const glm::ivec2& newRes);
+	void resize(const glm::ivec2& newRes, Filter filter);
 	
 	glm::vec4& pixel(int x, int y) { assert(x >= 0 && x < int(_w) && y >= 0 && y < int(_h)); return _pixels[_w * y + x]; }
 

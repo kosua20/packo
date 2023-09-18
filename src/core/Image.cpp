@@ -130,20 +130,38 @@ bool Image::save(const fs::path& path, Format format) const {
 	return res == 0;
 }
 
-void Image::resize(const glm::ivec2& newRes){
+void Image::resize(const glm::ivec2& newRes, Filter filter){
 	if(_w == 0 || _h == 0){
 		return;
 	}
 
 	std::vector<glm::vec4> newPixels(newRes.x * newRes.y);
-	float* input = &(_pixels[0][0]);
-	float* output = &(newPixels[0][0]);
-	int res = stbir_resize_float(input, _w, _h , sizeof(glm::vec4) * _w, output, newRes.x, newRes.y, sizeof(glm::vec4) * newRes.x, 4);
-	if(res == 1){
-		// Success
+
+	bool success = false;
+	if(filter == Filter::SMOOTH){
+		float* input = &(_pixels[0][0]);
+		float* output = &(newPixels[0][0]);
+
+		int res = stbir_resize_float(input, _w, _h , sizeof(glm::vec4) * _w, output, newRes.x, newRes.y, sizeof(glm::vec4) * newRes.x, 4);
+		success = (res == 1);
+	} else if(filter == Filter::NEAREST){
+		const glm::vec2 srcRes(_w, _h);
+		for(uint y = 0u; y < uint(newRes.y); ++y){
+			for(uint x = 0u; x < uint(newRes.x); ++x){
+				const glm::vec2 uv = (glm::vec2(x, y) + 0.5f) / glm::vec2(newRes);
+				const glm::vec2 srcCoords = uv * srcRes - 0.5f;
+				const glm::ivec2 srcPix = glm::clamp(glm::floor(srcCoords), glm::vec2(0.f), srcRes - 1.f);
+				newPixels[y * newRes.x + x] = pixel(srcPix);
+			}
+		}
+		success = true;
+	} else {
+		assert(false);
+	}
+
+	if(success){
 		_w = newRes.x;
 		_h = newRes.y;
 		std::swap(newPixels, _pixels);
 	}
-
 }

@@ -691,7 +691,7 @@ bool compile( const Graph& editGraph, bool optimize, ErrorContext& errors, Compi
 	return true;
 }
 
-void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, bool forceRes, SharedContext& sharedContext, const glm::ivec2& maxRes){
+void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGraph, const glm::ivec2& fallbackRes, Image::Filter filter, bool forceRes,SharedContext& sharedContext, const glm::ivec2& maxRes){
 
 	const uint inputCountInBatch  = ( uint )batch.inputs.size();
 	const uint outputCountInBatch = ( uint )batch.outputs.size();
@@ -716,7 +716,7 @@ void allocateContextForBatch(const Batch& batch, const CompiledGraph& compiledGr
 	// Ensure all images are the same size.
 	for( Image& img : sharedContext.inputImages ){
 		if( (img.w() != uint(sharedContext.dims.x)) || (img.h() != uint(sharedContext.dims.y)) ){
-			img.resize( sharedContext.dims );
+			img.resize( sharedContext.dims, filter );
 		}
 	}
 
@@ -839,7 +839,7 @@ void saveContextForBatch(const Batch& batch, const SharedContext& context){
 }
 
 
-bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes){
+bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, Image::Filter filterOutputRes, bool forceOutputRes){
 
 	CompiledGraph compiledGraph;
 	if(!compile(editGraph, true, errors, compiledGraph)){
@@ -862,7 +862,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs
 
 	for(const Batch& batch : batches){
 		SharedContext sharedContext;
-		allocateContextForBatch(batch, compiledGraph, outputRes, forceOutputRes, sharedContext);
+		allocateContextForBatch(batch, compiledGraph, outputRes, filterOutputRes, forceOutputRes, sharedContext);
 
 		evaluateGraphForBatchOptimized(compiledGraph, sharedContext);
 
@@ -872,7 +872,7 @@ bool evaluate(const Graph& editGraph, ErrorContext& errors, const std::vector<fs
 	return true;
 }
 
-bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, bool forceOutputRes, std::atomic<int>& progress){
+bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const std::vector<fs::path>& inputPaths, const fs::path& outputDir, const glm::ivec2& outputRes, Image::Filter filterOutputRes, bool forceOutputRes, std::atomic<int>& progress){
 
 	CompiledGraph compiledGraph;
 	if(!compile(editGraph, true, errors, compiledGraph)){
@@ -893,7 +893,7 @@ bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const st
 	}
 
 	// Pass local objects by copy.
-	std::thread thread([&progress, compiledGraph, batches, outputRes, forceOutputRes ](){
+	std::thread thread([&progress, compiledGraph, batches, outputRes, filterOutputRes, forceOutputRes ](){
 		progress = 0;
 		const int batchCost = (int)std::floor(1.f / float(batches.size()) * kProgressCostGranularity);
 		for(const Batch& batch : batches){
@@ -901,7 +901,7 @@ bool evaluateInBackground(const Graph& editGraph, ErrorContext& errors, const st
 				break;
 			}
 			SharedContext sharedContext;
-			allocateContextForBatch(batch, compiledGraph, outputRes, forceOutputRes, sharedContext);
+			allocateContextForBatch(batch, compiledGraph, outputRes, filterOutputRes, forceOutputRes, sharedContext);
 
 			evaluateGraphForBatchOptimized(compiledGraph, sharedContext);
 
