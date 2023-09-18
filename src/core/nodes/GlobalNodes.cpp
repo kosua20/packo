@@ -297,34 +297,34 @@ void FilterNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 
 FloodFillNode::FloodFillNode(){
 	_name = "Flood fill";
-	_description = "Propagate non empty pixels";
+	_description = "For each pixel, find the coordinates of the closest non-zero pixel in X";
 	_inputNames = {"X"};
-	_outputNames = {"Y"};
+	_outputNames = {"U", "V"};
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FloodFillNode, NodeClass::FLOOD_FILL, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FloodFillNode, NodeClass::FLOOD_FILL, false, false, 1)
 
 void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inputs) const {
-	assert(inputs.size() == _channelCount);
+	assert(inputs.size() == 1);
 
 	const uint w = context.dims.x;
 	const uint h = context.dims.y;
 
-	// Do stuff
 	std::vector<unsigned char> flags(w * h);
 	std::vector<int> seeds(w * h);
 	std::vector<int> indices0; indices0.reserve(w * h); // Worst case.
 	std::vector<int> indices1; indices1.reserve(w * h); // Worst case.
 
-	Image tmp(w, h);
-	copyInputsToImage(context.tmpImagesRead, inputs, tmp);
+	const uint srcId = inputs[0];
+	const uint imageId = srcId / 4u;
+	const uint channelId = srcId % 4u;
+	const Image& src = context.tmpImagesRead[imageId];
 
 	// Collect seeds.
 	for(uint y = 0; y < h; ++y){
 		for(uint x = 0; x < w; ++x){
-			// Use latest channel as mask.
-			if(tmp.pixel(x,y)[_channelCount-1] == 0.f)
+			if(src.pixel(x,y)[channelId] == 0.f)
 				continue;
 			const int id = (int)y * (int)w + (int)x;
 			flags[id] = 1u;
@@ -361,17 +361,22 @@ void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inp
 	for(uint y = 0; y < h; ++y){
 		for(uint x = 0; x < w; ++x){
 			const int id = seeds[y * w + x];
-			dst.pixel(x, y) = tmp.pixel(id % w, id / w);
+			const glm::ivec2 pixCoords(id % w, id / w);
+			const glm::vec2 uvs = glm::vec2(pixCoords) / glm::vec2(w - 1, h - 1);
+			dst.pixel(x, y).x = uvs.x;
+			dst.pixel(x, y).y = uvs.y;
 		}
 	}
 }
 
 void FloodFillNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
-	assert(outputs.size() == _channelCount);
-	assert(inputs.size() == _channelCount);
-	for(uint i = 0u; i < _channelCount; ++i){
-		context.stack[outputs[i]] = context.shared->tmpImagesGlobal[0].pixel(context.coords)[i];
-	}
+	assert(outputs.size() == 2);
+	assert(inputs.size() == 1);
+
+	const Image& uvMap = context.shared->tmpImagesGlobal[0];
+	const glm::vec2 uvs = glm::vec2(uvMap.pixel(context.coords));
+	context.stack[outputs[0]] = uvs.x;
+	context.stack[outputs[1]] = uvs.y;
 }
 
 MedianFilterNode::MedianFilterNode(){
