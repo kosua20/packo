@@ -32,6 +32,8 @@
 #endif
 #endif
 
+constexpr uint kInitialPreviewDisplayWidth = 128;
+
 /// Window & GPU handling
 
 GLFWwindow* createWindow(int w, int h, ImFont*& defaultFont, ImFont*& smallFont) {
@@ -322,10 +324,15 @@ struct Styling {
 	ImNodesPinShape kPinsShape;
 	float kPreviewDisplayWidth;
 	float kSlotLabelWidth;
-	float kNodeInternalWidth;
-	float kNodeTotalWidth;
+	float cNodeInternalWidth;
+	float cNodeTotalWidth;
 	unsigned int kWinFlags;
 	float kSafetyMargin;
+
+	void refresh(){
+		cNodeInternalWidth = kPreviewDisplayWidth + 2.f * kSlotLabelWidth;
+		cNodeTotalWidth = cNodeInternalWidth + 2.f * ImNodes::GetStyle().NodePadding.x;
+	}
 };
 
 const Node* showErrorPanel(const ErrorContext& errorContext, float winWidth, float winHeight){
@@ -392,7 +399,7 @@ bool drawCommentNode(Node* node, uint nodeId, const Styling& style){
 		}
 	}
 
-	const ImVec2 fieldSize(style.kNodeInternalWidth, (float(lineCount) + 1.5f) * ImGui::GetTextLineHeight());
+	const ImVec2 fieldSize(style.cNodeInternalWidth, (float(lineCount) + 1.5f) * ImGui::GetTextLineHeight());
 	TextCallbackInfo commentInfo{att.str.c_str(), fieldSize.x - style.kSafetyMargin };
 	ImGui::InputTextMultiline( "##Comment", &(att.str), fieldSize, ImGuiInputTextFlags_CallbackEdit, &commentTextCallback, (void*)&commentInfo);
 	const bool edited = ImGui::IsItemActive();
@@ -678,7 +685,7 @@ bool editGraph(const std::unique_ptr<Graph>& graph, const std::unordered_map<Nod
 			createdNodes.push_back( createdNode );
 			mouseRightClick = ImGui::GetMousePos();
 			// Shift position to have the end link placed approximately at the mouse.
-			mouseRightClick.x -= style.kNodeTotalWidth;
+			mouseRightClick.x -= style.cNodeTotalWidth;
 			mouseRightClick.y -= 2.f * ImGui::GetTextLineHeightWithSpacing();
 
 			editor.addLink( newNodeId, 0, pin.node, pin.slot );
@@ -815,8 +822,7 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 	if(!res){
 		return false;
 	}
-	
-	// TODO: when errors or unused nodes, do something to give feedback to the user.
+
 	const uint inputCount = ( uint )compiledGraph.inputs.size();
 	// Count selected input files.
 	uint inputFileCount = 0u;
@@ -833,7 +839,7 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 	}
 
 	textures.clear();
-	const int previewSize = int(128u / (1u << previewQuality));
+	const int previewSize = int(kInitialPreviewDisplayWidth / (1u << previewQuality));
 	const glm::ivec2 previewRes{previewSize, previewSize};
 	// We can evaluate the graph to generate textures.
 	// Prepare a batch by hand
@@ -935,7 +941,7 @@ bool refreshPreviews(const std::unique_ptr<Graph>& graph, const std::vector<Inpu
 /// Main loop
 
 int main(int argc, char** argv){
-	(void)argc, argv;
+	(void)argc; (void)argv;
 	
 	Random::seed(743936);
 
@@ -957,13 +963,12 @@ int main(int argc, char** argv){
 	Styling style;
 	style.kSplitBarWidth = 8.0f;
 	style.kPinsShape = ImNodesPinShape_CircleFilled;
-	style.kPreviewDisplayWidth = 128.f;
+	style.kPreviewDisplayWidth = (float)kInitialPreviewDisplayWidth;
 	style.kSlotLabelWidth = 24.f;
-	style.kNodeInternalWidth = style.kPreviewDisplayWidth + 2.f * style.kSlotLabelWidth;
-	style.kNodeTotalWidth = style.kNodeInternalWidth + 2.f * ImNodes::GetStyle().NodePadding.x;
 	style.kWinFlags = ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoTitleBar;
 	style.defaultFont = defaultFont;
 	style.smallFont = smallFont;
+	style.refresh();
 
 	const uint kMaxRefreshDelayInFrames = 60u;
 	// Input/output state
@@ -984,6 +989,7 @@ int main(int argc, char** argv){
 	ImVec2 mouseRightClick( 0.f, 0.f );
 	glm::ivec2 customResolution = {64, 64};
 	float inputsWindowWidth = (std::min)(300.0f, 0.25f * float(winW));
+	float previewScale = 1.0f;
 	int selectedNodeType = 0;
 	int seed = Random::getSeed();
 	int previewQuality = 1;
@@ -1069,6 +1075,11 @@ int main(int argc, char** argv){
 						ImGui::PushItemWidth(130);
 						if(ImGui::Combo("Preview quality", &previewQuality, "High\0Medium\0Low\0")){
 							needsPreviewRefresh = true;
+						}
+						if(ImGui::SliderFloat("Preview size", &previewScale, 0.5f, 4.f, "%.2fx")){
+							previewScale = glm::max(previewScale, 0.1f);
+							style.kPreviewDisplayWidth = previewScale * kInitialPreviewDisplayWidth;
+							style.refresh();
 						}
 						if(ImGui::InputInt("Random seed", &seed)){
 							Random::seed(seed);
@@ -1408,6 +1419,7 @@ int main(int argc, char** argv){
 			texturesToPurge = textures;
 			if(!refreshPreviews(graph, inputFiles, customResolution, forceCustomResolution, previewQuality, showAlphaPreview, textures)){
 				// This failed, don't purge.
+				// TODO: when errors or unused nodes, do something to give feedback to the user.
 				textures = texturesToPurge;
 				texturesToPurge.clear();
 			}
