@@ -3,7 +3,7 @@
 
 
 void copyInputsToImage(const std::vector<Image>& srcs, const std::vector<int>& inputs, Image& dst){
-	const uint channelCount = inputs.size();
+	const uint channelCount = (uint)glm::min(4ull, inputs.size());
 	for(uint i = 0u; i < channelCount; ++i){
 		const uint srcId = inputs[i];
 		const uint imageId = srcId / 4u;
@@ -15,7 +15,7 @@ void copyInputsToImage(const std::vector<Image>& srcs, const std::vector<int>& i
 			}
 		}
 	}
-	for(uint i = channelCount; i < 4; ++i){
+	for(uint i = channelCount; i < 4u; ++i){
 		for(uint y = 0; y < dst.h(); ++y){
 			for(uint x = 0; x < dst.w(); ++x){
 				dst.pixel(x, y)[i] = 0.f;
@@ -24,18 +24,16 @@ void copyInputsToImage(const std::vector<Image>& srcs, const std::vector<int>& i
 	}
 }
 
-// TODO: some filters will require a mask. Use the last channel ? extra input (but then multi-channel...)
-
 FlipNode::FlipNode(){
 	_name = "Flip";
 	_description = "Flip an image content along the horizontal/vertical axis";
-	_inputNames = {"X"};
-	_outputNames = {"Y"};
+	_inputNames = { {"X", true} };
+	_outputNames = { {"Y", true} };
 	_attributes = { {"Axis", {"Horizontal", "Vertical"}}};
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FlipNode, NodeClass::FLIP, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FlipNode, NodeClass::FLIP, 1)
 
 void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
@@ -63,14 +61,14 @@ void FlipNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 TileNode::TileNode(){
 	_name = "Tile";
 	_description = "Tile an image content at a given scale and offset.";
-	_inputNames = {"X"};
-	_outputNames = {"Y"};
+	_inputNames = { {"X", true} };
+	_outputNames = { {"Y", true} };
 	_attributes = { {"Scale", Attribute::Type::FLOAT} , {"Offset X", Attribute::Type::FLOAT} , {"Offset Y", Attribute::Type::FLOAT} };
 	_attributes[ 0 ].flt = 1.0f;
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( TileNode, NodeClass::TILE, true, true, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( TileNode, NodeClass::TILE, 1 )
 
 void TileNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert( outputs.size() == _channelCount );
@@ -115,13 +113,13 @@ void TileNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 RotateNode::RotateNode(){
 	_name = "Rotate";
 	_description = "Rotate an image content at a certain angle around its center.";
-	_inputNames = {"X"};
-	_outputNames = {"Y"};
+	_inputNames = { {"X", true} };
+	_outputNames = { {"Y", true} };
 	_attributes = { {"Angle", Attribute::Type::FLOAT}};
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( RotateNode, NodeClass::ROTATE, true,true,  1 )
+NODE_DEFINE_TYPE_AND_VERSION( RotateNode, NodeClass::ROTATE, 1 )
 
 void RotateNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
 {
@@ -170,14 +168,14 @@ void RotateNode::evaluate( LocalContext& context, const std::vector<int>& inputs
 GaussianBlurNode::GaussianBlurNode(){
 	_name = "Gaussian Blur";
 	_description = "Apply a gaussian of a given radius to an image content.";
-	_inputNames = {"X"};
-	_outputNames = {"Y"};
+	_inputNames = { {"X", true} };
+	_outputNames = { {"Y", true} };
 	_attributes = { {"Radius", Attribute::Type::FLOAT}};
 	_attributes[0].flt = 2.f;
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(GaussianBlurNode, NodeClass::GAUSSIAN_BLUR, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(GaussianBlurNode, NodeClass::GAUSSIAN_BLUR, 1)
 
 void GaussianBlurNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
 	assert(inputs.size() == _channelCount);
@@ -219,13 +217,13 @@ void GaussianBlurNode::evaluate(LocalContext& context, const std::vector<int>& i
 PickerNode::PickerNode(){
 	_name = "Color picker";
 	_description = "Read the color at a given pixel and broadcast it to all.";
-	_inputNames = {"M"};
-	_outputNames = {"N"};
+	_inputNames = { {"M", true} };
+	_outputNames = { {"N", true} };
 	_attributes = { {"x", Attribute::Type::FLOAT},  {"y", Attribute::Type::FLOAT}};
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(PickerNode, NodeClass::PICKER, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(PickerNode, NodeClass::PICKER, 1)
 
 void PickerNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == _channelCount);
@@ -251,14 +249,14 @@ void PickerNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 FilterNode::FilterNode(){
 	_name = "Filter";
 	_description = "Apply a 3x3 filter to each pixel image, using its neighborhood.";
-	_inputNames = {"X"};
-	_outputNames = {"Y"};
+	_inputNames = { {"X", true} };
+	_outputNames = { {"Y", true} };
 	_attributes = { {"##Row0", Attribute::Type::VEC3}, {"##Row1", Attribute::Type::VEC3}, {"##Row2", Attribute::Type::VEC3}};
 	_attributes[0].clr = _attributes[1].clr = _attributes[2].clr = glm::vec4(1.0f);
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FilterNode, NodeClass::FILTER, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FilterNode, NodeClass::FILTER, 1)
 
 void FilterNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
 	assert(inputs.size() == _channelCount);
@@ -298,12 +296,12 @@ void FilterNode::evaluate(LocalContext& context, const std::vector<int>& inputs,
 FloodFillNode::FloodFillNode(){
 	_name = "Flood fill";
 	_description = "For each pixel, find the coordinates of the closest non-zero pixel in X";
-	_inputNames = {"X"};
-	_outputNames = {"U", "V"};
+	_inputNames = { {"X", false} };
+	_outputNames = { {"U", false}, {"V", false} };
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(FloodFillNode, NodeClass::FLOOD_FILL, false, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(FloodFillNode, NodeClass::FLOOD_FILL, 1)
 
 void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inputs) const {
 	assert(inputs.size() == 1);
@@ -382,14 +380,14 @@ void FloodFillNode::evaluate(LocalContext& context, const std::vector<int>& inpu
 MedianFilterNode::MedianFilterNode(){
 	_name = "Median filter";
 	_description = "Apply a median filter to each pixel of X, only for pixels in mask M";
-	_inputNames = { "X", "M"};
-	_outputNames = { "Y" };
+	_inputNames = { {"X", false}, {"M", false} };
+	_outputNames = { {"Y", false} };
 	_attributes = { {"Radius", Attribute::Type::FLOAT} };
 	_attributes[ 0 ].flt = 1.f;
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( MedianFilterNode, NodeClass::MEDIAN_FILTER, false, false, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( MedianFilterNode, NodeClass::MEDIAN_FILTER, 1 )
 
 
 void MedianFilterNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
@@ -441,15 +439,15 @@ void MedianFilterNode::evaluate( LocalContext& context, const std::vector<int>& 
 QuantizeNode::QuantizeNode(){
 	_name = "Quantize";
 	_description = "Quantize an image at a given pixel scale";
-	_inputNames = { "X" };
-	_outputNames = { "Y" };
+	_inputNames = { {"X", true} };
+	_outputNames = { {"Y", true} };
 	_attributes = { {"Factor", Attribute::Type::FLOAT}, {"Bilinear", Attribute::Type::BOOL} };
 	_attributes[0].flt = 2.f;
 	_attributes[1].bln = false;
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( QuantizeNode, NodeClass::QUANTIZE, true, true, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( QuantizeNode, NodeClass::QUANTIZE, 1 )
 
 void QuantizeNode::prepare(SharedContext& context, const std::vector<int>& inputs) const {
 	assert(inputs.size() == _channelCount);
@@ -493,31 +491,43 @@ void QuantizeNode::evaluate( LocalContext& context, const std::vector<int>& inpu
 SampleNode::SampleNode(){
 	_name = "Sample";
 	_description = "Sample an image at the given UV";
-	_inputNames = { "X", "U", "V"};
-	_outputNames = { "Y" };
+	_inputNames = { {"X", true}, {"U", false}, {"V", false} };
+	_outputNames = { {"Y", true} };
 	_attributes = { {"Bilinear", Attribute::Type::BOOL} };
 	_attributes[ 0 ].bln = false;
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( SampleNode, NodeClass::SAMPLING, false, false, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( SampleNode, NodeClass::SAMPLING, 1 )
 
 void SampleNode::prepare( SharedContext& context, const std::vector<int>& inputs ) const {
-	assert(inputs.size() == 3);
-	assert(inputs.size() <= 4);
+	assert(inputs.size() == _channelCount + 2);
 
 	copyInputsToImage(context.tmpImagesRead, inputs, context.tmpImagesGlobal[ 0 ]);
 }
 
-void SampleNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const {
-	assert( outputs.size() == 1 );
-	assert( inputs.size() == 3 );
+void SampleNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
+{
+	assert( inputs.size() == _channelCount + 2 );
+	assert( outputs.size() == _channelCount );
 
 	const Image& src = context.shared->tmpImagesGlobal[ 0 ];
 
 	// Retrieve UVs.
-	const glm::vec4& pixelInfo = src.pixel(context.coords);
-	const glm::vec2 coords = glm::fract(glm::vec2(pixelInfo.y, pixelInfo.z));
+	// TODO: FIXME
+	glm::vec2 coords( 0.f );
+	{
+		const uint srcIdX = inputs[ _channelCount - 2 ];
+		const uint imageIdX = srcIdX / 4u;
+		const uint channelIdX = srcIdX % 4u;
+		coords.x = context.shared->tmpImagesRead[ imageIdX ].pixel(context.coords)[channelIdX];
+
+		const uint srcIdY = inputs[ _channelCount - 1 ];
+		const uint imageIdY = srcIdY / 4u;
+		const uint channelIdY = srcIdY % 4u;
+		coords.y = context.shared->tmpImagesRead[ imageIdY ].pixel( context.coords )[ channelIdY ];
+	}
+	coords = glm::fract( coords );
 	// Convert to texel coordinates (for now, naive, don't take into account half pixel offset)
 	const glm::vec2 imageSize = glm::vec2(context.shared->dims);
 	const glm::ivec2 safeSize = context.shared->dims - glm::ivec2(1, 1);
@@ -527,17 +537,19 @@ void SampleNode::evaluate( LocalContext& context, const std::vector<int>& inputs
 	glm::ivec2 coords00 = glm::ivec2(glm::floor(pixCoords));
 	coords00 = glm::clamp(coords00, {0, 0}, safeSize);
 
-	float basePixel = src.pixel(coords00)[0];
+	glm::vec4 basePixel = src.pixel(coords00);
 	const bool bilinear = _attributes[ 0 ].bln;
 	if(bilinear){
-		const float c00 = basePixel;
+		const glm::vec4 c00 = basePixel;
 		const glm::ivec2 coords11 = glm::min(coords00 + 1, safeSize);
-		const float c10 = src.pixel(coords11.x, coords00.y)[0];
-		const float c01 = src.pixel(coords00.x, coords11.y)[0];
-		const float c11 = src.pixel(coords11.x, coords11.y)[0];
+		const glm::vec4& c10 = src.pixel(coords11.x, coords00.y);
+		const glm::vec4& c01 = src.pixel(coords00.x, coords11.y);
+		const glm::vec4& c11 = src.pixel(coords11.x, coords11.y);
 		const glm::vec2 frac = pixCoords - glm::vec2(coords00);
 		basePixel = (1.f - frac.x) * (1.f - frac.y) * c00 + (1.f - frac.x) * frac.y * c01 + frac.x * (1.f - frac.y) * c10 + frac.x * frac.y * c11;
 	}
 
-	context.stack[ outputs[ 0 ] ] = basePixel;
+	for( uint i = 0; i < _channelCount; ++i ){
+		context.stack[ outputs[ i ] ] = basePixel[i];
+	}
 }

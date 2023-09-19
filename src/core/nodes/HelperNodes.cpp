@@ -22,13 +22,13 @@ void CommentNode::evaluate(LocalContext& context, const std::vector<int>& inputs
 LogNode::LogNode(){
 	_name = "Log";
 	_description = "Log the color for a given pixel";
-	_inputNames = {"M"};
-	_outputNames = {"N"};
+	_inputNames = { {"M", true} };
+	_outputNames = { {"N", true} };
 	_attributes = { {"x", Attribute::Type::FLOAT}, {"y", Attribute::Type::FLOAT}, {"##Color", Attribute::Type::COLOR} };
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( LogNode, NodeClass::LOG, true, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION( LogNode, NodeClass::LOG, 1)
 
 void LogNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == _channelCount);
@@ -71,11 +71,11 @@ void LogNode::evaluate(LocalContext& context, const std::vector<int>& inputs, co
 ResolutionNode::ResolutionNode(){
 	_name = "Resolution";
 	_description = "Output image(s) resolution.";
-	_outputNames = {"W", "H"};
+	_outputNames = { {"W", false }, {"H", false} };
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(ResolutionNode, NodeClass::RESOLUTION, false, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(ResolutionNode, NodeClass::RESOLUTION, 1)
 
 void ResolutionNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -90,12 +90,12 @@ CoordinatesNode::CoordinatesNode()
 {
 	_name = "Coordinates";
 	_description = "Output pixel coordinates.";
-	_outputNames = { "X", "Y" };
+	_outputNames = { {"X", false }, {"Y", false} };
 	_attributes = { {"Range", {"Unit", "Pixel"}}};
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( CoordinatesNode, NodeClass::COORDINATES, false, false, 1 )
+NODE_DEFINE_TYPE_AND_VERSION( CoordinatesNode, NodeClass::COORDINATES, 1 )
 
 void CoordinatesNode::evaluate( LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs ) const
 {
@@ -115,14 +115,13 @@ void CoordinatesNode::evaluate( LocalContext& context, const std::vector<int>& i
 MathConstantNode::MathConstantNode(){
 	_name = "Math constant";
 	_description = "if invert then 1/(constant * scale) else (constant*scale)";
-	_outputNames = {"X"};
-
+	_outputNames = { {"X", true} };
 	_attributes = { {"##X", {"pi", "sqrt(pi)", "sqrt(2pi)", "sqrt(pi/2)", "e", "ln(2)", "sqrt(2)", "sqrt(3)", "phi"  } }, {"Scale", Attribute::Type::FLOAT}, {"Invert", Attribute::Type::BOOL} };
 	_attributes[1].flt = 1.f;
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(MathConstantNode, NodeClass::CONST_MATH, false, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(MathConstantNode, NodeClass::CONST_MATH, 1)
 
 void MathConstantNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -145,13 +144,13 @@ void MathConstantNode::evaluate(LocalContext& context, const std::vector<int>& i
 BroadcastNode::BroadcastNode(){
 	_name = "Broadcast";
 	_description = "Replicate X to Y.";
-	_inputNames = {"X"};
-	_outputNames = {"Y"};
+	_inputNames = { {"X", false} };
+	_outputNames = { {"Y", true} };
 
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(BroadcastNode, NodeClass::BROADCAST, false, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(BroadcastNode, NodeClass::BROADCAST, 1)
 
 void BroadcastNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1u);

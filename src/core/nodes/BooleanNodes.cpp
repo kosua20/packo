@@ -4,12 +4,12 @@
 SelectNode::SelectNode(){
 	_name = "Select";
 	_description = "M = if B then X else Y";
-	_inputNames = {"X", "Y", "B"};
-	_outputNames = {"M"};
+	_inputNames = { {"X", true}, {"Y", true}, {"B", true} };
+	_outputNames = { {"M", true} };
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(SelectNode, NodeClass::SELECT, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(SelectNode, NodeClass::SELECT, 1)
 
 void SelectNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 3 * _channelCount);
@@ -24,12 +24,12 @@ static constexpr float kEpsilon = 1e-5f;
 EqualNode::EqualNode(){
 	_name = "Equal";
 	_description = "B = (X==Y) ?";
-	_inputNames = {"X", "Y"};
-	_outputNames = {"B"};
+	_inputNames = { {"X", true}, {"Y", true} };
+	_outputNames = { {"B", true} };
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(EqualNode, NodeClass::EQUAL, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(EqualNode, NodeClass::EQUAL, 1)
 
 void EqualNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -43,12 +43,12 @@ void EqualNode::evaluate(LocalContext& context, const std::vector<int>& inputs, 
 DifferentNode::DifferentNode(){
 	_name = "Different";
 	_description = "B = (X!=Y) ?";
-	_inputNames = {"X", "Y"};
-	_outputNames = {"B"};
+	_inputNames = { {"X", true}, {"Y", true} };
+	_outputNames = { {"B", true} };
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(DifferentNode, NodeClass::DIFFERENT, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(DifferentNode, NodeClass::DIFFERENT, 1)
 
 void DifferentNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -62,13 +62,13 @@ void DifferentNode::evaluate(LocalContext& context, const std::vector<int>& inpu
 GreaterNode::GreaterNode(){
 	_name = "Greater";
 	_description = "B = X>Y (strict)\nB = X≥Y (otherwise)";
-	_inputNames = {"X", "Y"};
-	_outputNames = {"B"};
+	_inputNames = { {"X", true}, {"Y", true} };
+	_outputNames = { {"B", true} };
 	_attributes = {{"Strict", Attribute::Type::BOOL}};
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(GreaterNode, NodeClass::GREATER, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(GreaterNode, NodeClass::GREATER, 1)
 
 void GreaterNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -89,13 +89,13 @@ void GreaterNode::evaluate(LocalContext& context, const std::vector<int>& inputs
 LessNode::LessNode(){
 	_name = "Less";
 	_description = "B = X<Y (strict)\nB = X≤Y (otherwise)";
-	_inputNames = {"X", "Y"};
-	_outputNames = {"B"};
+	_inputNames = { {"X", true}, {"Y", true} };
+	_outputNames = { {"B", true} };
 	_attributes = {{"Strict", Attribute::Type::BOOL}};
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(LessNode, NodeClass::LESSER, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(LessNode, NodeClass::LESSER, 1)
 
 void LessNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 2 * _channelCount);
@@ -114,12 +114,12 @@ void LessNode::evaluate(LocalContext& context, const std::vector<int>& inputs, c
 NegateNode::NegateNode(){
 	_name = "Not";
 	_description = "B= not X";
-	_inputNames = {"X"};
-	_outputNames = {"B"};
+	_inputNames = { {"X", true} };
+	_outputNames = { {"B", true} };
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(NegateNode, NodeClass::NOT, true, true, 1)
+NODE_DEFINE_TYPE_AND_VERSION(NegateNode, NodeClass::NOT, 1)
 
 void NegateNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 1 * _channelCount);

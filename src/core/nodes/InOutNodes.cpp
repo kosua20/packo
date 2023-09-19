@@ -7,7 +7,7 @@ InputNode::InputNode() {
 	_index = _freeList.getIndex();
 	_name = "Input " + std::to_string(_index);
 	_description = "Load an image from disk.";
-	_outputNames = {"R", "G", "B", "A"};
+	_outputNames = { {"R", false }, {"G", false }, {"B", false}, {"A", false} };
 	finalize();
 }
 
@@ -15,7 +15,7 @@ InputNode::~InputNode(){
 	_freeList.returnIndex( _index );
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(InputNode, NodeClass::INPUT_IMG, false, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(InputNode, NodeClass::INPUT_IMG, 1)
 
 void InputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);
@@ -35,7 +35,7 @@ OutputNode::OutputNode() {
 	_index = _freeList.getIndex();
 	_name = "Output " + std::to_string(_index);
 	_description = "Output an image to the disk.";
-	_inputNames = { "R", "G", "B", "A" };
+	 _inputNames = { {"R", false }, {"G", false }, {"B", false}, {"A", false} };
 	_attributes = { {"Format", {"PNG", "BMP", "JPEG", "TGA", "EXR"}}, {"Prefix", Attribute::Type::STRING}, {"Suffix", Attribute::Type::STRING} };
 	finalize();
 }
@@ -44,7 +44,7 @@ OutputNode::~OutputNode(){
 	_freeList.returnIndex( _index );
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(OutputNode, NodeClass::OUTPUT_IMG, false, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(OutputNode, NodeClass::OUTPUT_IMG, 1)
 
 void OutputNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 4u);
