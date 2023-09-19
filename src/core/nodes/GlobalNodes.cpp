@@ -362,7 +362,7 @@ void FloodFillNode::prepare( SharedContext& context, const std::vector<int>& inp
 		for(uint x = 0; x < w; ++x){
 			const int id = seeds[y * w + x];
 			const glm::ivec2 pixCoords(id % w, id / w);
-			const glm::vec2 uvs = glm::vec2(pixCoords) / glm::vec2(w - 1, h - 1);
+			const glm::vec2 uvs = (glm::vec2(pixCoords) + 0.5f)/ glm::vec2(context.dims);
 			dst.pixel(x, y).x = uvs.x;
 			dst.pixel(x, y).y = uvs.y;
 		}
@@ -521,7 +521,8 @@ void SampleNode::evaluate( LocalContext& context, const std::vector<int>& inputs
 	// Convert to texel coordinates (for now, naive, don't take into account half pixel offset)
 	const glm::vec2 imageSize = glm::vec2(context.shared->dims);
 	const glm::ivec2 safeSize = context.shared->dims - glm::ivec2(1, 1);
-	const glm::vec2 pixCoords = coords * (imageSize - 1.f);
+
+	const glm::vec2 pixCoords = coords * imageSize - 0.5f;
 	// We already wrapped above, clamp.
 	glm::ivec2 coords00 = glm::ivec2(glm::floor(pixCoords));
 	coords00 = glm::clamp(coords00, {0, 0}, safeSize);

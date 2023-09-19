@@ -105,7 +105,8 @@ void CoordinatesNode::evaluate( LocalContext& context, const std::vector<int>& i
 	glm::vec2 coords = context.coords;
 	// Normalize if requested
 	if(_attributes[ 0 ].cmb == 0){
-		coords /= (glm::vec2( context.shared->dims ) - 1.f);
+		const glm::vec2 uvs = ( glm::vec2( coords ) + 0.5f ) / glm::vec2( context.shared->dims );
+		coords = uvs;
 	}
 	context.stack[ outputs[ 0 ] ] = coords[0];
 	context.stack[ outputs[ 1 ] ] = coords[1];
