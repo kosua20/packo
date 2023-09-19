@@ -3,7 +3,7 @@
 
 
 void copyInputsToImage(const std::vector<Image>& srcs, const std::vector<int>& inputs, Image& dst){
-	const uint channelCount = (uint)glm::min(4ull, inputs.size());
+	const uint channelCount = glm::min(4u, (uint)inputs.size());
 	for(uint i = 0u; i < channelCount; ++i){
 		const uint srcId = inputs[i];
 		const uint imageId = srcId / 4u;
@@ -513,40 +513,44 @@ void SampleNode::evaluate( LocalContext& context, const std::vector<int>& inputs
 
 	const Image& src = context.shared->tmpImagesGlobal[ 0 ];
 
-	// Retrieve UVs.
-	// TODO: FIXME
+	// Retrieve UVs from the last two input channels.
 	glm::vec2 coords( 0.f );
 	{
-		const uint srcIdX = inputs[ _channelCount - 2 ];
+		const uint srcIdX = inputs[ _channelCount ];
 		const uint imageIdX = srcIdX / 4u;
 		const uint channelIdX = srcIdX % 4u;
 		coords.x = context.shared->tmpImagesRead[ imageIdX ].pixel(context.coords)[channelIdX];
 
-		const uint srcIdY = inputs[ _channelCount - 1 ];
+		const uint srcIdY = inputs[ _channelCount + 1 ];
 		const uint imageIdY = srcIdY / 4u;
 		const uint channelIdY = srcIdY % 4u;
 		coords.y = context.shared->tmpImagesRead[ imageIdY ].pixel( context.coords )[ channelIdY ];
 	}
 	coords = glm::fract( coords );
+
 	// Convert to texel coordinates (for now, naive, don't take into account half pixel offset)
 	const glm::vec2 imageSize = glm::vec2(context.shared->dims);
 	const glm::ivec2 safeSize = context.shared->dims - glm::ivec2(1, 1);
 
 	const glm::vec2 pixCoords = coords * imageSize - 0.5f;
 	// We already wrapped above, clamp.
-	glm::ivec2 coords00 = glm::ivec2(glm::floor(pixCoords));
-	coords00 = glm::clamp(coords00, {0, 0}, safeSize);
 
-	glm::vec4 basePixel = src.pixel(coords00);
+	glm::vec4 basePixel;
 	const bool bilinear = _attributes[ 0 ].bln;
 	if(bilinear){
-		const glm::vec4 c00 = basePixel;
+		glm::ivec2 coords00 = glm::ivec2(glm::floor(pixCoords));
+		coords00 = glm::clamp(coords00, {0, 0}, safeSize);
 		const glm::ivec2 coords11 = glm::min(coords00 + 1, safeSize);
+		const glm::vec4& c00 = src.pixel(coords00.x, coords00.y);
 		const glm::vec4& c10 = src.pixel(coords11.x, coords00.y);
 		const glm::vec4& c01 = src.pixel(coords00.x, coords11.y);
 		const glm::vec4& c11 = src.pixel(coords11.x, coords11.y);
 		const glm::vec2 frac = pixCoords - glm::vec2(coords00);
 		basePixel = (1.f - frac.x) * (1.f - frac.y) * c00 + (1.f - frac.x) * frac.y * c01 + frac.x * (1.f - frac.y) * c10 + frac.x * frac.y * c11;
+	} else {
+		glm::ivec2 coords00 = glm::ivec2(glm::round(pixCoords));
+		coords00 = glm::clamp(coords00, {0, 0}, safeSize);
+		basePixel = src.pixel(coords00);
 	}
 
 	for( uint i = 0; i < _channelCount; ++i ){
