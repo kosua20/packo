@@ -8,7 +8,7 @@ CommentNode::CommentNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION( CommentNode, NodeClass::COMMENT, false, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION( CommentNode, NodeClass::COMMENT, 1)
 
 void CommentNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == 0u);

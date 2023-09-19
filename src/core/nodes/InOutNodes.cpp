@@ -85,7 +85,7 @@ BackupNode::BackupNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(BackupNode, NodeClass::INTERNAL_BACKUP, false, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(BackupNode, NodeClass::INTERNAL_BACKUP, 1)
 
 void BackupNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(outputs.size() == inputs.size());
@@ -108,7 +108,7 @@ RestoreNode::RestoreNode(){
 	finalize();
 }
 
-NODE_DEFINE_TYPE_AND_VERSION(RestoreNode, NodeClass::INTERNAL_RESTORE, false, false, 1)
+NODE_DEFINE_TYPE_AND_VERSION(RestoreNode, NodeClass::INTERNAL_RESTORE, 1)
 
 void RestoreNode::evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const {
 	assert(inputs.size() == outputs.size());
