@@ -49,6 +49,12 @@ public:
 
 		~Attribute();
 	};
+
+	struct PinInfos {
+		std::string name = "Unknown pin";
+		bool channeled = false;
+
+	};
 	
 	virtual void prepare( SharedContext& context, const std::vector<int>& inputs) const { (void)context; (void)inputs; assert(global());};
 
@@ -61,18 +67,16 @@ public:
 
 	virtual uint type() const = 0;
 	virtual uint version() const = 0;
-	virtual bool channeledInputs() const = 0;
-	virtual bool channeledOutputs() const = 0;
 	virtual bool global() const { return false; }
-	bool channeled() const { return channeledInputs() || channeledOutputs(); }
+	bool channeled() const { return _channeled; }
 
 	void setChannelCount(uint c);
 	uint channelCount() const { return _channelCount; }
 
 	const std::string& name() const { return _name; }
 	const std::string& description() const { return _description; }
-	const std::vector<std::string>& inputs() const { return _currentInputs; }
-	const std::vector<std::string>& outputs() const { return _currentOutputs; }
+	const std::vector<PinInfos>& inputs() const { return _currentInputs; }
+	const std::vector<PinInfos>& outputs() const { return _currentOutputs; }
 	const std::vector<Attribute>& attributes( ) const { return _attributes; }
 	std::vector<Attribute>& attributes( )  { return _attributes; }
 
@@ -82,24 +86,20 @@ protected:
 	
 	std::string _name;
 	std::string _description;
-	std::vector<std::string> _inputNames;
-	std::vector<std::string> _outputNames;
-	std::vector<std::string> _currentInputs;
-	std::vector<std::string> _currentOutputs;
+	std::vector<PinInfos> _inputNames;
+	std::vector<PinInfos> _outputNames;
+	std::vector<PinInfos> _currentInputs;
+	std::vector<PinInfos> _currentOutputs;
 	std::vector<Attribute> _attributes;
 	uint _channelCount = 1;
-	// TODO: support per-input/output channeling.
+	bool _channeled = false;
 };
 
 #define NODE_DECLARE_EVAL_TYPE_AND_VERSION() \
 void evaluate(LocalContext& context, const std::vector<int>& inputs, const std::vector<int>& outputs) const override; \
 uint type() const override; \
-uint version() const override; \
-bool channeledInputs() const override;\
-bool channeledOutputs() const override;
+uint version() const override;
 
-#define NODE_DEFINE_TYPE_AND_VERSION(C, T, BI, BO, V) \
+#define NODE_DEFINE_TYPE_AND_VERSION(C, T, V) \
 uint C::type() const { return T; } \
-uint C::version() const { return V; }\
-bool C::channeledInputs() const { return BI; }\
-bool C::channeledOutputs() const { return BO; }
+uint C::version() const { return V; }

@@ -372,7 +372,7 @@ const Node* showErrorPanel(const ErrorContext& errorContext, float winWidth, flo
 			ImGui::TableNextColumn();
 			if(slot >= 0){
 				if(node && ((uint)slot < node->inputs().size())){
-					ImGui::TextUnformatted(node->inputs()[slot].c_str());
+					ImGui::TextUnformatted(node->inputs()[slot].name.c_str());
 				} else {
 					ImGui::Text("%d", slot + 1);
 				}
@@ -443,11 +443,11 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 	// Draw all inputs.
 	ImGui::BeginGroup();
 	{
-		const bool multiChannel = (node->channelCount() > 1) && (node->channeledInputs());
+		const bool supportMultiChannel = (node->channelCount() > 1);
 		uint slotId = 0u;
-		for( const std::string& name : node->inputs() ){
+		for( const Node::PinInfos& input : node->inputs() ){
 			ImNodes::BeginInputAttribute( fromInputSlotToLink( { nodeId, slotId } ), style.kPinsShape);
-			TextIndex( name, multiChannel, style.smallFont );
+			TextIndex( input.name, supportMultiChannel && input.channeled, style.smallFont );
 			ImNodes::EndInputAttribute();
 			++slotId;
 		}
@@ -520,16 +520,16 @@ bool drawNode(Node* node, uint nodeId, const Styling& style, const std::unordere
 	ImGui::SameLine(0,0);
 	ImGui::BeginGroup();
 	{
-		const bool multiChannel = (node->channelCount() > 1) && (node->channeledOutputs());
+		const bool supportMultiChannel = ( node->channelCount() > 1 );
 		uint slotId = 0u;
-		for( const std::string& name : node->outputs() ){
-
-			const float labelSize = TextIndexSize( name, multiChannel, style.smallFont->FontSize / style.defaultFont->FontSize );
+		for( const Node::PinInfos& output : node->outputs() ){
+			const bool multiChannel = supportMultiChannel && output.channeled;
+			const float labelSize = TextIndexSize( output.name, multiChannel, style.smallFont->FontSize / style.defaultFont->FontSize );
 			const float offset = std::max( 0.f, style.kSlotLabelWidth - labelSize );
 
 			ImNodes::BeginOutputAttribute( fromOutputSlotToLink( { nodeId, slotId } ), style.kPinsShape);
 			ImGui::Indent(offset);
-			TextIndex( name, multiChannel, style.smallFont );
+			TextIndex( output.name, multiChannel, style.smallFont );
 			ImGui::Unindent();
 			ImNodes::EndOutputAttribute();
 			++slotId;

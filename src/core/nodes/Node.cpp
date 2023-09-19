@@ -43,20 +43,27 @@ void Node::setChannelCount(uint c){
 
 	const std::string suffixes[4] = {"R", "G", "B", "A"};
 
-	if(channeledInputs()){
-		_currentInputs.clear();
-		for(const std::string& input : _inputNames){
-			for(uint i = 0; i < _channelCount; ++i){
-				_currentInputs.push_back(input + suffixes[i]);
+	_currentInputs.clear();
+	for(const Node::PinInfos& input : _inputNames){
+		if( input.channeled ){
+			for( uint i = 0; i < _channelCount; ++i ){
+				_currentInputs.push_back( input );
+				_currentInputs.back().name += suffixes[ i ];
 			}
+		} else {
+			_currentInputs.push_back(input);
 		}
 	}
-	if(channeledOutputs()){
-		_currentOutputs.clear();
-		for(const std::string& output : _outputNames){
-			for(uint i = 0; i < _channelCount; ++i){
-				_currentOutputs.push_back(output + suffixes[i]);
+
+	_currentOutputs.clear();
+	for( const Node::PinInfos& output : _outputNames ){
+		if( output.channeled ){
+			for( uint i = 0; i < _channelCount; ++i ){
+				_currentOutputs.push_back( output );
+				_currentOutputs.back().name += suffixes[ i ];
 			}
+		} else {
+			_currentOutputs.push_back( output );
 		}
 	}
 }
@@ -175,6 +182,13 @@ bool Node::deserialize(const json& data){
 }
 
 void Node::finalize(){
+	_channeled = false;
+	for( const auto& input : _inputNames ){
+		_channeled = _channeled || input.channeled;
+	}
+	for(const auto& output : _outputNames){
+		_channeled = _channeled || output.channeled;
+	}
 	_currentInputs = _inputNames;
 	_currentOutputs = _outputNames;
 	_channelCount = 1;
